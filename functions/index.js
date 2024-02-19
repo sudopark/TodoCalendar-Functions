@@ -1,12 +1,24 @@
 // The cloud functions fore Firebase SDK to create Cloud functions and trigger
 const functions = require("firebase-functions");
-const {onRequest} = require("firebase-functions/v2/https");
+const express = require("express");
+// const cors = require("cors");
 
 // The firebase Admin SDK to access Firestore
 const firebaseAdmin = require("firebase-admin");
 
 firebaseAdmin.initializeApp();
 
+
+// router instance
+const todoRouter = require("./routes/todo");
+
+const app = express();
+// TODO: app use middleware
+
+// setup router
+app.use("/todo", todoRouter);
+
+exports.api = functions.https.onRequest(app);
 
 exports.addmessage = functions.https.onRequest(async (req, res) => {
 
