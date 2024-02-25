@@ -10,26 +10,18 @@ firebaseAdmin.initializeApp();
 
 
 // router instance
+const accountRouter = require('./routes/account');
 const todoRouter = require("./routes/todo");
 
 const app = express();
 // TODO: app use middleware
 
 // setup router
+app.use("/account", accountRouter);
 app.use("/todo", todoRouter);
 
 exports.api = functions.https.onRequest(app);
 
-exports.addmessage = functions.https.onRequest(async (req, res) => {
-
-	const original = req.query.text;
-
-	const writeResult = await firebaseAdmin.firestore()
-		.collection("message")
-		.add({original: original})
-
-	res.json({ result: `Message with ID: ${writeResult.id} added.` });
-});
 
 // // Create and Deploy Your First Cloud Functions
 // // https://firebase.google.com/docs/functions/write-firebase-functions
