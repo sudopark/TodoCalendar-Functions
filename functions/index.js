@@ -17,8 +17,8 @@ const app = express();
 // TODO: app use middleware
 
 // setup router
-app.use("/account", accountRouter);
-app.use("/todo", todoRouter);
+app.use("/accounts", accountRouter);
+app.use("/todos", todoRouter);
 
 exports.api = functions.https.onRequest(app);
 

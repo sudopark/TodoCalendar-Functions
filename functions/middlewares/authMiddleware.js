@@ -11,9 +11,10 @@ async function validateToken(req, res, next) {
     }
 
     if(typeof idToken === 'undefined') {
+        // 현재 클라에서는 에러메세지 파싱 불가 -> 추후 interceptor 구현 이후에 statusCode 변경
         res.status(403).json(
             {
-                code: 'Unauthorized', 
+                code: 'NoAccessToken', 
                 message: 'No Firebase ID token was passed as a Bearer token in the Authorization header.'
             }
         );
@@ -26,11 +27,11 @@ async function validateToken(req, res, next) {
         next();
         return;        
     } catch (error) {
-        res.status(403).json(
+        res.status(401).json(
             {
-                code: 'Unauthorized', 
+                code: 'InvalidAccessKey', 
                 message: 'Fail to verify id token', 
-                origin: error
+                origin: JSON.stringify(error)
             }
         );
         return;
