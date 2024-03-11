@@ -10,7 +10,7 @@ const EventTimeRepository = require("../../repositories/eventTimeRepository");
 
 const todoRepository = new TodoRepository();
 const eventTimeRepository = new EventTimeRepository();
-const eventTimeService = new EventTimeService({eventTimeRepository});
+const eventTimeService = new EventTimeService(eventTimeRepository);
 const todoService = new TodoService({ todoRepository, eventTimeService });
 const todoController = new TodoController(todoService);
 

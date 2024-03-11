@@ -2,12 +2,12 @@
 
 class EventTimeService {
 
-    constructor({ eventTimeRepository} ) {
+    constructor(eventTimeRepository) {
         this.eventTimeRepository = eventTimeRepository
     }
 
     async updateEventTime (eventId, time, repeating) {
-        let ranges = this.range(time, repeating);
+        let ranges = this.#range(time, repeating);
         try {
             let result = await this.eventTimeRepository.updateTime(eventId, ranges)
             return result
@@ -17,13 +17,13 @@ class EventTimeService {
         }
     };
 
-    range(time, repeating) {
+    #range(time, repeating) {
         switch (time?.time_type) {
             case 'at':
                 return {
                     lower: repeating?.start != null 
                         ? repeating.start : time.timestamp, 
-                    upper: repeating?.end != null
+                    upper: repeating != null
                         ? repeating.end : time.timestamp
                 }
     
@@ -31,7 +31,7 @@ class EventTimeService {
                 return {
                     lower: repeating?.start != null 
                         ? repeating.start : time.period_start, 
-                    upper: repeating?.end != null
+                    upper: repeating != null
                         ? repeating.end : time.period_end
                 }
             
