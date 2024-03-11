@@ -2,6 +2,7 @@
 const functions = require("firebase-functions");
 const express = require("express");
 // const cors = require("cors");
+const bodyParser = require("body-parser");
 
 // The firebase Admin SDK to access Firestore
 const firebaseAdmin = require("firebase-admin");
@@ -14,7 +15,8 @@ const accountRouter = require('./routes/account');
 const todoRouter = require("./routes/todo");
 
 const app = express();
-// TODO: app use middleware
+// app use middleware
+app.use(bodyParser.json());
 
 // setup router
 app.use("/accounts", accountRouter);
