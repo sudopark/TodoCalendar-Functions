@@ -2,7 +2,7 @@
 const express = require("express");
 const router = express.Router();
 const admin = require("firebase-admin");
-const validateToken = require("../middlewares/authMiddleware");
+const validateToken = require("../../middlewares/authMiddleware");
 
 // account 세팅
 router.put("/info", validateToken, async (req, res, next) => {
