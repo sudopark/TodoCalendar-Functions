@@ -1,4 +1,31 @@
 
+class StubAccountRepository {
+
+    constructor() {
+        this.noAccountInfoExists = false
+        this.shouldFailFindAccountInfo = false
+        this.shouldFailSaveAccountInfo = false
+    }
+
+    async findAccountInfo(uid, auth_time) {
+        if(this.shouldFailFindAccountInfo) {
+            throw { message: 'failed' };
+        } else if(this.noAccountInfoExists) {
+            return null;
+        } else {
+            return {id: uid, last_sign_in: auth_time};
+        }
+    }
+
+    async saveAccountInfo(uid, payload) {
+        if(this.shouldFailSaveAccountInfo) {
+            throw { message: 'failed' };
+        } else {
+            return { id: uid, ...payload };
+        }
+    }
+}
+
 class StubTodoRepository {
 
     constructor() {
@@ -32,6 +59,7 @@ class StubEventTimeRepository {
 }
 
 module.exports = {
+    Account: StubAccountRepository,
     Todo: StubTodoRepository, 
     EventTime: StubEventTimeRepository
 };

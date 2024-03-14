@@ -23,7 +23,7 @@ async function validateToken(req, res, next) {
 
     try {
         const decodeIdToken = await admin.auth().verifyIdToken(idToken);
-        req.user = decodeIdToken;
+        req.auth = decodeIdToken;
         next();
         return;        
     } catch (error) {
