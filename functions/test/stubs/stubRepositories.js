@@ -1,4 +1,7 @@
 
+
+// MARK: - Account
+
 class StubAccountRepository {
 
     constructor() {
@@ -26,11 +29,15 @@ class StubAccountRepository {
     }
 }
 
+
+// MARK: - Todo
+
 class StubTodoRepository {
 
     constructor() {
         this.makeNewTodo = this.makeNewTodo.bind(this);
         this.shouldFailMakeTodo = false
+        this.shouldfailUpdateTodo = false
     }
 
     async makeNewTodo(payload) {
@@ -40,7 +47,26 @@ class StubTodoRepository {
             return {uuid: "new", ...payload};
         }
     }
+
+    async updateTodo(id, payload) {
+        if(this.shouldfailUpdateTodo) {
+            throw { message: 'failed' }
+        } else {
+            return {uuid: id, ...payload}
+        }
+    }
+
+    async findTodo(id) {
+        if(id == 'orign') {
+            return { uuid: id, name: 'old_name', event_tag_id: 'old tag' }
+        } else {
+            throw { message: 'not exists' }
+        }
+    }
 }
+
+
+// MARK: - event time
 
 class StubEventTimeRepository {
 

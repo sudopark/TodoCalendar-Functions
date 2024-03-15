@@ -8,13 +8,12 @@ class TodooController {
 
     async makeTodo(req, res) {
 
-        const { body } = req; const userId = req.user.uid
+        const { body } = req; const userId = req.auth.uid
         if(
             !body.name ||
             !userId
         ) {
-            res
-                .status(400)
+            res.status(400)
                 .send({
                     code: "InvalidParameter", 
                     message: "todo name or user id is missing." 
@@ -32,14 +31,12 @@ class TodooController {
         }
         
         try { 
-            let newTodo = await this.todoService.makeTodo(payload)
+            const newTodo = await this.todoService.makeTodo(payload)
     
             res.status(201).send(newTodo);
     
         } catch(error) {
-            console.log(error)
-            res
-                .status(error?.status || 500)
+            res.status(error?.status || 500)
                 .send({
                     code: error?.code ?? "Unknown", 
                     message: error?.message || error, 
@@ -47,6 +44,47 @@ class TodooController {
                 })
         }
     }
+
+    async patchTodo(req, res) {
+
+        const { body } = req; const userId = req.auth.uid; 
+        const todoId = req.params.id;
+
+        if(
+            !body.name ||
+            !userId ||
+            !todoId
+        ) {
+            res.status(400)
+                .send({
+                    code: "InvalidParameter", 
+                    message: "todo name, user id or todoId is missing." 
+                })
+            return;
+        }
+
+        try {
+            const payload = {
+                name: body.name, 
+                event_tag_id: body.event_tag_id, 
+                event_time: body.event_time, 
+                repeating: body.repeating, 
+                notification_options: body.notification_options
+            }
+            
+            const todo = await this.todoService.updateTodo(todoId, payload)
+            res.status(201)
+                .send(todo);
+
+        } catch (error) {
+            res.status(error?.status || 500)
+                .send({
+                    code: error?.code ?? "Unknown", 
+                    message: error?.message || error, 
+                    origin: error?.origin
+                })
+        }
+    };
 }
 
 module.exports = TodooController;
