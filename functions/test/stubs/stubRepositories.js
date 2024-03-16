@@ -57,7 +57,7 @@ class StubTodoRepository {
     }
 
     async findTodo(id) {
-        if(id == 'orign') {
+        if(id == 'origin') {
             return { uuid: id, name: 'old_name', event_tag_id: 'old tag' }
         } else {
             throw { message: 'not exists' }

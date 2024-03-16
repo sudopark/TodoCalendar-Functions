@@ -6,12 +6,38 @@ class TodooController {
         this.todoService = todoService;
     }
 
+    async getTodo(req, res) {
+        let todoId = req.params.id
+        if( !todoId ) {
+            res.status(400)
+                .send({
+                    code: "InvalidParameter", 
+                    message: "todo name or user id is missing." 
+                })
+            return;
+        }
+
+        try {
+
+            const todo = await this.todoService.findTodo(todoId);
+            res.status(200)
+                .send(todo)
+
+        } catch(error) {
+            console.log(error)
+                .send({
+                    code: error?.code ?? "Unknown", 
+                    message: error?.message || error, 
+                    origin: error?.origin
+                })
+        }
+    }
+
     async makeTodo(req, res) {
 
         const { body } = req; const userId = req.auth.uid
         if(
-            !body.name ||
-            !userId
+            !body.name || !userId
         ) {
             res.status(400)
                 .send({
@@ -47,13 +73,11 @@ class TodooController {
 
     async patchTodo(req, res) {
 
-        const { body } = req; const userId = req.auth.uid; 
+        const { body } = req;
         const todoId = req.params.id;
 
         if(
-            !body.name ||
-            !userId ||
-            !todoId
+            !body.name || !todoId
         ) {
             res.status(400)
                 .send({

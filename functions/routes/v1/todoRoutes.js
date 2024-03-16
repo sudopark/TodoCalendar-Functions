@@ -13,6 +13,10 @@ const eventTimeService = new EventTimeService(eventTimeRepository);
 const todoService = new TodoService({ todoRepository, eventTimeService });
 const todoController = new TodoController(todoService);
 
+router.get("/todo/:id", async (req, res) => {
+    todoController.getTodo(req, res);
+});
+
 router.post("/todo", async (req, res) => {
     todoController.makeTodo(req, res);
 });

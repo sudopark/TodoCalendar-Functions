@@ -7,38 +7,30 @@ class TodoEventService {
         this.eventTimeService = eventTimeService
     }
 
+    async findTodo(todoId) {
+        const todo = await this.todoRepository.findTodo(todoId);
+        return todo
+    }
+
     async makeTodo (payload) {
-
-        try {
-
-            let newTodo = await this.todoRepository.makeNewTodo(payload);
-            await this.#updateEventtime(newTodo)
-            return newTodo
-
-        } catch (error) {
-            throw error
-        }
+        let newTodo = await this.todoRepository.makeNewTodo(payload);
+        await this.#updateEventtime(newTodo)
+        return newTodo
     };
 
     async updateTodo(todoId, payload) {
 
-        try  {
-            let origin = this.todoRepository.findTodo(todoId);
-            if(origin == null) {
-                throw {
-                    status: 404, message: "todo not exists"
-                }
-                return
+        let origin = await this.todoRepository.findTodo(todoId);
+        if(origin == null) {
+            throw {
+                status: 404, message: "todo not exists"
             }
-            let updatePayload = this.#apply(origin, payload);
-
-            let updated = await this.todoRepository.updateTodo(todoId, updatePayload);
-            await this.#updateEventtime(updated);
-            return updated
-            
-        } catch(error) {
-            throw error
         }
+        let updatePayload = this.#apply(origin, payload);
+
+        let updated = await this.todoRepository.updateTodo(todoId, updatePayload);
+        await this.#updateEventtime(updated);
+        return updated
     }
 
     #apply(origin, payload) {
