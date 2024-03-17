@@ -173,6 +173,30 @@ class TodooController {
                 })
         }
     }
+
+    async removeTodo(req, res) {
+        const todoId = req.params.id;
+        if( !todoId ) {
+            res.status(400)
+                .send({
+                    code: "InvalidParameter", 
+                    message: "todoId is missing." 
+                })
+            return;
+        }
+        try {
+            await this.todoService.removeTodo(todoId);
+            res.status(200)
+                .send({ status: 'ok'})
+        } catch (error) {
+            res.status(error?.status || 500)
+                .send({
+                    code: error?.code ?? "Unknown", 
+                    message: error?.message || error, 
+                    origin: error?.origin
+                })
+        }
+    }
 }
 
 module.exports = TodooController;

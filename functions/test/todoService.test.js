@@ -169,6 +169,7 @@ describe('TodoService', () => {
 
         beforeEach(() => {
             stubEventTimeRepository.shouldFailUpdateTime = false
+            stubEventTimeRepository.didRemovedEventId = null
             todoRepository.shouldfailUpdateTodo = false
             doneTodoRepository.shouldFailSave = false
             todoRepository.removedTodoId = null
@@ -185,6 +186,7 @@ describe('TodoService', () => {
             assert.equal(result.next_repeating.event_time.time_type, 'at')
             assert.equal(result.next_repeating.event_time.timestamp, 100)
             assert.equal(todoRepository.removedTodoId, null)
+            assert.equal(stubEventTimeRepository.didRemovedEventId, null)
         });
         
         it('origin 다음 반본시간 없는경우 기존 todo 삭제', async () => {
@@ -192,6 +194,7 @@ describe('TodoService', () => {
             assert.equal(result.done.name, 'done')
             assert.equal(result.next_repeating == null, true)
             assert.equal(todoRepository.removedTodoId, 'origin')
+            assert.equal(stubEventTimeRepository.didRemovedEventId, 'origin')
         });
 
         it('완료 실패', async () => {
@@ -208,6 +211,7 @@ describe('TodoService', () => {
 
         beforeEach(() => {
             stubEventTimeRepository.shouldFailUpdateTime = false
+            stubEventTimeRepository.didRemovedEventId = null
             todoRepository.shouldfailUpdateTodo = false
             todoRepository.shouldFailMakeTodo = false
             todoRepository.removedTodoId = null
@@ -223,6 +227,7 @@ describe('TodoService', () => {
             assert.equal(result.next_repeating.event_time.time_type, 'at')
             assert.equal(result.next_repeating.event_time.timestamp, 100)
             assert.equal(todoRepository.removedTodoId, null)
+            assert.equal(stubEventTimeRepository.didRemovedEventId, null)
         }); 
 
         it('다음 반복이벤트 없는 경우에 기존 todo 삭제', async () => {
@@ -230,6 +235,7 @@ describe('TodoService', () => {
             assert.equal(result.new_todo.name, 'replaced')
             assert.equal(result.next_repeating == null, true)
             assert.equal(todoRepository.removedTodoId, 'origin')
+            assert.equal(stubEventTimeRepository.didRemovedEventId, 'origin')
         });
 
         it('교체 실패', async () => {
@@ -240,5 +246,21 @@ describe('TodoService', () => {
                 assert.equal(error != null, true)
             }
         });
+    })
+
+    describe('remove todo', () => {
+
+        before(() => {
+            todoRepository.didRemovedEventId = null
+            stubEventTimeRepository.didRemovedEventId = null
+        })
+
+        it('이벤트 시간이랑 같이 삭제', async () => {
+
+            const result = await todoService.removeTodo('some');
+            assert.equal(result.status, 'ok')
+            assert.equal(todoRepository.removedTodoId, 'some')
+            assert.equal(stubEventTimeRepository.didRemovedEventId, 'some')
+        })
     })
 })

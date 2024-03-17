@@ -9,14 +9,14 @@ class EventTimeRangeService {
     async updateEventTime (userId, eventId, time, repeating) {
         const ranges = this.#range(time, repeating);
         const payload = {userId: userId, ...ranges}
-        try {
-            let result = await this.eventTimeRepository.updateTime(eventId, payload)
-            return result
-
-        } catch (error) {
-            throw error
-        }
+        let result = await this.eventTimeRepository.updateTime(eventId, payload)
+        return result
     };
+
+    async removeEventTime(eventId) {
+        let result = await this.eventTimeRepository.remove(eventId)
+        return result
+    }
 
     #range(time, repeating) {
         switch (time?.time_type) {

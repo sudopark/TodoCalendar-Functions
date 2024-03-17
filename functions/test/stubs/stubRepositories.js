@@ -78,6 +78,7 @@ class StubEventTimeRangeRepository {
     constructor() {
         this.updateTime = this.updateTime.bind(this);
         this.shouldFailUpdateTime = false
+        this.didRemovedEventId = null
     }
 
     async updateTime(eventId, payload) {
@@ -86,6 +87,10 @@ class StubEventTimeRangeRepository {
         } else {
             return {eventId: eventId, ...payload};
         }
+    }
+
+    async remove(eventId) {
+        this.didRemovedEventId = eventId
     }
 }
 

@@ -35,4 +35,8 @@ router.post('/todo/:id/replace', async (req, res) => {
     todoController.replaceRepeatingTodo(req, res);
 });
 
+router.delete('/todo/:id', async (req, res) => {
+    todoController.removeTodo(req, res);
+})
+
 module.exports = router;

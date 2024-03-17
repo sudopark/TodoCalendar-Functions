@@ -35,7 +35,7 @@ class TodoEventService {
             await this.#updateEventtime(userId, updatedTodo)
             return { done: done, next_repeating: updatedTodo }
         } else {
-            await this.todoRepository.removeTodo(originId);
+            await this.removeTodo(originId);
             return { done: done }
         }
     }
@@ -50,9 +50,15 @@ class TodoEventService {
             await this.#updateEventtime(userId, updatedTodo)
             return { new_todo: newTodo, next_repeating: updatedTodo}
         } else {
-            await this.todoRepository.removeTodo(originId);
+            await this.removeTodo(originId);
             return { new_todo: newTodo }
         }
+    }
+
+    async removeTodo(todoId) {
+        await this.todoRepository.removeTodo(todoId);
+        await this.eventTimeRangeService.removeEventTime(todoId);
+        return { status: 'ok' }
     }
 
     async #updateEventtime(userId, todo) {
