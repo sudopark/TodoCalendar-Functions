@@ -22,7 +22,6 @@ class AccountService {
                 return newInfo
             }
         } catch (error) {
-            console.log(error)
             throw error;
         }
     }

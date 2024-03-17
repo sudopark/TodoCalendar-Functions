@@ -15,7 +15,7 @@ class TodoEventService {
 
     async makeTodo (userId, payload) {
         let newTodo = await this.todoRepository.makeNewTodo(payload);
-        await this.#updateEventtime(newTodo)
+        await this.#updateEventtime(userId, newTodo)
         return newTodo
     };
 
@@ -30,17 +30,17 @@ class TodoEventService {
         let updatePayload = this.#apply(origin, payload);
 
         let updated = await this.todoRepository.updateTodo(todoId, updatePayload);
-        await this.#updateEventtime(updated);
+        await this.#updateEventtime(userId, updated);
         return updated
     }
 
-    async completeTodo(userId, originId, origin, nextEventTime = null) {
+    async completeTodo(userId, originId, origin, nextEventTime) {
 
         const done = await this.doneTodoRepository.save(originId, origin);
         if(nextEventTime != null) {
             const payload = { event_time: nextEventTime }
             let updatedTodo = await this.todoRepository.updateTodo(originId, payload, true);
-            await this.#updateEventtime(updatedTodo)
+            await this.#updateEventtime(userId, updatedTodo)
             return { done: done, next_repeating: updatedTodo }
         } else {
             await this.todoRepository.removeTodo(originId);
@@ -48,14 +48,14 @@ class TodoEventService {
         }
     }
 
-    async replaceReaptingTodo(userid, originId, newPayload, originNextEventTime) {
+    async replaceReaptingTodo(userId, originId, newPayload, originNextEventTime) {
 
         const newTodo = await this.todoRepository.makeNewTodo(newPayload);
 
         if(originNextEventTime != null) {
             const payload = { event_time: originNextEventTime }
             let updatedTodo = await this.todoRepository.updateTodo(originId, payload, true)
-            await this.#updateEventtime(updatedTodo)
+            await this.#updateEventtime(userId, updatedTodo)
             return { new_todo: newTodo, next_repeating: updatedTodo}
         } else {
             await this.todoRepository.removeTodo(originId);
@@ -75,8 +75,9 @@ class TodoEventService {
     }
 
     // TOOD: 무조건 userId 받도록 => 덮어쓰기이기때문에
-    async #updateEventtime(todo) {
+    async #updateEventtime(userId, todo) {
         await this.eventTimeService.updateEventTime(
+            userId,
             todo.uuid, 
             todo.event_time ?? {}, 
             todo.repeating ?? {}

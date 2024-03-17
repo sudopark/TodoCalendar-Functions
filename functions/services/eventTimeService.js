@@ -6,10 +6,11 @@ class EventTimeService {
         this.eventTimeRepository = eventTimeRepository
     }
 
-    async updateEventTime (eventId, time, repeating) {
-        let ranges = this.#range(time, repeating);
+    async updateEventTime (userId, eventId, time, repeating) {
+        const ranges = this.#range(time, repeating);
+        const payload = {userId: userId, ...ranges}
         try {
-            let result = await this.eventTimeRepository.updateTime(eventId, ranges)
+            let result = await this.eventTimeRepository.updateTime(eventId, payload)
             return result
 
         } catch (error) {

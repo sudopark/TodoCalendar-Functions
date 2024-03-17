@@ -24,7 +24,7 @@ class TodooController {
                 .send(todo)
 
         } catch(error) {
-            console.log(error)
+            res.status(error?.status || 500)
                 .send({
                     code: error?.code ?? "Unknown", 
                     message: error?.message || error, 
