@@ -2,9 +2,9 @@
 
 class TodoEventService {
 
-    constructor({ todoRepository, eventTimeService, doneTodoRepository }) {
+    constructor({ todoRepository, eventTimeRangeService, doneTodoRepository }) {
         this.todoRepository = todoRepository
-        this.eventTimeService = eventTimeService
+        this.eventTimeRangeService = eventTimeRangeService
         this.doneTodoRepository = doneTodoRepository
     }
 
@@ -74,9 +74,8 @@ class TodoEventService {
         }
     }
 
-    // TOOD: 무조건 userId 받도록 => 덮어쓰기이기때문에
     async #updateEventtime(userId, todo) {
-        await this.eventTimeService.updateEventTime(
+        await this.eventTimeRangeService.updateEventTime(
             userId,
             todo.uuid, 
             todo.event_time ?? {}, 

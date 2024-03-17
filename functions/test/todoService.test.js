@@ -2,7 +2,7 @@
 
 const TodoService = require('../services/todoEventService');
 const assert = require('assert');
-const EventTimeService = require('../services/eventTimeService');
+const EventTimeRangeService = require('../services/eventTimeRangeService');
 const StubRepos = require("./stubs/stubRepositories");
 
 
@@ -10,10 +10,10 @@ describe('TodoService', () => {
     
     
     const stubEventTimeRepository = new StubRepos.EventTime();
-    const eventTimeService = new EventTimeService(stubEventTimeRepository)
+    const eventTimeRangeService = new EventTimeRangeService(stubEventTimeRepository)
     const todoRepository = new StubRepos.Todo();
     const doneTodoRepository = new StubRepos.DoneTodo();
-    const todoService = new TodoService( { todoRepository, eventTimeService, doneTodoRepository })
+    const todoService = new TodoService( { todoRepository, eventTimeRangeService, doneTodoRepository })
 
     
     describe('save todo', () => {

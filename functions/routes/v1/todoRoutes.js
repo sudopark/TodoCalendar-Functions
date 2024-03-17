@@ -3,16 +3,16 @@ const express = require("express");
 const router = express.Router();
 const TodoController = require("../../controllers/todoController");
 const TodoService = require("../../services/todoEventService");
-const EventTimeService = require("../../services/eventTimeService");
+const EventTimeRangeService = require("../../services/eventTimeRangeService");
 const TodoRepository = require("../../repositories/todoRepository");
-const EventTimeRepository = require("../../repositories/eventTimeRepository");
+const EventTimeRepository = require("../../repositories/eventTimeRangeRepository");
 const DoneTodoEventRepository = require('../../repositories/doneTodoEventRepository');
 
 const todoRepository = new TodoRepository();
 const eventTimeRepository = new EventTimeRepository();
 const doneTodoRepository = new DoneTodoEventRepository();
-const eventTimeService = new EventTimeService(eventTimeRepository);
-const todoService = new TodoService({ todoRepository, eventTimeService, doneTodoRepository });
+const eventTimeRangeService = new EventTimeRangeService(eventTimeRepository);
+const todoService = new TodoService({ todoRepository, eventTimeRangeService, doneTodoRepository });
 const todoController = new TodoController(todoService);
 
 router.get("/todo/:id", async (req, res) => {

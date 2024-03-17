@@ -2,7 +2,7 @@
 
 const admin = require("firebase-admin");
 
-class EventTimeRepository {
+class EventTimeRangeRepository {
 
     async updateTime(eventId, payload) {
 
@@ -18,4 +18,4 @@ class EventTimeRepository {
     };
 }
 
-module.exports = EventTimeRepository;
+module.exports = EventTimeRangeRepository;

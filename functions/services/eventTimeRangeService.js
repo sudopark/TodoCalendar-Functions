@@ -1,6 +1,6 @@
 
 
-class EventTimeService {
+class EventTimeRangeService {
 
     constructor(eventTimeRepository) {
         this.eventTimeRepository = eventTimeRepository
@@ -59,4 +59,4 @@ class EventTimeService {
     };
 }
 
-module.exports = EventTimeService;
+module.exports = EventTimeRangeService;

@@ -73,7 +73,7 @@ class StubTodoRepository {
 
 // MARK: - event time
 
-class StubEventTimeRepository {
+class StubEventTimeRangeRepository {
 
     constructor() {
         this.updateTime = this.updateTime.bind(this);
@@ -109,6 +109,6 @@ class StubDoneTodoEventRepository {
 module.exports = {
     Account: StubAccountRepository,
     Todo: StubTodoRepository, 
-    EventTime: StubEventTimeRepository, 
+    EventTime: StubEventTimeRangeRepository, 
     DoneTodo: StubDoneTodoEventRepository
 };

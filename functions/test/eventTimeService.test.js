@@ -2,14 +2,14 @@
 
 const assert = require('assert');
 const StubRepos = require("./stubs/stubRepositories");
-const EventTimeService = require("../services/eventTimeService");
+const EventTimeRangeService = require("../services/eventTimeRangeService");
 
 
 
 describe("EventTimeService", () => {
 
     const stubRepository = new StubRepos.EventTime()
-    const service = new EventTimeService(stubRepository);
+    const service = new EventTimeRangeService(stubRepository);
 
     const dummyRepeatWithEndTime = {
         start: 10, 
