@@ -21,15 +21,7 @@ class TodoEventService {
 
     async updateTodo(userId, todoId, payload) {
 
-        let origin = await this.todoRepository.findTodo(todoId);
-        if(origin == null) {
-            throw {
-                status: 404, message: "todo not exists"
-            }
-        }
-        let updatePayload = this.#apply(origin, payload);
-
-        let updated = await this.todoRepository.updateTodo(todoId, updatePayload);
+        let updated = await this.todoRepository.updateTodo(todoId, payload, true);
         await this.#updateEventtime(userId, updated);
         return updated
     }
@@ -60,17 +52,6 @@ class TodoEventService {
         } else {
             await this.todoRepository.removeTodo(originId);
             return { new_todo: newTodo }
-        }
-    }
-
-    #apply(origin, payload) {
-    
-        return {
-            name: payload.name ?? origin.name, 
-            event_tag_id: payload.event_tag_id, 
-            event_time: payload.event_time, 
-            repeating: payload.repeating, 
-            notification_options: payload.notification_options
         }
     }
 
