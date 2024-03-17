@@ -12,7 +12,9 @@ describe('TodoService', () => {
     const stubEventTimeRepository = new StubRepos.EventTime();
     const eventTimeService = new EventTimeService(stubEventTimeRepository)
     const todoRepository = new StubRepos.Todo();
-    const todoService = new TodoService( { todoRepository, eventTimeService })
+    const doneTodoRepository = new StubRepos.DoneTodo();
+    const todoService = new TodoService( { todoRepository, eventTimeService, doneTodoRepository })
+
     
     describe('save todo', () => {
 
@@ -27,7 +29,7 @@ describe('TodoService', () => {
 
         it('success', async () => {
   
-            const newTodo = await todoService.makeTodo(makePayload)
+            const newTodo = await todoService.makeTodo('uid', makePayload)
             assert.equal(newTodo.uuid, "new")
         })
 
@@ -37,7 +39,7 @@ describe('TodoService', () => {
             todoRepository.shouldFailMakeTodo = true;
 
             try {
-                const newTodo = await todoService.makeTodo(makePayload)
+                const newTodo = await todoService.makeTodo('uid', makePayload)
             } catch(error) {
                 assert.equal(error != null, true);
             }
@@ -50,7 +52,7 @@ describe('TodoService', () => {
                 stubEventTimeRepository.shouldFailUpdateTime = true
 
                 try {
-                    const newTodo = await todoService.makeTodo(makePayload)
+                    const newTodo = await todoService.makeTodo('uid', makePayload)
                 } catch(error) {
                     assert.equal(error != null, true);
                 }
@@ -84,7 +86,7 @@ describe('TodoService', () => {
         }
 
         it('성공시 업데이트된 값 전달', async () => {
-            const todo = await todoService.updateTodo('origin', payload);
+            const todo = await todoService.updateTodo('uid', 'origin', payload);
             assert.equal(todo.uuid, 'origin')
             assert.equal(todo.name, 'new name')
             assert.equal(todo.event_tag_id, 'new tag')
@@ -102,7 +104,7 @@ describe('TodoService', () => {
             let payload2 = JSON.parse(JSON.stringify(payload));
             payload2.event_tag_id = null;
 
-            const todo = await todoService.updateTodo('origin', payload2);
+            const todo = await todoService.updateTodo('uid', 'origin', payload2);
             assert.equal(todo.uuid, 'origin')
             assert.equal(todo.name, 'new name')
             assert.equal(todo.event_tag_id, null)
@@ -118,7 +120,7 @@ describe('TodoService', () => {
         it('기존 todo 조회 실패시 에러', async () => {
 
             try {
-                const todo = await todoService.updateTodo('not_exists', payload);
+                const todo = await todoService.updateTodo('uid', 'not_exists', payload);
             } catch(error) {
                 assert.equal(error != null, true)
             }
@@ -129,7 +131,7 @@ describe('TodoService', () => {
             stubEventTimeRepository.shouldFailUpdateTime = true
 
             try {
-                const todo = await todoService.updateTodo('origin', payload);
+                const todo = await todoService.updateTodo('uid', 'origin', payload);
             } catch(error) {
                 assert.equal(error != null, true)
             }
@@ -140,7 +142,7 @@ describe('TodoService', () => {
             todoRepository.shouldfailUpdateTodo = true
             
             try {
-                const todo = await todoService.updateTodo('origin', payload);
+                const todo = await todoService.updateTodo('uid', 'origin', payload);
             } catch(error) {
                 assert.equal(error != null, true)
             }
@@ -162,4 +164,81 @@ describe('TodoService', () => {
             }
         });
     });
+
+    describe('complete todo', () => {
+
+        beforeEach(() => {
+            stubEventTimeRepository.shouldFailUpdateTime = false
+            todoRepository.shouldfailUpdateTodo = false
+            doneTodoRepository.shouldFailSave = false
+            todoRepository.removedTodoId = null
+        })
+
+        const originPayload = { name: 'done' }
+
+        it('origin 다음 반복 시간 있으면 기존 todo update', async () => {
+            
+            const nextTime = { time_type: 'at', timestamp: 100 }    
+            const result = await todoService.completeTodo('uid', 'origin', originPayload, nextTime)
+            assert.equal(result.done.name, 'done')
+            assert.equal(result.next_repeating.uuid, 'origin')
+            assert.equal(result.next_repeating.event_time.time_type, 'at')
+            assert.equal(result.next_repeating.event_time.timestamp, 100)
+            assert.equal(todoRepository.removedTodoId, null)
+        });
+        
+        it('origin 다음 반본시간 없는경우 기존 todo 삭제', async () => {
+            const result = await todoService.completeTodo('uid', 'origin', originPayload);
+            assert.equal(result.done.name, 'done')
+            assert.equal(result.next_repeating == null, true)
+            assert.equal(todoRepository.removedTodoId, 'origin')
+        });
+
+        it('완료 실패', async () => {
+            doneTodoRepository.shouldFailSave = true
+            try {
+                const result = await todoService.completeTodo('uid', 'origin', originPayload)
+            } catch (error) {
+                assert.equal(error != null, true)
+            }
+        })
+    })
+
+    describe('replace repeating todo', () => {
+
+        beforeEach(() => {
+            stubEventTimeRepository.shouldFailUpdateTime = false
+            todoRepository.shouldfailUpdateTodo = false
+            todoRepository.shouldFailMakeTodo = false
+            todoRepository.removedTodoId = null
+        })
+
+        const newPayload = { name: 'replaced' }
+
+        it('다음 반복이벤트 있는 경우에 기존 todo 업데이트', async () => {
+            const nextTime = { time_type: 'at', timestamp: 100 }    
+            const result = await todoService.replaceReaptingTodo('uid', 'origin', newPayload, nextTime)
+            assert.equal(result.new_todo.name, 'replaced')
+            assert.equal(result.next_repeating.uuid, 'origin')
+            assert.equal(result.next_repeating.event_time.time_type, 'at')
+            assert.equal(result.next_repeating.event_time.timestamp, 100)
+            assert.equal(todoRepository.removedTodoId, null)
+        }); 
+
+        it('다음 반복이벤트 없는 경우에 기존 todo 삭제', async () => {
+            const result = await todoService.replaceReaptingTodo('uid', 'origin', newPayload)
+            assert.equal(result.new_todo.name, 'replaced')
+            assert.equal(result.next_repeating == null, true)
+            assert.equal(todoRepository.removedTodoId, 'origin')
+        });
+
+        it('교체 실패', async () => {
+            todoRepository.shouldFailMakeTodo = true
+            try {
+                const result = await todoService.replaceReaptingTodo('uid', 'origin', newPayload);
+            } catch (error) {
+                assert.equal(error != null, true)
+            }
+        });
+    })
 })

@@ -38,6 +38,7 @@ class StubTodoRepository {
         this.makeNewTodo = this.makeNewTodo.bind(this);
         this.shouldFailMakeTodo = false
         this.shouldfailUpdateTodo = false
+        this.removedTodoId = null;
     }
 
     async makeNewTodo(payload) {
@@ -48,7 +49,7 @@ class StubTodoRepository {
         }
     }
 
-    async updateTodo(id, payload) {
+    async updateTodo(id, payload, isPartial) {
         if(this.shouldfailUpdateTodo) {
             throw { message: 'failed' }
         } else {
@@ -62,6 +63,10 @@ class StubTodoRepository {
         } else {
             throw { message: 'not exists' }
         }
+    }
+
+    async removeTodo(id) {
+        this.removedTodoId = id;
     }
 }
 
@@ -84,8 +89,26 @@ class StubEventTimeRepository {
     }
 }
 
+// MARK: done todo event repository
+
+class StubDoneTodoEventRepository {
+
+    constructor()  {
+        this.shouldFailSave = false
+    }
+
+    async save(originId, origin) {
+        if(this.shouldFailSave) {
+            throw { message: 'failed'  }
+        } else {
+            return {uuid: 'new-done', origin_event_id: originId, ...origin }
+        }
+    }
+}
+
 module.exports = {
     Account: StubAccountRepository,
     Todo: StubTodoRepository, 
-    EventTime: StubEventTimeRepository
+    EventTime: StubEventTimeRepository, 
+    DoneTodo: StubDoneTodoEventRepository
 };

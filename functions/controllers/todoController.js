@@ -57,7 +57,7 @@ class TodooController {
         }
         
         try { 
-            const newTodo = await this.todoService.makeTodo(payload)
+            const newTodo = await this.todoService.makeTodo(userId, payload)
     
             res.status(201).send(newTodo);
     
@@ -75,9 +75,10 @@ class TodooController {
 
         const { body } = req;
         const todoId = req.params.id;
+        const userId = req.auth.uid;
 
         if(
-            !body.name || !todoId
+            !body.name || !todoId || !userId
         ) {
             res.status(400)
                 .send({
@@ -89,6 +90,7 @@ class TodooController {
 
         try {
             const payload = {
+                userId: userId,
                 name: body.name, 
                 event_tag_id: body.event_tag_id, 
                 event_time: body.event_time, 
@@ -96,7 +98,7 @@ class TodooController {
                 notification_options: body.notification_options
             }
             
-            const todo = await this.todoService.updateTodo(todoId, payload)
+            const todo = await this.todoService.updateTodo(userId, todoId, payload)
             res.status(201)
                 .send(todo);
 
@@ -109,6 +111,68 @@ class TodooController {
                 })
         }
     };
+
+    async completeTodo(req, res) {
+        const userId = req.auth.userId;
+        const originId = req.params.id;
+        const origin = req.body.origin
+        const nextEventTime = req.body.next_event_time
+        if(
+            !userId || !originId  || !origin
+        ) {
+            res.status(400)
+                .send({
+                    code: "InvalidParameter", 
+                    message: "todoId is missing." 
+                })
+            return;
+        }
+        
+        try {
+            const donePayload = {userId: userId, ...origin}
+            const result = await this.todoService.completeTodo(userId, originId, donePayload, nextEventTime);
+            res.status(201)
+                .send(result);
+        } catch(error) {
+            res.status(error?.status || 500)
+                .send({
+                    code: error?.code ?? "Unknown", 
+                    message: error?.message || error, 
+                    origin: error?.origin
+                })
+        }
+    };
+
+    async replaceRepeatingTodo(req, res) {
+        const userId = req.auth.uid;
+        const originId = req.params.id;
+        const newPayload = req.body.new
+        const originNextEventTime = req.body.origin_next_event_time
+        if(
+            !originId || !newPayload || !userId
+        ) {
+            res.status(400)
+                .send({
+                    code: "InvalidParameter", 
+                    message: "todoId is missing." 
+                })
+            return;
+        }
+
+        try {
+            const payload = {userId: userId, ...newPayload}
+            const result = await this.todoService.replaceRepeatingTodo(originId, payload, originNextEventTime);
+            res.status(201)
+                .send(result)
+        } catch (error) {
+            res.status(error?.status || 500)
+                .send({
+                    code: error?.code ?? "Unknown", 
+                    message: error?.message || error, 
+                    origin: error?.origin
+                })
+        }
+    }
 }
 
 module.exports = TodooController;
