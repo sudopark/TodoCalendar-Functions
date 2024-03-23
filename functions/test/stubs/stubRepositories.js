@@ -82,10 +82,14 @@ class StubEventTimeRangeRepository {
     }
 
     async updateTime(eventId, payload) {
+        let params = JSON.parse(JSON.stringify(payload))
         if (this.shouldFailUpdateTime) {
             throw { message: 'failed' }
         } else {
-            return {eventId: eventId, ...payload};
+            if(params.lower && !params.upper) {
+                params.no_endtime = true
+            }
+            return {eventId: eventId, ...params};
         }
     }
 
