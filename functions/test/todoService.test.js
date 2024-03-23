@@ -27,10 +27,18 @@ describe('TodoService', () => {
             stubEventTimeRepository.shouldFailUpdateTime = false
         })
 
-        it('success', async () => {
-  
+        it('success - current todo', async () => {
             const newTodo = await todoService.makeTodo('uid', makePayload)
             assert.equal(newTodo.uuid, "new")
+            assert.equal(newTodo.is_current, true)
+        })
+
+        it('success - not current todo', async () => {
+            let payload2 = {...makePayload}
+            payload2.event_time = { time_type: 'at', timestamp: 100 }
+            const newTodo = await todoService.makeTodo('uid', payload2)
+            assert.equal(newTodo.uuid, "new")
+            assert.equal(newTodo.is_current, null)
         })
 
         // todo 저장 실패
@@ -59,6 +67,102 @@ describe('TodoService', () => {
             })
         })
     });
+
+    describe('put todo', () => {
+
+        beforeEach(() => {
+            todoRepository.shouldFailPutTodo = false;
+            stubEventTimeRepository.shouldFailUpdateTime = false
+        })
+
+        const payload = {
+            name: 'new name', 
+            event_tag_id: 'new tag', 
+            event_time:  {
+                time_type: "at",
+                timestamp: 200
+            },
+            repeating: {
+                start: 10, 
+                end: 120, 
+                option: { optionType: 'every_day', interval: 3 }
+            }, 
+            notification_options: [
+                {type_text: 'at_time'}
+            ]
+        }
+
+        it('성공시 업데이트된 값 전달', async () => {
+            const todo = await todoService.putTodo('uid', 'origin', payload);
+            assert.equal(todo.uuid, 'origin')
+            assert.equal(todo.name, 'new name')
+            assert.equal(todo.event_tag_id, 'new tag')
+            assert.equal(todo.event_time.time_type, 'at')
+            assert.equal(todo.event_time.timestamp, 200)
+            assert.equal(todo.repeating.start, 10)
+            assert.equal(todo.repeating.end, 120)
+            assert.equal(todo.repeating.option.optionType, 'every_day')
+            assert.equal(todo.repeating.option.interval, 3)
+            assert.equal(todo.notification_options[0].type_text, 'at_time')
+            assert.equal(todo.is_current, null)
+        });
+
+        it('성공시 업데이트된 값 전달 - current 로 변경', async () => {
+            let payload2 = JSON.parse(JSON.stringify(payload))
+            payload2.event_time = null
+            const todo = await todoService.putTodo('uid', 'origin', payload2);
+            assert.equal(todo.uuid, 'origin')
+            assert.equal(todo.name, 'new name')
+            assert.equal(todo.event_tag_id, 'new tag')
+            assert.equal(todo.event_time, null)
+            assert.equal(todo.repeating.start, 10)
+            assert.equal(todo.repeating.end, 120)
+            assert.equal(todo.repeating.option.optionType, 'every_day')
+            assert.equal(todo.repeating.option.interval, 3)
+            assert.equal(todo.notification_options[0].type_text, 'at_time')
+            assert.equal(todo.is_current, true)
+        });
+
+        it('기존에 있는 값 업데이트하고 값 전달 / 삭제된 값은 제거후', async () => {
+
+            let payload2 = JSON.parse(JSON.stringify(payload));
+            payload2.event_tag_id = null;
+
+            const todo = await todoService.putTodo('uid', 'origin', payload2);
+            assert.equal(todo.uuid, 'origin')
+            assert.equal(todo.name, 'new name')
+            assert.equal(todo.event_tag_id, null)
+            assert.equal(todo.event_time.time_type, 'at')
+            assert.equal(todo.event_time.timestamp, 200)
+            assert.equal(todo.repeating.start, 10)
+            assert.equal(todo.repeating.end, 120)
+            assert.equal(todo.repeating.option.optionType, 'every_day')
+            assert.equal(todo.repeating.option.interval, 3)
+            assert.equal(todo.notification_options[0].type_text, 'at_time')
+        });
+
+        it('이벤트타임 업데이트 실패하면 에러', async () => {
+            
+            stubEventTimeRepository.shouldFailUpdateTime = true
+
+            try {
+                const todo = await todoService.putTodo('uid', 'origin', payload);
+            } catch(error) {
+                assert.equal(error != null, true)
+            }
+        });
+
+        it('실패시 에러', async () => {
+            
+            todoRepository.shouldFailPutTodo = true
+            
+            try {
+                const todo = await todoService.putTodo('uid', 'origin', payload);
+            } catch(error) {
+                assert.equal(error != null, true)
+            }
+        });
+    })
 
     describe('update todo', () => {
 
@@ -97,33 +201,23 @@ describe('TodoService', () => {
             assert.equal(todo.repeating.option.optionType, 'every_day')
             assert.equal(todo.repeating.option.interval, 3)
             assert.equal(todo.notification_options[0].type_text, 'at_time')
+            assert.equal(todo.is_current, false)
         });
 
-        it('기존에 있는 값 업데이트하고 값 전달 / 삭제된 값은 제거후', async () => {
-
-            let payload2 = JSON.parse(JSON.stringify(payload));
-            payload2.event_tag_id = null;
-
+        it('성공시 업데이트된 값 전달 - eventTime 업데이트 안하면 is_current 세팅 안함', async () => {
+            let payload2 = JSON.parse(JSON.stringify(payload))
+            payload2.event_time = null
             const todo = await todoService.updateTodo('uid', 'origin', payload2);
             assert.equal(todo.uuid, 'origin')
             assert.equal(todo.name, 'new name')
-            assert.equal(todo.event_tag_id, null)
-            assert.equal(todo.event_time.time_type, 'at')
-            assert.equal(todo.event_time.timestamp, 200)
+            assert.equal(todo.event_tag_id, 'new tag')
+            assert.equal(todo.event_time, null)
             assert.equal(todo.repeating.start, 10)
             assert.equal(todo.repeating.end, 120)
             assert.equal(todo.repeating.option.optionType, 'every_day')
             assert.equal(todo.repeating.option.interval, 3)
             assert.equal(todo.notification_options[0].type_text, 'at_time')
-        });
-
-        it('기존 todo 조회 실패시 에러', async () => {
-
-            try {
-                const todo = await todoService.updateTodo('uid', 'not_exists', payload);
-            } catch(error) {
-                assert.equal(error != null, true)
-            }
+            assert.equal(todo.is_current, null)
         });
 
         it('이벤트타임 업데이트 실패하면 에러', async () => {

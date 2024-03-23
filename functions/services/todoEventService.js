@@ -14,14 +14,19 @@ class TodoEventService {
     }
 
     async makeTodo (userId, payload) {
-        let newTodo = await this.todoRepository.makeNewTodo(payload);
+        const newTodo = await this.todoRepository.makeNewTodo(payload);
         await this.#updateEventtime(userId, newTodo)
         return newTodo
     };
 
-    async updateTodo(userId, todoId, payload) {
+    async putTodo(userId, todoId, payload) {
+        const updated = await this.todoRepository.putTodo(todoId, payload);
+        await this.#updateEventtime(userId, updated);
+        return updated
+    }
 
-        let updated = await this.todoRepository.updateTodo(todoId, payload, true);
+    async updateTodo(userId, todoId, payload) {
+        const updated = await this.todoRepository.updateTodo(todoId, payload);
         await this.#updateEventtime(userId, updated);
         return updated
     }
@@ -31,7 +36,7 @@ class TodoEventService {
         const done = await this.doneTodoRepository.save(originId, origin);
         if(nextEventTime != null) {
             const payload = { event_time: nextEventTime }
-            let updatedTodo = await this.todoRepository.updateTodo(originId, payload, true);
+            let updatedTodo = await this.todoRepository.updateTodo(originId, payload);
             await this.#updateEventtime(userId, updatedTodo)
             return { done: done, next_repeating: updatedTodo }
         } else {
@@ -46,7 +51,7 @@ class TodoEventService {
 
         if(originNextEventTime != null) {
             const payload = { event_time: originNextEventTime }
-            let updatedTodo = await this.todoRepository.updateTodo(originId, payload, true)
+            let updatedTodo = await this.todoRepository.updateTodo(originId, payload)
             await this.#updateEventtime(userId, updatedTodo)
             return { new_todo: newTodo, next_repeating: updatedTodo}
         } else {

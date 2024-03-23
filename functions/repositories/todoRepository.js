@@ -19,15 +19,27 @@ class TodoRepository {
         }
     }
 
-    async updateTodo(id, payload, isPartial = false) {
+    async putTodo(id, payload) {
         try {
+            const ref = admin.firestore()
+                .collection('todos')
+                .doc(id)
+            await ref.set(payload, {merge: false})
+            const snapshot = await ref.get();
+            return {uuid: snapshot.id, ...snapshot.data() }
+        } catch (error) {
+            throw { status: 500, message: error?.message || error};
+        }
+    }
 
-            const ref = await admin.firestore()
+    async updateTodo(id, payload) {
+        try {
+            const ref = admin.firestore()
                 .collection("todos")
                 .doc(id)
-            await ref.set(payload, { merge: isPartial})
+            await ref.set(payload, { merge: true })
             const snapshot = await ref.get()
-            return { id: snapshot.id, ...snapshot.data() }
+            return { uuid: snapshot.id, ...snapshot.data() }
 
         } catch (error) {
             throw { status: 500, message: error?.message || error};

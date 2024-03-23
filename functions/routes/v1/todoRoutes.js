@@ -23,6 +23,10 @@ router.post("/todo", async (req, res) => {
     todoController.makeTodo(req, res);
 });
 
+router.put("/todo/:id", async (req, res) => {
+    todoController.putTodo(req, res);
+});
+
 router.patch("/todo/:id", async (req, res) => {
     todoController.patchTodo(req, res);
 });

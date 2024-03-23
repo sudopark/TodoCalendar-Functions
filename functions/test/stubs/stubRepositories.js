@@ -37,23 +37,44 @@ class StubTodoRepository {
     constructor() {
         this.makeNewTodo = this.makeNewTodo.bind(this);
         this.shouldFailMakeTodo = false
+        this.shouldFailPutTodo = false
         this.shouldfailUpdateTodo = false
         this.removedTodoId = null;
     }
 
     async makeNewTodo(payload) {
+        let params = JSON.parse(JSON.stringify(payload))
         if (this.shouldFailMakeTodo) {
             throw { message: 'failed' }
         } else {
-            return {uuid: "new", ...payload};
+            if(!params.event_time) {
+                params.is_current = true
+            }
+            return {uuid: "new", ...params};
         }
     }
 
-    async updateTodo(id, payload, isPartial) {
+    async putTodo(id, payload) {
+        let params = JSON.parse(JSON.stringify(payload))
+        if(this.shouldFailPutTodo) {
+            throw { message: 'failed' }
+        } else {
+            if(!params.event_time) {
+                params.is_current = true
+            }
+            return {uuid: id, ...params}
+        }
+    }
+
+    async updateTodo(id, payload) {
+        let params = JSON.parse(JSON.stringify(payload))
         if(this.shouldfailUpdateTodo) {
             throw { message: 'failed' }
         } else {
-            return {uuid: id, ...payload}
+            if(params.event_time) {
+                params.is_current = false
+            }
+            return {uuid: id, ...params}
         }
     }
 

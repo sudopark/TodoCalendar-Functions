@@ -71,8 +71,7 @@ class TodooController {
         }
     }
 
-    async patchTodo(req, res) {
-
+    async putTodo(req, res) {
         const { body } = req;
         const todoId = req.params.id;
         const userId = req.auth.uid;
@@ -89,16 +88,41 @@ class TodooController {
         }
 
         try {
-            const payload = {
-                userId: userId,
-                name: body.name, 
-                event_tag_id: body.event_tag_id, 
-                event_time: body.event_time, 
-                repeating: body.repeating, 
-                notification_options: body.notification_options
-            }
-            
-            const todo = await this.todoService.updateTodo(userId, todoId, payload)
+            const payload = {userId: userId, ...body }
+            const todo = await this.todoService.putTodo(userId, todoId, payload);
+            res.status(201)
+                .send(todo);
+
+        } catch (error) {
+            res.status(error?.status || 500)
+                .send({
+                    code: error?.code ?? "Unknown", 
+                    message: error?.message || error, 
+                    origin: error?.origin
+                })
+        }
+    }
+
+    async patchTodo(req, res) {
+
+        const { body } = req;
+        const todoId = req.params.id;
+        const userId = req.auth.uid;
+
+        if(
+            !todoId || !userId
+        ) {
+            res.status(400)
+                .send({
+                    code: "InvalidParameter", 
+                    message: "user id or todoId is missing." 
+                })
+            return;
+        }
+
+        try {
+
+            const todo = await this.todoService.updateTodo(userId, todoId, body)
             res.status(201)
                 .send(todo);
 
