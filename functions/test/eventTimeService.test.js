@@ -29,14 +29,14 @@ describe("EventTimeService", () => {
 
     describe("time 없는 경우", () => {
         it("둘다 없는 경우", async () => {
-            let result = await service.updateEventTime('uid', "id")
+            let result = await service.updateEventTime('uid', true, "id")
             assert.equal(result.eventId, "id")
             assert.equal(result.lower, null)
             assert.equal(result.upper, null)
             assert.equal(result.no_endtime, null)
         })
         it("time은 없는데 repeating은 있는 경우", async () => {
-            let result = await service.updateEventTime('uid',"id", null, dummyRepeatWithEndTime)
+            let result = await service.updateEventTime('uid', true, "id", null, dummyRepeatWithEndTime)
             assert.equal(result.eventId, "id")
             assert.equal(result.lower, null)
             assert.equal(result.upper, null)
@@ -50,21 +50,21 @@ describe("EventTimeService", () => {
             timestamp: 300
         }
         it("repeat 있고 종료시간은 없는 경우 => repeat.start...", async () => {
-            let result = await service.updateEventTime('uid', "id", at, dummyRepeatWithoutEndTime)
+            let result = await service.updateEventTime('uid', true, "id", at, dummyRepeatWithoutEndTime)
             assert.equal(result.eventId, "id")
             assert.equal(result.lower, 10)
             assert.equal(result.upper, null)
             assert.equal(result.no_endtime, true)
         })
         it("repeat 있고 종료시간 있는 경우 => repeat.start..<repeat.end", async () => {
-            let result = await service.updateEventTime('uid', "id", at, dummyRepeatWithEndTime)
+            let result = await service.updateEventTime('uid', true, "id", at, dummyRepeatWithEndTime)
             assert.equal(result.eventId, "id")
             assert.equal(result.lower, 10)
             assert.equal(result.upper, 1000)
             assert.equal(result.no_endtime, null)
         })
         it("repeat 없는 경우 => time.timestamp..<time.timestamp", async () => {
-            let result = await service.updateEventTime('uid', "id", at)
+            let result = await service.updateEventTime('uid', true, "id", at)
             assert.equal(result.eventId, "id")
             assert.equal(result.lower, 300)
             assert.equal(result.upper, 300)
@@ -79,21 +79,21 @@ describe("EventTimeService", () => {
             period_end: 200 
         }
         it("repeat 있고 종료시간은 없는 경우 => repeat.start...", async () => {
-            let result = await service.updateEventTime('uid', "id", period, dummyRepeatWithoutEndTime)
+            let result = await service.updateEventTime('uid', true, "id", period, dummyRepeatWithoutEndTime)
             assert.equal(result.eventId, "id")
             assert.equal(result.lower, 10)
             assert.equal(result.upper, null)
             assert.equal(result.no_endtime, true)
         })
         it("repeat 있고 종료시간 있는 경우 => repeat.start..<repeat.end", async () => {
-            let result = await service.updateEventTime('uid', "id", period, dummyRepeatWithEndTime)
+            let result = await service.updateEventTime('uid', true, "id", period, dummyRepeatWithEndTime)
             assert.equal(result.eventId, "id")
             assert.equal(result.lower, 10)
             assert.equal(result.upper, 1000)
             assert.equal(result.no_endtime, null)
         })
         it("repeat 없는 경우 => time.period_start..<time.period_end", async () => {
-            let result = await service.updateEventTime('uid', "id", period)
+            let result = await service.updateEventTime('uid', true, "id", period)
             assert.equal(result.eventId, "id")
             assert.equal(result.lower, 20)
             assert.equal(result.upper, 200)
@@ -115,28 +115,28 @@ describe("EventTimeService", () => {
             period_end: 400, 
         }
         it("offset 없는 경우 => { }", async () => {
-            let result = await service.updateEventTime('uid', "id", allDayWithoutOffset)
+            let result = await service.updateEventTime('uid', true, "id", allDayWithoutOffset)
             assert.equal(result.eventId, "id")
             assert.equal(result.lower, null)
             assert.equal(result.upper, null)
             assert.equal(result.no_endtime, null)
         })
         it("repeat 있고 종료시간 없는 경우 => 조정(repeat.start)...", async () => {
-            let result = await service.updateEventTime('uid', "id", allday, dummyRepeatWithoutEndTime)
+            let result = await service.updateEventTime('uid', true, "id", allday, dummyRepeatWithoutEndTime)
             assert.equal(result.eventId, "id")
             assert.equal(result.lower, 10+7-14*3600)
             assert.equal(result.upper, null)
             assert.equal(result.no_endtime, true)
         })
         it("repeat 있고 종료시간 있는 경우 => 조정(repeat.start)..<(repeat.end)", async () => {
-            let result = await service.updateEventTime('uid', "id", allday, dummyRepeatWithEndTime)
+            let result = await service.updateEventTime('uid', true, "id", allday, dummyRepeatWithEndTime)
             assert.equal(result.eventId, "id")
             assert.equal(result.lower, 10+7-14*3600)
             assert.equal(result.upper, 1000+7+12*3600)
             assert.equal(result.no_endtime, null)
         })
         it("repeat 없는 경우 => time.period_start..<time.period_end", async () => {
-            let result = await service.updateEventTime('uid', "id", allday)
+            let result = await service.updateEventTime('uid', true, "id", allday)
             assert.equal(result.eventId, "id")
             assert.equal(result.lower, 40+7-14*3600)
             assert.equal(result.upper, 400+7+12*3600)

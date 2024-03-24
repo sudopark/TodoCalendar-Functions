@@ -33,6 +33,42 @@ class TodooController {
         }
     }
 
+    async getTodos(req, res) {
+        
+        const userId = req.auth.uid;
+        const lower = req.query.lower; const upper = req.query.upper
+
+        if( !userId ) {
+            res.status(400)
+                .send({
+                    code: "InvalidParameter", 
+                    message: "user id is missing." 
+                })
+            return;
+        }
+
+        try {
+
+            if(lower && upper) {
+                const todos = await this.todoService.findTodos(userId, lower, upper)
+                res.status(200)
+                    .send(todos)
+            } else {
+                const currents = await this.todoService.findCurrentTodo(userId);
+                res.status(200)
+                    .send(currents)
+            }
+
+        } catch (error) {
+            res.status(error?.status || 500)
+                .send({
+                    code: error?.code ?? "Unknown", 
+                    message: error?.message || error, 
+                    origin: error?.origin
+                })
+        }
+    }
+
     async makeTodo(req, res) {
 
         const { body } = req; const userId = req.auth.uid

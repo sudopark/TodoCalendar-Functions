@@ -1,4 +1,5 @@
 
+const { chunk } = require('../Utils/functions');
 
 class TodoEventService {
 
@@ -9,8 +10,20 @@ class TodoEventService {
     }
 
     async findTodo(todoId) {
-        const todo = await this.todoRepository.findTodo(todoId);
-        return todo
+        return this.todoRepository.findTodo(todoId);
+    }
+
+    async findTodos(userId, lower, upper) {
+        const eventIds = await this.eventTimeRangeService.eventIds(userId, true, lower, upper);
+        const eventIdSlices = chunk(eventIds, 30)
+        const loadTodods = eventIdSlices.map((ids) => {
+            return this.todoRepository.findTodos(ids)
+        })
+        return (await Promise.all(loadTodods)).flat();
+    }
+
+    async findCurrentTodo(userId) {
+        return this.todoRepository.findCurrentTodos(userId)
     }
 
     async makeTodo (userId, payload) {
@@ -69,6 +82,7 @@ class TodoEventService {
     async #updateEventtime(userId, todo) {
         await this.eventTimeRangeService.updateEventTime(
             userId,
+            true,
             todo.uuid, 
             todo.event_time ?? {}, 
             todo.repeating ?? {}

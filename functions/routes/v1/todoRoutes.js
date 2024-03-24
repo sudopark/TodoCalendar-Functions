@@ -19,6 +19,10 @@ router.get("/todo/:id", async (req, res) => {
     todoController.getTodo(req, res);
 });
 
+router.get('/', async (req, res) => {
+    todoController.getTodos(req, res);
+});
+
 router.post("/todo", async (req, res) => {
     todoController.makeTodo(req, res);
 });

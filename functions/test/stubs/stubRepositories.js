@@ -86,6 +86,21 @@ class StubTodoRepository {
         }
     }
 
+    async findCurrentTodos(userId) {
+        const todos = [
+            { uuid: 'current1', userId: userId, is_current: true },
+            { uuid: 'current2', userId: userId, is_current: true }
+        ]
+        return todos
+    } 
+
+    async findTodos(eventIds) {
+        const todos = eventIds.map((id) => {
+            return { uuid: id, userId: 'some' }
+        })
+        return todos
+    }
+
     async removeTodo(id) {
         this.removedTodoId = id;
     }
@@ -116,6 +131,12 @@ class StubEventTimeRangeRepository {
 
     async remove(eventId) {
         this.didRemovedEventId = eventId
+    }
+
+    async eventIds(userId, isTodo, lower, upper) {
+        const len = upper - lower
+        const array = Array.from({length: len}, (v, i) => i+lower)
+        return array.map(i => `id:${i}`)
     }
 }
 

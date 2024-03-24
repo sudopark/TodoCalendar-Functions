@@ -243,22 +243,6 @@ describe('TodoService', () => {
         });
     });
 
-    describe('find todo', () => {
-
-        it('조회 성공', async () => {
-            const todo = await todoService.findTodo("origin")
-            assert.equal(todo.name, 'old_name')
-        });
-
-        it('조회 실패', async () => {
-            try {
-                await todoService.findTodo('not exists');;
-            } catch(error) {
-                assert.equal(error != null, true)
-            }
-        });
-    });
-
     describe('complete todo', () => {
 
         beforeEach(() => {
@@ -355,6 +339,43 @@ describe('TodoService', () => {
             assert.equal(result.status, 'ok')
             assert.equal(todoRepository.removedTodoId, 'some')
             assert.equal(stubEventTimeRepository.didRemovedEventId, 'some')
+        })
+    })
+
+    describe('find todo', () => {
+
+        it('조회 성공', async () => {
+            const todo = await todoService.findTodo("origin")
+            assert.equal(todo.name, 'old_name')
+        });
+
+        it('조회 실패', async () => {
+            try {
+                await todoService.findTodo('not exists');;
+            } catch(error) {
+                assert.equal(error != null, true)
+            }
+        });
+    });
+
+    describe('find current todos', () => {
+
+        it('조회 성공', async () => {
+            const todos = await todoService.findCurrentTodo('some')
+            assert.equal(todos.length, 2)
+        })
+    });
+
+    describe('find todos in range', () => {
+
+        it('조회 성공', async () => {
+            const todos = await todoService.findTodos('some', 0, 10)
+            assert.equal(todos.length, 10)
+        })
+
+        it('30개 이상인 경우도 조회성공', async () => {
+            const todos = await todoService.findTodos('some', 0, 100)
+            assert.equal(todos.length, 100)
         })
     })
 })
