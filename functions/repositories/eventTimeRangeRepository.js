@@ -12,7 +12,7 @@ class EventTimeRangeRepository {
         try {
             let result = await admin.firestore().collection("event_times")
                 .doc(eventId)
-                .set(payload, { merge: false} )
+                .set(payload, { merge: false } )
             return {eventId: eventId, ...payload}
 
         } catch (error) {

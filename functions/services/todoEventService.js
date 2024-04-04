@@ -84,8 +84,8 @@ class TodoEventService {
             userId,
             true,
             todo.uuid, 
-            todo.event_time ?? {}, 
-            todo.repeating ?? {}
+            todo.event_time,
+            todo.repeating
         )
     }
 }

@@ -1,6 +1,6 @@
 
 
-const { getFirestore, Filter, FieldPath } = require('firebase-admin/firestore');
+const { getFirestore, FieldPath } = require('firebase-admin/firestore');
 
 const db = getFirestore();
 const collectionRef = db.collection('todos')
