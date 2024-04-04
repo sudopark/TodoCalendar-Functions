@@ -18,6 +18,7 @@ getFirestore().settings({ignoreUndefinedProperties: true});
 // router instance
 const v1AccountRouter = require('./routes/v1/accountRoutes');
 const v1TodoRouter = require("./routes/v1/todoRoutes");
+const v1ScheduleRouter = require('./routes/v1/schedulesRoutes');
 const v1TestRouter = require('./routes/v1/testRoutes');
 
 const app = express();
@@ -27,6 +28,7 @@ app.use(bodyParser.json());
 // setup router
 app.use("/v1/accounts", v1AccountRouter);
 app.use("/v1/todos", authValidator, v1TodoRouter);
+app.use("/v1/schedules", authValidator, v1ScheduleRouter);
 app.use('/v1/tests', v1TestRouter);
 
 exports.api = functions.https.onRequest(app);

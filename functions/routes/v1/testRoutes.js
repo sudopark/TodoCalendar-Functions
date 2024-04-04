@@ -10,6 +10,26 @@ const TodoRepository = require('../../repositories/todoRepository');
 const todoReposiotry = new TodoRepository()
 
 const { chunk } = require('../../Utils/functions')
+
+router.get('/', (req, res) => {
+    res.status(200)
+     .send({ path: '/' })
+})
+
+router.get('/path', (req, res) => {
+    res.status(200)
+        .send({ path: '/path' })
+});
+
+router.get('/path/:id', (req, res) => {
+    res.status(200)
+        .send({ path: `/path/${req.params.id}` })
+});
+
+router.get('/path/:id/sub', (req, res) => {
+    res.status(200)
+        .send({ path: `/path/${req.params.id}/sub` })
+});
      
 router.get('/current/todos', async (req, res) => {
     try {

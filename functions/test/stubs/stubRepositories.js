@@ -107,6 +107,28 @@ class StubTodoRepository {
 }
 
 
+// MARK: - schedule event
+
+class StubScheduleEventRepository {
+
+    constructor() {
+        this.shouldFailMake = false
+        this.eventMap = new Map();
+    }
+ 
+    async makeEvent(payload) {
+        if(this.shouldFailMake) {
+            throw { message: 'failed' }
+        }
+
+        let newEvent = JSON.parse(JSON.stringify(payload))
+        newEvent['uuid'] = 'new'
+        this.eventMap.set(newEvent.uuid, newEvent);
+        return newEvent
+    }
+}
+
+
 // MARK: - event time
 
 class StubEventTimeRangeRepository {
@@ -115,6 +137,7 @@ class StubEventTimeRangeRepository {
         this.updateTime = this.updateTime.bind(this);
         this.shouldFailUpdateTime = false
         this.didRemovedEventId = null
+        this.eventTimeMap = new Map();
     }
 
     async updateTime(eventId, payload) {
@@ -125,7 +148,9 @@ class StubEventTimeRangeRepository {
             if(params.lower && !params.upper) {
                 params.no_endtime = true
             }
-            return {eventId: eventId, ...params};
+            const range = {eventId: eventId, ...params};
+            this.eventTimeMap.set(eventId, range)
+            return range;
         }
     }
 
@@ -161,5 +186,6 @@ module.exports = {
     Account: StubAccountRepository,
     Todo: StubTodoRepository, 
     EventTime: StubEventTimeRangeRepository, 
-    DoneTodo: StubDoneTodoEventRepository
+    DoneTodo: StubDoneTodoEventRepository, 
+    ScheduleEvent: StubScheduleEventRepository,
 };
