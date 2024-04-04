@@ -82,7 +82,30 @@ class ScheduleEventController {
     }
 
     async patchEvent(req, res) {
+        const { body } = req, eventId = req.params.id, userId = req.auth.userId;
+        if(
+            !eventId || !userId
+        ) {
+            res.status(400)
+                .send({
+                    code: "InvalidParameter", 
+                    message: "user id or eventId is missing." 
+                })
+            return;
+        }
 
+        try {
+            const updated = await this.scheduleEventService.updateEvent(userId, eventId, body)
+            res.status(201)
+                .send(updated)
+        } catch (error) {
+            res.status(error?.status || 500)
+                .send({
+                    code: error?.code ?? "Unknown", 
+                    message: error?.message || error, 
+                    origin: error?.origin
+                })
+        }
     }
 
     async excludeRepeatingTime(req, res) {

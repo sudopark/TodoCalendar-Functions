@@ -114,6 +114,7 @@ class StubScheduleEventRepository {
     constructor() {
         this.shouldFailMake = false
         this.shouldFailPut = false
+        this.shouldFailUpdate = false
         this.eventMap = new Map();
     }
  
@@ -134,6 +135,20 @@ class StubScheduleEventRepository {
         }
         let updated = JSON.parse(JSON.stringify(payload))
         updated.uuid = eventId
+        this.eventMap.set(eventId, updated)
+        return updated
+    }
+
+    async updateEvent(eventId, payload) {
+        if(this.shouldFailUpdate) {
+            throw { message: 'failed' }
+        }
+        const oldValue = this.eventMap.get(eventId);
+        if(!oldValue) {
+            throw { message: 'not exists' }
+        }
+        const newValue = JSON.parse(JSON.stringify(payload));
+        const updated = { ...oldValue, ...newValue }
         this.eventMap.set(eventId, updated)
         return updated
     }
