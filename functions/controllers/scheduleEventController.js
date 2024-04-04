@@ -52,7 +52,33 @@ class ScheduleEventController {
     }
 
     async putEvent(req, res) {
+        const { body } = req;
+        const eventId = req.params.id, userId = req.auth.uid;
+        if(
+            !body.name || !eventId || !userId || !body.event_time
+        ) {
+            res.status(400)
+                .send({
+                    code: "InvalidParameter", 
+                    message: "schedule name, user id, event_time or eventId is missing." 
+                })
+            return;
+        }
 
+        try {
+            const payload = { userId: userId, ...body }
+            const event = await this.scheduleEventService.putEvent(userId, eventId, payload);
+            res.status(201)
+                .send(event);
+
+        } catch (error) {
+            res.status(error?.status || 500)
+                .send({
+                    code: error?.code ?? "Unknown", 
+                    message: error?.message || error, 
+                    origin: error?.origin
+                })
+        }
     }
 
     async patchEvent(req, res) {

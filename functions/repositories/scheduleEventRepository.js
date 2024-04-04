@@ -16,6 +16,17 @@ class ScheduleEventRepository {
             throw { status: 500, message: error?.message || error};
         }
     }
+
+    async putEvent(eventId, payload) {
+        try {
+            const ref = collectionRef.doc(eventId);
+            await ref.set(payload, { merge: false })
+            const snapshot = await ref.get();
+            return { uuid: snapshot.id, ...snapshot.data() };
+        } catch (error) {
+            throw { status: 500, message: error?.message || error};
+        }
+    }
 }
 
 module.exports = ScheduleEventRepository;

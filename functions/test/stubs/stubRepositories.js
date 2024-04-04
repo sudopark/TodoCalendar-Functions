@@ -113,6 +113,7 @@ class StubScheduleEventRepository {
 
     constructor() {
         this.shouldFailMake = false
+        this.shouldFailPut = false
         this.eventMap = new Map();
     }
  
@@ -122,9 +123,19 @@ class StubScheduleEventRepository {
         }
 
         let newEvent = JSON.parse(JSON.stringify(payload))
-        newEvent['uuid'] = 'new'
+        newEvent['uuid'] = 'some'
         this.eventMap.set(newEvent.uuid, newEvent);
         return newEvent
+    }
+
+    async putEvent(eventId, payload) {
+        if(this.shouldFailPut) {
+            throw { message: 'failed' }
+        }
+        let updated = JSON.parse(JSON.stringify(payload))
+        updated.uuid = eventId
+        this.eventMap.set(eventId, updated)
+        return updated
     }
 }
 

@@ -13,6 +13,12 @@ class ScheduleEventService {
         return newEvent;
     }
 
+    async putEvent(userId, eventId, payload) {
+        const updated = await this.scheduleEventRepository.putEvent(eventId, payload);
+        await this.#updateEventtime(userId, updated);
+        return updated;
+    }
+
     async #updateEventtime(userId, event) {
         await this.eventTimeRangeService.updateEventTime(
             userId,
