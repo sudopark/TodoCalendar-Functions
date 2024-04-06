@@ -117,6 +117,14 @@ class StubScheduleEventRepository {
         this.shouldFailUpdate = false
         this.eventMap = new Map();
     }
+
+    async findEvent(eventId) {
+        const event = this.eventMap.get(eventId);
+        if(!event) {
+            throw { message: 'not exists' }
+        }
+        return event
+    }
  
     async makeEvent(payload) {
         if(this.shouldFailMake) {
@@ -152,6 +160,10 @@ class StubScheduleEventRepository {
         this.eventMap.set(eventId, updated)
         return updated
     }
+
+    async removeEvent(eventId) {
+        this.eventMap.delete(eventId)
+    }
 }
 
 
@@ -182,6 +194,7 @@ class StubEventTimeRangeRepository {
 
     async remove(eventId) {
         this.didRemovedEventId = eventId
+        this.eventTimeMap.delete(eventId)
     }
 
     async eventIds(userId, isTodo, lower, upper) {

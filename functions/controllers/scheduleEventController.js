@@ -109,11 +109,78 @@ class ScheduleEventController {
     }
 
     async excludeRepeatingTime(req, res) {
+        const eventId = req.params.id, userId = req.auth.userId
+        const newPayload = req.body.new, excludeTime = req.body.exlcude_time
+        if(
+            !eventId || !userId 
+        ) {
+            res.status(400)
+                .send({
+                    code: "InvalidParameter", 
+                    message: "user id or eventId is missing." 
+                })
+            return
+        }
 
+        if(
+            !(newPayload?.name) || !(newPayload?.event_time) || !excludeTime
+        ) {
+            res.status(400)
+                .send({
+                    code: "InvalidParameter", 
+                    message: "new payload event name, event_time or excludeTime is missing" 
+                })
+            return
+        }
+
+        const payload = {
+            userId: userId, 
+            name: newPayload.name, 
+            evnet_tag_id: newPayload.evnet_tag_id, 
+            event_time: newPayload.event_time,
+            repeating: newPayload.repeating, 
+            notification_options: newPayload.notification_options, 
+            show_turns: newPayload.show_turns
+        }
+
+        try {
+            const result = this.scheduleEventService.excludeRepeatingEventTime(
+                userId, eventId, excludeTime, payload
+            )
+            res.status(201)
+                .send(result)
+        } catch (error) {
+            res.status(error?.status || 500)
+                .send({
+                    code: error?.code ?? "Unknown", 
+                    message: error?.message || error, 
+                    origin: error?.origin
+                })
+        }
     }
 
     async removeEvent(req, res) {
+        const eventId = req.params.id
+        if(!eventId) {
+            res.status(400)
+                .send({
+                    code: "InvalidParameter", 
+                    message: "eventId is missing." 
+                })
+        }
 
+        try {
+            await this.scheduleEventService.removeEvent(eventId);
+            res.status(201)
+                .send({ status: 'ok' })
+        } catch (error) {
+            res.status(error?.status || 500)
+                .send({
+                    code: error?.code ?? "Unknown", 
+                    message: error?.message || error, 
+                    origin: error?.origin
+                })
+        }
     }
 }
 

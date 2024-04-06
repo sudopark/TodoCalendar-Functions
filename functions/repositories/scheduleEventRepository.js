@@ -6,6 +6,15 @@ const collectionRef = db.collection('schedules');
 
 class ScheduleEventRepository {
 
+    async findEvent(eventId) {
+        try {
+            const snapshot = await collectionRef.doc(eventId).get();
+            return { uuid: snapshot.id, ...snapshot.data() }
+        } catch (error) {
+            throw { status: 500, message: error?.message || error};
+        }
+    }
+
     async makeEvent(payload) {
 
         try {
@@ -34,6 +43,14 @@ class ScheduleEventRepository {
             await ref.set(payload, { merge: true })
             const snapshot = await ref.get();
             return { uuid: snapshot.id, ...snapshot.data() };
+        } catch (error) {
+            throw { status: 500, message: error?.message || error};
+        }
+    }
+
+    async removeEvent(eventId) {
+        try {
+            await collectionRef.doc(eventId).delete()
         } catch (error) {
             throw { status: 500, message: error?.message || error};
         }
