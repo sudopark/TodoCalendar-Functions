@@ -7,6 +7,20 @@ class ScheduleEventService {
         this.eventTimeRangeService = eventTimeRangeService
     }
 
+    async getEvent(eventId) {
+        const event = await this.scheduleEventRepository.findEvent(eventId);
+        return event
+    }
+
+    async findEvents(userId, lower, upper) {
+        const eventIds = await this.eventTimeRangeService.eventIds(userId, false, lower, upper);
+        const eventIdSlices = chunk(eventIds, 30)
+        const loadEvents = eventIdSlices.map((ids) => {
+            return this.scheduleEventRepository.findEvents(ids)
+        })
+        return (await Promise.all(loadEvents)).flat();
+    }
+
     async makeEvent(userId, payload) {
         const newEvent = await this.scheduleEventRepository.makeEvent(payload);
         await this.#updateEventtime(userId, newEvent);

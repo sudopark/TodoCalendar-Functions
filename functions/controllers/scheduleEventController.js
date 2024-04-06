@@ -6,12 +6,58 @@ class ScheduleEventController {
         this.scheduleEventService = scheduleEventService
     }
 
-    async getEvents(req, res) {
+    async getEvent(req, res) {
+        const eventId = req.params.id
+        if(!eventId) {
+            res.status(400)
+                .send({
+                    code: "InvalidParameter", 
+                    message: "event id is missing." 
+                })
+            return;
+        }
 
+        try {
+            const event = await this.scheduleEventService.getEvent(eventId);
+            res.status(200)
+                .send(event)
+        } catch (error) {
+            res.status(error?.status || 500)
+                .send({
+                    code: error?.code ?? "Unknown", 
+                    message: error?.message || error, 
+                    origin: error?.origin
+                })
+        }
     }
 
-    async getEvent(req, res) {
+    async getEvents(req, res) {
+        const userId = req.auth.uid;
+        const lower = req.query.lower, upper = req.query.upper;
 
+        if(
+            !userId || !lower || !upper
+        ) {
+            res.status(400)
+                .send({
+                    code: "InvalidParameter", 
+                    message: "user id, lower or upper is missing." 
+                })
+            return
+        }
+
+        try {
+            const events = await this.scheduleEventService.findEvents(userId, lower, upper);
+            res.status(200)
+                .send(events)
+        } catch (error) {
+            res.status(error?.status || 500)
+                .send({
+                    code: error?.code ?? "Unknown", 
+                    message: error?.message || error, 
+                    origin: error?.origin
+                })
+        }
     }
 
     async makeEvent(req, res) {
@@ -82,7 +128,7 @@ class ScheduleEventController {
     }
 
     async patchEvent(req, res) {
-        const { body } = req, eventId = req.params.id, userId = req.auth.userId;
+        const { body } = req, eventId = req.params.id, userId = req.auth.uid;
         if(
             !eventId || !userId
         ) {
@@ -109,7 +155,7 @@ class ScheduleEventController {
     }
 
     async excludeRepeatingTime(req, res) {
-        const eventId = req.params.id, userId = req.auth.userId
+        const eventId = req.params.id, userId = req.auth.uid
         const newPayload = req.body.new, excludeTime = req.body.exlcude_time
         if(
             !eventId || !userId 

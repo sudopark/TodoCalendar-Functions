@@ -15,6 +15,23 @@ class ScheduleEventRepository {
         }
     }
 
+    async findEvents(eventIds) {
+        if(!eventIds.length) {
+            return []
+        }
+        try {
+            const query = collectionRef
+                .where(FieldPath.documentId(), 'in', eventIds)
+            const snapshot = await query.get();
+            const events = snapshot.docs.map((doc => {
+                return { uuid: doc.id, ...doc.data() }
+            }))
+            return events
+        } catch (error) {
+            throw { status: 500, message: error?.message || error};
+        }
+    }
+
     async makeEvent(payload) {
 
         try {

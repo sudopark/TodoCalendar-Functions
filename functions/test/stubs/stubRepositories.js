@@ -125,6 +125,13 @@ class StubScheduleEventRepository {
         }
         return event
     }
+
+    async findEvents(eventIds) {
+        const events = eventIds.map((id) => {
+            return { uuid: id, userId: 'some' }
+        })
+        return events
+    }
  
     async makeEvent(payload) {
         if(this.shouldFailMake) {

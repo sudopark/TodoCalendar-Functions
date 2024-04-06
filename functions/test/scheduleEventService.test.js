@@ -242,4 +242,41 @@ describe('ScheduleEventService', () => {
             assert.equal(time == null, true)
         })
     })
+
+    describe('get event', () => {
+
+        beforeEach(async () => {
+            const payload = {
+                name: 'event', 
+                event_time: { time_type: 'at', timestamp: 100 }, 
+            }
+            await scheduleService.putEvent('owner', 'some', payload)
+        })
+
+        it('success', async () => {
+            const event = await scheduleService.getEvent('some')
+            assert.equal(event.name, 'event')
+        });
+
+        it('fail when not exists', async () => {
+            try {
+                const event = await scheduleService.getEvent('not exists')
+            } catch(error) {
+                assert.equal(error != null, true)
+            }
+        })
+    })
+
+    describe('find events', () => {
+
+        it('success', async () => {
+            const events = await scheduleService.findEvents('owner', 0, 10)
+            assert.equal(events.length, 10)
+        })
+
+        it('success: total count more than 30', async () => {
+            const events = await scheduleService.findEvents('owner', 0, 100)
+            assert.equal(events.length, 100)
+        })
+    })
 });

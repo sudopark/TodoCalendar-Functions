@@ -77,6 +77,9 @@ class TodoRepository {
     }
 
     async findTodos(eventIds) {
+        if(!eventIds.length) {
+            return []
+        }
         try {
             const query = collectionRef
                 .where(FieldPath.documentId(), 'in', eventIds)
