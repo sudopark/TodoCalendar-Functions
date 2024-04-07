@@ -228,10 +228,103 @@ class StubDoneTodoEventRepository {
     }
 }
 
+// MARK: - event tag repository
+
+class StubEventTagRepository {
+
+    constructor(eventTagMap) {
+        this.eventTagMap = eventTagMap
+        this.shouldFail = false
+        this.isFindTagsAlwaysReplayIdsMocking = false
+    }
+
+    async makeTag(payload) {
+
+        if(this.shouldFail) {
+            throw { message: 'failed' }
+        }
+
+        const newTag = {
+            uuid: 'new', name: payload.name, color_hex: payload.color_hex, userId: payload.userId
+        }
+        this.eventTagMap.set(newTag.uuid, newTag)
+        return newTag
+    }
+    async updateTag(tagId, payload) {
+
+        if(this.shouldFail) {
+            throw { message: 'failed' }
+        }
+
+        let tag = this.eventTagMap.get(tagId)
+        if(!tag) {
+            throw { message: 'not exists' }
+        }
+        tag.name = payload.name
+        tag.color_hex = payload.color_hex
+        this.eventTagMap[tag.uuid] = tag
+        return tag
+    }
+
+    async removeTag(tagId) {
+
+        if(this.shouldFail) {
+            throw { message: 'failed' }
+        }
+
+        this.eventTagMap.delete(tagId)
+    }
+    async findTagByName(name, userId) {
+        let sender = []
+        this.eventTagMap.forEach((v, _) => {
+            if(v.name == name && v.userId == userId) {
+                sender.push(v)
+            }
+        });
+        return sender
+    }
+    async findAllTags(userId) {
+
+        if(this.shouldFail) {
+            throw { message: 'failed' }
+        }
+
+        let sender = []
+        this.eventTagMap.forEach((v, _) => {
+            if(v.userId == userId) {
+                sender.push(v)
+            }
+        });
+        return sender
+    }
+    async findTags(ids) {
+
+        if(this.shouldFail) {
+            throw { message: 'failed' }
+        }
+
+        if(this.isFindTagsAlwaysReplayIdsMocking) {
+            const tags = ids.map(id => {
+                return { uuid: id, name: `name:${id}`, color_hex: 'some', userId: 'some'}
+            })
+            return tags
+        }
+
+        let sender = []
+        this.eventTagMap.forEach((v, k) => {
+            if(ids.includes(k)) {
+                sender.push(v)
+            }
+        });
+        return sender
+    }
+}
+
 module.exports = {
     Account: StubAccountRepository,
     Todo: StubTodoRepository, 
     EventTime: StubEventTimeRangeRepository, 
     DoneTodo: StubDoneTodoEventRepository, 
     ScheduleEvent: StubScheduleEventRepository,
+    EventTag: StubEventTagRepository
 };
