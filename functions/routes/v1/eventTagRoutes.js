@@ -6,7 +6,7 @@ const EventTagRepository = require('../../repositories/eventTagRepository');
 const EventTagService = require('../../services/eventTagService');
 const EventTagController = require('../../controllers/eventTagController');
 
-const controller = EventTagController(
+const controller = new EventTagController(
     new EventTagService(
         new EventTagRepository()
     )

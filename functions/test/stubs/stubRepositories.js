@@ -320,11 +320,50 @@ class StubEventTagRepository {
     }
 }
 
+// MARK: - evnet detail data
+
+class StubEventDetailDataRepository {
+
+    constructor(shouldFail) {
+        this.shouldFail = shouldFail
+        this.detailMap = new Map()
+    }
+
+    async putData(eventId, payload) {
+        if(this.shouldFail) {
+            throw { message: 'failed' }
+        }
+        const newDetail = JSON.parse(JSON.stringify(payload))
+        newDetail.eventId = eventId
+        this.detailMap.set(eventId, newDetail)
+        return newDetail
+    }
+
+    async findData(eventId) {
+        if(this.shouldFail) {
+            throw { message: 'failed' }
+        }
+        const data = this.detailMap.get(eventId)
+        if(!data) {
+            throw { code: 'EventDetailNotExists' }
+        }
+        return data
+    }
+
+    async removeData(eventId) {
+        if(this.shouldFail) {
+            throw { message: 'failed' }
+        }
+        this.detailMap.delete(eventId)
+    }
+}
+
 module.exports = {
     Account: StubAccountRepository,
     Todo: StubTodoRepository, 
     EventTime: StubEventTimeRangeRepository, 
     DoneTodo: StubDoneTodoEventRepository, 
     ScheduleEvent: StubScheduleEventRepository,
-    EventTag: StubEventTagRepository
+    EventTag: StubEventTagRepository, 
+    EventDetailData: StubEventDetailDataRepository
 };
