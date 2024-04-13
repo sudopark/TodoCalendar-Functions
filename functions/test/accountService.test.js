@@ -30,7 +30,7 @@ describe('AccountService', () => {
 
         it("있는 계정 반환", async () => {
             let account = await service.putAccountInfo(dummyAuth);
-            assert.equal(account.id, "some");
+            assert.equal(account.uid, "some");
             assert.equal(account.last_sign_in, 100);
         })
     })
@@ -53,7 +53,7 @@ describe('AccountService', () => {
 
         it('신규 생성해서 반환', async () => {
             let account = await service.putAccountInfo(dummyAuth);
-            assert.equal(account.id, "some");
+            assert.equal(account.uid, "some");
             assert.equal(account.email, "some@email.com");
             assert.equal(account.method, "google");
             assert.equal(account.first_signed_in, 100);
@@ -84,7 +84,7 @@ describe('AccountService', () => {
             payload.email = null;
             
             let account = await service.putAccountInfo(payload);
-            assert.equal(account.id, "some");
+            assert.equal(account.uid, "some");
             assert.equal(account.email, null);
             assert.equal(account.method, "google");
             assert.equal(account.first_signed_in, 100);
@@ -95,7 +95,7 @@ describe('AccountService', () => {
             payload.firebase = null;
             
             let account = await service.putAccountInfo(payload);
-            assert.equal(account.id, "some");
+            assert.equal(account.uid, "some");
             assert.equal(account.email, "some@email.com");
             assert.equal(account.method, null);
             assert.equal(account.first_signed_in, 100);
@@ -106,7 +106,7 @@ describe('AccountService', () => {
             payload.firebase.sign_in_provider = null;
             
             let account = await service.putAccountInfo(payload);
-            assert.equal(account.id, "some");
+            assert.equal(account.uid, "some");
             assert.equal(account.email, "some@email.com");
             assert.equal(account.method, null);
             assert.equal(account.first_signed_in, 100);
@@ -118,7 +118,7 @@ describe('AccountService', () => {
             
             let account = await service.putAccountInfo(payload);
             
-            assert.equal(account.id, "some");
+            assert.equal(account.uid, "some");
             assert.equal(account.email, "some@email.com");
             assert.equal(account.method, "google");
             assert.equal(account.first_signed_in, null);

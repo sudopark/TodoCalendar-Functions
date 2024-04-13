@@ -16,7 +16,7 @@ class StubAccountRepository {
         } else if(this.noAccountInfoExists) {
             return null;
         } else {
-            return {id: uid, last_sign_in: auth_time};
+            return {uid: uid, last_sign_in: auth_time};
         }
     }
 
@@ -24,7 +24,7 @@ class StubAccountRepository {
         if(this.shouldFailSaveAccountInfo) {
             throw { message: 'failed' };
         } else {
-            return { id: uid, ...payload };
+            return { uid: uid, ...payload };
         }
     }
 }

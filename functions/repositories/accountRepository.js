@@ -3,16 +3,16 @@ const adimn = require("firebase-admin");
 
 class AccountRepository {
 
-    async findAccountInfo(auth) {
+    async findAccountInfo(uid, auth_time) {
         try {
 
             const snapshot = await adimn.firestore()
-                .collection('account_infos').doc(auth.uid)
+                .collection('account_infos').doc(uid)
                 .get();
         
             if(snapshot.exists) {
                 return {
-                    id: auth.uid, ...snapshot.data(), last_sign_in: auth.auth_time
+                    uid: uid, ...snapshot.data(), last_sign_in: auth_time
                 }
             } else {
                 return null
@@ -33,7 +33,7 @@ class AccountRepository {
             await ref.set(payload)
             const newInfo = await ref.get();
 
-            return { id: uid, ...newInfo.data() };
+            return { uid: uid, ...newInfo.data() };
 
         } catch (error) {
             throw { status: 500, message: error?.message || error };
