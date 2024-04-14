@@ -355,6 +355,43 @@ class StubEventDetailDataRepository {
     }
 }
 
+class StubMigrationReposiotry {
+
+    constructor() {
+        this.shouldFail = false
+    } 
+
+    async migrateEventTags(tags) {
+        if(this.shouldFail) {
+            throw { message: 'failed' }
+        }
+        this.didMigratedTags = tags;
+    }
+
+    async migratieTodos(todos, eventTimeRanges) {
+        if(this.shouldFail) {
+            throw { message: 'failed' }
+        }
+        this.didMigratedTodos = todos;
+        this.didMigratedEventTimeRanges = eventTimeRanges;
+    }
+
+    async migrateSchedules(schedules, eventTimeRanges) {
+        if(this.shouldFail) {
+            throw { message: 'failed' }
+        }
+        this.didMigratedSchedules = schedules;
+        this.didMigratedEventTimeRanges = eventTimeRanges;
+    }
+
+    async migrateEventDetails(details) {
+        if(this.shouldFail) {
+            throw { message: 'failed' }
+        }
+        this.didMigratedDetails = details;
+    }
+}
+
 module.exports = {
     Account: StubAccountRepository,
     Todo: StubTodoRepository, 
@@ -362,5 +399,6 @@ module.exports = {
     DoneTodo: StubDoneTodoEventRepository, 
     ScheduleEvent: StubScheduleEventRepository,
     EventTag: StubEventTagRepository, 
-    EventDetailData: StubEventDetailDataRepository
+    EventDetailData: StubEventDetailDataRepository, 
+    Migration: StubMigrationReposiotry
 };
