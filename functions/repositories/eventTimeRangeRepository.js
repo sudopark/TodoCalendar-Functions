@@ -6,9 +6,6 @@ const { Filter } = require('firebase-admin/firestore');
 class EventTimeRangeRepository {
 
     async updateTime(eventId, payload) {
-        if(payload.lower && !payload.upper) {
-            payload.no_endtime = true
-        }
         try {
             let result = await admin.firestore().collection("event_times")
                 .doc(eventId)

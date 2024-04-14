@@ -40,21 +40,22 @@ class EventTagController {
     }
 
     async putEventTag(req, res) {
-        const { body } = req, tagId = req.params.id;
+        const { body } = req, tagId = req.params.id, userId = req.auth.userId;
         if(
-            !tagId || !body.name
+            !tagId || !body.name || !userId
         ) {
             res.status(400)
                 .send({
                     code: "InvalidParameter", 
-                    message: "tag id or tag name is missing." 
+                    message: "tag id, user id or tag name is missing." 
                 })
             return;
         }
 
         const payload = {
             name: body.name, 
-            color_hex: body.color_hex
+            color_hex: body.color_hex, 
+            userId: userId
         }
         try {
             const tag = await this.eventTagService.putTag(tagId, payload)

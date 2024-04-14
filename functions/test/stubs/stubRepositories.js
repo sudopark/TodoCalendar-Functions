@@ -190,9 +190,6 @@ class StubEventTimeRangeRepository {
         if (this.shouldFailUpdateTime) {
             throw { message: 'failed' }
         } else {
-            if(params.lower && !params.upper) {
-                params.no_endtime = true
-            }
             const range = {eventId: eventId, ...params};
             this.eventTimeMap.set(eventId, range)
             return range;

@@ -3,10 +3,14 @@ const admin = require('firebase-admin');
 
 class DoneTodoEventRepository {
 
-    async save(originId, userId, origin) {
+    async save(originId, origin) {
 
         try {
-            const payload = {origin_event_id: originId, ...origin, user_id: userId}
+            const payload = {
+                origin_event_id: originId, ...origin,
+                done_at: (new Date()).getTime() / 1000
+            }
+        
             const ref = await admin.firestore()
                 .collection('done_todos')
                 .add(payload)

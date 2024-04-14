@@ -80,13 +80,8 @@ class TodoEventService {
     }
 
     async #updateEventtime(userId, todo) {
-        await this.eventTimeRangeService.updateEventTime(
-            userId,
-            true,
-            todo.uuid, 
-            todo.event_time,
-            todo.repeating
-        )
+        const payload = this.eventTimeRangeService.todoEventTimeRange(userId, todo)
+        await this.eventTimeRangeService.updateEventTime(todo.uuid, payload);
     }
 }
 

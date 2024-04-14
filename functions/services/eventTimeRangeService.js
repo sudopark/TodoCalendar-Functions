@@ -6,16 +6,13 @@ class EventTimeRangeService {
         this.eventTimeRepository = eventTimeRepository
     }
 
-    async updateEventTime (userId, isTodo, eventId, time, repeating) {
-        let ranges = this.#range(time, repeating);
-        const payload = {userId: userId, isTodo: isTodo, ...ranges}
-        let result = await this.eventTimeRepository.updateTime(eventId, payload)
-        return result
-    };
-
     async removeEventTime(eventId) {
         let result = await this.eventTimeRepository.remove(eventId)
         return result
+    }
+
+    async updateEventTime(eventId, payload) {
+        return this.eventTimeRepository.updateTime(eventId, payload);
     }
 
     async eventIds(userId, isTodo, lower, upper) {
@@ -23,7 +20,22 @@ class EventTimeRangeService {
         return result
     }
 
+    todoEventTimeRange(userId, todo) {
+        const range = this.#range(todo.event_time, todo.repeating)
+        const payload = { userId: userId, isTodo: true, ...range }
+        this.#markNotEndTimeIfNeed(payload)
+        return payload
+    }
+
+    scheduleTimeRange(userId, schedule) {
+        const range = this.#range(schedule.event_time, schedule.repeating);
+        const payload = { userId: userId, isTodo: false, ...range }
+        this.#markNotEndTimeIfNeed(payload)
+        return payload
+    }
+
     #range(time, repeating) {
+
         switch (time?.time_type) {
             case 'at':
                 return {
@@ -60,6 +72,12 @@ class EventTimeRangeService {
                 }
             default: 
                 return { }
+        }
+    };
+
+    #markNotEndTimeIfNeed(payload) {
+        if(payload.lower && !payload.upper) {
+            payload.no_endtime = true
         }
     };
 }

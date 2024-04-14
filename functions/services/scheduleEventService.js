@@ -59,13 +59,8 @@ class ScheduleEventService {
     }
 
     async #updateEventtime(userId, event) {
-        await this.eventTimeRangeService.updateEventTime(
-            userId,
-            false,
-            event.uuid, 
-            event.event_time, 
-            event.repeating
-        )
+        const payload = this.eventTimeRangeService.scheduleTimeRange(userId, event);
+        await this.eventTimeRangeService.updateEventTime(event.uuid, payload);
     }
 }
 
