@@ -120,4 +120,29 @@ describe('MigrationService', () => {
             assert.equal(Object.keys(stubReposiotry.didMigratedDetails || {}).length, 0)
         })
     })
+
+    describe('migrate done Todo events', () => {
+
+        const dones = {
+            'd1': {origin_event_id: 't1', done_at: 100}, 
+            'd2': {origin_event_id: 't2', done_at: 200}, 
+        }
+
+        it('success', async () => {
+
+            await service.migrationDoneTodoEvents(dones)
+            assert.equal(Object.keys(stubReposiotry.didMigratedDoneTodoEvents).length, 2)
+        })
+
+        it('fail', async () => {
+            stubReposiotry.shouldFail = true
+
+            try {
+                await service.migrationDoneTodoEvents(dones)
+            } catch (error) {
+                assert.equal(error != null, true)
+            }
+            assert.equal(Object.keys(stubReposiotry.didMigratedDoneTodoEvents || {}).length, 0)
+        })
+    })
 });

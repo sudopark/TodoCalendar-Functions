@@ -98,6 +98,30 @@ class MigrationController {
                 })
         }
     }
+
+    async postMigrationDoneTodoEvents(req, res) {
+        const { dones } = req, userId = req.auth.uid;
+        if(!userId) {
+            res.status(400)
+                .send({ code: "InvalidParameter",  message: "user id is missing." })
+            return;
+        }
+        try {
+            for(const id in dones) {
+                dones[id].userId = userId
+            }
+            await this.migrationService.migrationDoneTodoEvents(dones);
+            res.status(201)
+                .send({ status: 'ok' })
+        } catch (error) {
+            res.status(error?.status || 500)
+                .send({
+                    code: error?.code ?? "Unknown", 
+                    message: error?.message || error, 
+                    origin: error?.origin
+                })
+        }
+    }
 }
 
 module.exports = MigrationController;

@@ -390,6 +390,13 @@ class StubMigrationReposiotry {
         }
         this.didMigratedDetails = details;
     }
+
+    async migrationDoneTodoEvents(dones) {
+        if(this.shouldFail) {
+            throw { message: 'failed' }
+        }
+        this.didMigratedDoneTodoEvents = dones;
+    }
 }
 
 module.exports = {
