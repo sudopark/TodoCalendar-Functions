@@ -22,7 +22,8 @@ const v1ScheduleRouter = require('./routes/v1/schedulesRoutes');
 const v1EventTagRouter = require('./routes/v1/eventTagRoutes');
 const v1EventDetailRouter = require('./routes/v1/eventDetailRoutes');
 const v1MigrationRouter = require('./routes/v1/migrationRoutes');
-// const v1TestRouter = require('./routes/v1/testRoutes');
+const v1SettingRouter = require('./routes/v1/settingRoutes');
+const v1TestRouter = require('./routes/v1/testRoutes');
 
 const app = express();
 // app use middleware
@@ -35,6 +36,7 @@ app.use("/v1/schedules", authValidator, v1ScheduleRouter);
 app.use('/v1/tags', authValidator, v1EventTagRouter);
 app.use('/v1/event_details', authValidator, v1EventDetailRouter);
 app.use('/v1/migration', authValidator, v1MigrationRouter);
+app.use('/v1/setting', authValidator, v1SettingRouter);
 // app.use('/v1/tests', v1TestRouter);
 
 exports.api = functions.https.onRequest(app);

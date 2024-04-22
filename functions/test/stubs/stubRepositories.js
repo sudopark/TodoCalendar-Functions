@@ -399,6 +399,36 @@ class StubMigrationReposiotry {
     }
 }
 
+class StubAppSettingRepository {
+
+    constructor() {
+        this.userSettingMap = new Map()
+        this.shouldFail = false
+    }
+
+    stubUserSetting(userId, setting) {
+        this.userSettingMap.set(userId, setting)
+    }
+
+    async userDefaultEventTagColors(userId) {
+        if(this.shouldFail) {
+            throw { message: 'failed' }
+        }
+        const setting = this.userSettingMap.get(userId)
+        return setting?.defaultEventTagColors ?? {}
+    }
+
+    async updateUserDefaultEventTagColors(userId, payload) {
+        if(this.shouldFail) {
+            throw { message: 'failed' }
+        }
+        const setting = this.userSettingMap.get(userId) ?? {}
+        setting.defaultEventTagColors = payload
+        this.userSettingMap.set(userId, setting)
+        return setting
+    }
+}
+
 module.exports = {
     Account: StubAccountRepository,
     Todo: StubTodoRepository, 
@@ -407,5 +437,6 @@ module.exports = {
     ScheduleEvent: StubScheduleEventRepository,
     EventTag: StubEventTagRepository, 
     EventDetailData: StubEventDetailDataRepository, 
-    Migration: StubMigrationReposiotry
+    Migration: StubMigrationReposiotry, 
+    ApPSetting: StubAppSettingRepository
 };

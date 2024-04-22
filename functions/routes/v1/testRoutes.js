@@ -9,6 +9,9 @@ const collectionRef = db.collection('event_times')
 const TodoRepository = require('../../repositories/todoRepository');
 const todoReposiotry = new TodoRepository()
 
+const SettingRepository = require('../../repositories/appSettingRepository');
+const settingRepository = new SettingRepository();
+
 const { chunk } = require('../../Utils/functions')
 
 router.get('/', (req, res) => {
@@ -108,6 +111,17 @@ router.get('/queries/null_test', async (req, res) => {
         console.log(error);
         res.status(500)
             .send({message: 'failed', origin: error})
+    }
+});
+
+router.get('/tag/colors', async (req, res) => {
+    try {
+        const color = await settingRepository.userDefaultEventTagColors('some')
+        res.status(200)
+            .send(color)
+    } catch (error) {
+        res.status(500)
+            .send(error)
     }
 });
 
