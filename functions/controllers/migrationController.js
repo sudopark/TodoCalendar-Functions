@@ -1,5 +1,6 @@
 
 
+const Errors = require('../models/Errors');
 
 class MigrationController {
 
@@ -10,9 +11,7 @@ class MigrationController {
     async postMigrationTags(req, res) {
         const { tags } = req, userId = req.auth.uid;
         if(!userId) {
-            res.status(400)
-                .send({ code: "InvalidParameter",  message: "user id is missing." })
-            return;
+            throw new Errors.BadRequest('user id is missing.')
         }
         
         try {
@@ -23,21 +22,14 @@ class MigrationController {
             res.status(201)
                 .send({ status: 'ok' })
         } catch (error) {
-            res.status(error?.status || 500)
-                .send({
-                    code: error?.code ?? "Unknown", 
-                    message: error?.message || error, 
-                    origin: error?.origin
-                })
+            throw new Errors.Application(error);
         }
     }
 
     async postMigrationTodos(req, res) {
         const { todos } = req, userId = req.auth.uid;
         if(!userId) {
-            res.status(400)
-                .send({ code: "InvalidParameter",  message: "user id is missing." })
-            return;
+            throw new Errors.BadRequest('user id is missing.')
         }
         
         try {
@@ -48,21 +40,14 @@ class MigrationController {
             res.status(201)
                 .send({ status: 'ok' })
         } catch (error) {
-            res.status(error?.status || 500)
-                .send({
-                    code: error?.code ?? "Unknown", 
-                    message: error?.message || error, 
-                    origin: error?.origin
-                })
+            throw new Errors.Application(error);
         }
     }
 
     async postMigrationSchedules(req, res) {
         const { schedules } = req, userId = req.auth.uid;
         if(!userId) {
-            res.status(400)
-                .send({ code: "InvalidParameter",  message: "user id is missing." })
-            return;
+            throw new Errors.BadRequest('user id is missing.')
         }
         
         try {
@@ -73,12 +58,7 @@ class MigrationController {
             res.status(201)
                 .send({ status: 'ok' })
         } catch (error) {
-            res.status(error?.status || 500)
-                .send({
-                    code: error?.code ?? "Unknown", 
-                    message: error?.message || error, 
-                    origin: error?.origin
-                })
+            throw new Errors.Application(error);
         }
     }
 
@@ -90,21 +70,14 @@ class MigrationController {
             res.status(201)
                 .send({ status: 'ok' })
         } catch (error) {
-            res.status(error?.status || 500)
-                .send({
-                    code: error?.code ?? "Unknown", 
-                    message: error?.message || error, 
-                    origin: error?.origin
-                })
+            throw new Errors.Application(error);
         }
     }
 
     async postMigrationDoneTodoEvents(req, res) {
         const { dones } = req, userId = req.auth.uid;
         if(!userId) {
-            res.status(400)
-                .send({ code: "InvalidParameter",  message: "user id is missing." })
-            return;
+            throw new Errors.BadRequest('user id is missing.')
         }
         try {
             for(const id in dones) {
@@ -114,12 +87,7 @@ class MigrationController {
             res.status(201)
                 .send({ status: 'ok' })
         } catch (error) {
-            res.status(error?.status || 500)
-                .send({
-                    code: error?.code ?? "Unknown", 
-                    message: error?.message || error, 
-                    origin: error?.origin
-                })
+            throw new Errors.Application(error);
         }
     }
 }

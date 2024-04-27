@@ -16,35 +16,35 @@ const todoService = new TodoService({ todoRepository, eventTimeRangeService, don
 const todoController = new TodoController(todoService);
 
 router.get("/todo/:id", async (req, res) => {
-    todoController.getTodo(req, res);
+    await todoController.getTodo(req, res);
 });
 
 router.get('/', async (req, res) => {
-    todoController.getTodos(req, res);
+    await todoController.getTodos(req, res);
 });
 
 router.post("/todo", async (req, res) => {
-    todoController.makeTodo(req, res);
+    await todoController.makeTodo(req, res);
 });
 
 router.put("/todo/:id", async (req, res) => {
-    todoController.putTodo(req, res);
+    await todoController.putTodo(req, res);
 });
 
 router.patch("/todo/:id", async (req, res) => {
-    todoController.patchTodo(req, res);
+    await todoController.patchTodo(req, res);
 });
 
 router.post('/todo/:id/complete', async (req, res) => {
-    todoController.completeTodo(req, res);
+    await todoController.completeTodo(req, res);
 });
 
 router.post('/todo/:id/replace', async (req, res) => {
-    todoController.replaceRepeatingTodo(req, res);
+    await todoController.replaceRepeatingTodo(req, res);
 });
 
 router.delete('/todo/:id', async (req, res) => {
-    todoController.removeTodo(req, res);
+    await todoController.removeTodo(req, res);
 })
 
 module.exports = router;

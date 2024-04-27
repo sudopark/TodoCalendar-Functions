@@ -13,6 +13,7 @@ const SettingRepository = require('../../repositories/appSettingRepository');
 const settingRepository = new SettingRepository();
 
 const { chunk } = require('../../Utils/functions')
+const Errors = require('../../models/Errors');
 
 router.get('/', (req, res) => {
     res.status(200)
@@ -122,6 +123,23 @@ router.get('/tag/colors', async (req, res) => {
     } catch (error) {
         res.status(500)
             .send(error)
+    }
+});
+
+
+router.get('/throwing', async (req, res) => {
+    const errorType = req.query.type
+    switch(errorType) {
+        case 'base':
+            throw new Errors.Base(401, 'customCode', 'base error error message');
+        case 'badReq':
+            throw new Errors.BadRequest("bad request..")
+        case 'notFound':
+            throw new Errors.NotFound("not exits");
+        case 'application': 
+            throw new Errors.Application({status: 400, code: 'app_code', message: 'some message'})
+        default:
+            throw new Errors.Application({})
     }
 });
 

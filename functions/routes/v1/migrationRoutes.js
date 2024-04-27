@@ -18,23 +18,23 @@ const migrationController = new MigrationController(
 )
 
 router.post('/event_tags', async (req, res) => {
-    migrationController.postMigrationTags(req, res);
+    await migrationController.postMigrationTags(req, res);
 });
 
 router.post('/todos', async (req, res) => {
-    migrationController.postMigrationTodos(req, res);
+    await migrationController.postMigrationTodos(req, res);
 });
 
 router.post('/schedules', async (req, res) => {
-    migrationController.postMigrationSchedules(req, res);
+    await migrationController.postMigrationSchedules(req, res);
 });
 
 router.post('/event_details', async (req, res) => {
-    migrationController.postMigrationEventDetails(req, res);
+    await migrationController.postMigrationEventDetails(req, res);
 });
 
 router.post('/todos/done', async (req, res) => {
-    migrationController.postMigrationDoneTodoEvents(req, res);
+    await migrationController.postMigrationDoneTodoEvents(req, res);
 });
 
 module.exports = router;

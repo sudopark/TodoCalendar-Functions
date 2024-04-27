@@ -12,15 +12,15 @@ const controller = new EventDetailDataController(
 )
 
 router.get('/:id', async (req, res) => {
-    controller.getData(req, res);
+    await controller.getData(req, res);
 });
 
 router.put('/:id', async (req, res) => {
-    controller.putData(req, res);
+    await controller.putData(req, res);
 });
 
 router.delete('/:id', async (req, res) => {
-    controller.deleteData(req, res);
+    await controller.deleteData(req, res);
 });
 
 module.exports = router;

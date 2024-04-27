@@ -1,4 +1,5 @@
 
+const Errors = require('../models/Errors');
 
 class ScheduleEventController {
 
@@ -9,12 +10,7 @@ class ScheduleEventController {
     async getEvent(req, res) {
         const eventId = req.params.id
         if(!eventId) {
-            res.status(400)
-                .send({
-                    code: "InvalidParameter", 
-                    message: "event id is missing." 
-                })
-            return;
+            throw new Errors.BadRequest('event id is missing.')
         }
 
         try {
@@ -22,12 +18,7 @@ class ScheduleEventController {
             res.status(200)
                 .send(event)
         } catch (error) {
-            res.status(error?.status || 500)
-                .send({
-                    code: error?.code ?? "Unknown", 
-                    message: error?.message || error, 
-                    origin: error?.origin
-                })
+            throw new Errors.Application(error)
         }
     }
 
@@ -38,12 +29,7 @@ class ScheduleEventController {
         if(
             !userId || !lower || !upper
         ) {
-            res.status(400)
-                .send({
-                    code: "InvalidParameter", 
-                    message: "user id, lower or upper is missing." 
-                })
-            return
+            throw new Errors.BadRequest('user id, lower or upper is missing.')
         }
 
         try {
@@ -51,12 +37,7 @@ class ScheduleEventController {
             res.status(200)
                 .send(events)
         } catch (error) {
-            res.status(error?.status || 500)
-                .send({
-                    code: error?.code ?? "Unknown", 
-                    message: error?.message || error, 
-                    origin: error?.origin
-                })
+            throw new Errors.Application(error)
         }
     }
 
@@ -65,12 +46,7 @@ class ScheduleEventController {
         if(
             !body.name || !userId || !body.event_time
         ) {
-            res.status(400)
-                .send({
-                    code: "InvalidParameter", 
-                    message: "schedule event name, event_time or user id is missing." 
-                })
-            return;
+            throw new Errors.BadRequest('schedule event name, event_time or user id is missing.')
         }
 
         const payload = {
@@ -88,12 +64,7 @@ class ScheduleEventController {
             res.status(201)
                 .send(newEvent);
         } catch (error) {
-            res.status(error?.status || 500)
-                .send({
-                    code: error?.code ?? "Unknown", 
-                    message: error?.message || error, 
-                    origin: error?.origin
-                })
+            throw new Errors.Application(error)
         }
     }
 
@@ -103,12 +74,7 @@ class ScheduleEventController {
         if(
             !body.name || !eventId || !userId || !body.event_time
         ) {
-            res.status(400)
-                .send({
-                    code: "InvalidParameter", 
-                    message: "schedule name, user id, event_time or eventId is missing." 
-                })
-            return;
+            throw new Errors.BadRequest('schedule name, user id, event_time or eventId is missing.')
         }
 
         try {
@@ -118,12 +84,7 @@ class ScheduleEventController {
                 .send(event);
 
         } catch (error) {
-            res.status(error?.status || 500)
-                .send({
-                    code: error?.code ?? "Unknown", 
-                    message: error?.message || error, 
-                    origin: error?.origin
-                })
+            throw new Errors.Application(error)
         }
     }
 
@@ -132,12 +93,7 @@ class ScheduleEventController {
         if(
             !eventId || !userId
         ) {
-            res.status(400)
-                .send({
-                    code: "InvalidParameter", 
-                    message: "user id or eventId is missing." 
-                })
-            return;
+            throw new Errors.BadRequest('event id or user id or eventId is missing.')
         }
 
         try {
@@ -145,12 +101,7 @@ class ScheduleEventController {
             res.status(201)
                 .send(updated)
         } catch (error) {
-            res.status(error?.status || 500)
-                .send({
-                    code: error?.code ?? "Unknown", 
-                    message: error?.message || error, 
-                    origin: error?.origin
-                })
+            throw new Errors.Application(error)
         }
     }
 
@@ -160,23 +111,13 @@ class ScheduleEventController {
         if(
             !eventId || !userId 
         ) {
-            res.status(400)
-                .send({
-                    code: "InvalidParameter", 
-                    message: "user id or eventId is missing." 
-                })
-            return
+            throw new Errors.BadRequest('user id or eventId is missing.')
         }
 
         if(
             !(newPayload?.name) || !(newPayload?.event_time) || !excludeTime
         ) {
-            res.status(400)
-                .send({
-                    code: "InvalidParameter", 
-                    message: "new payload event name, event_time or excludeTime is missing" 
-                })
-            return
+            throw new Errors.BadRequest('new payload event name, event_time or excludeTime is missing')
         }
 
         const payload = {
@@ -196,23 +137,14 @@ class ScheduleEventController {
             res.status(201)
                 .send(result)
         } catch (error) {
-            res.status(error?.status || 500)
-                .send({
-                    code: error?.code ?? "Unknown", 
-                    message: error?.message || error, 
-                    origin: error?.origin
-                })
+            throw new Errors.Application(error)
         }
     }
 
     async removeEvent(req, res) {
         const eventId = req.params.id
         if(!eventId) {
-            res.status(400)
-                .send({
-                    code: "InvalidParameter", 
-                    message: "eventId is missing." 
-                })
+            throw new Errors.BadRequest('event id is missing.')
         }
 
         try {
@@ -220,12 +152,7 @@ class ScheduleEventController {
             res.status(201)
                 .send({ status: 'ok' })
         } catch (error) {
-            res.status(error?.status || 500)
-                .send({
-                    code: error?.code ?? "Unknown", 
-                    message: error?.message || error, 
-                    origin: error?.origin
-                })
+            throw new Errors.Application(error)
         }
     }
 }

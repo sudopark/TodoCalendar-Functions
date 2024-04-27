@@ -1,5 +1,6 @@
 
 const admin = require("firebase-admin");
+const Errors = require('../models/Errors');
 
 async function validateToken(req, res, next) {
 
@@ -12,13 +13,7 @@ async function validateToken(req, res, next) {
 
     if(typeof idToken === 'undefined') {
         // 현재 클라에서는 에러메세지 파싱 불가 -> 추후 interceptor 구현 이후에 statusCode 변경
-        res.status(403).json(
-            {
-                code: 'NoAccessToken', 
-                message: 'No Firebase ID token was passed as a Bearer token in the Authorization header.'
-            }
-        );
-        return;
+        throw new Errors.Base(403, 'NoAccessToken', 'No Firebase ID token was passed as a Bearer token in the Authorization header.')
     }
 
     try {
@@ -27,14 +22,7 @@ async function validateToken(req, res, next) {
         next();
         return;        
     } catch (error) {
-        res.status(401).json(
-            {
-                code: 'InvalidAccessKey', 
-                message: 'Fail to verify id token', 
-                origin: JSON.stringify(error)
-            }
-        );
-        return;
+        throw new Errors.Base(401, 'InvalidAccessKey', 'Fail to verify id token')
     }
 }
 

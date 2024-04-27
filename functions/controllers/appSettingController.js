@@ -1,4 +1,5 @@
 
+const Errors = require('../models/Errors');
 
 class AppSetingController {
 
@@ -9,12 +10,7 @@ class AppSetingController {
     async getUserDefaultEventTagColors(req, res)  {
         const userId = req.auth.uid;
         if(!userId) {
-            res.status(400)
-                .send({
-                    code: "InvalidParameter", 
-                    message: "user id is missing." 
-                })
-            return
+            throw new Errors.BadRequest('user id is missing.')
         }
 
         try {
@@ -22,24 +18,14 @@ class AppSetingController {
             res.status(200)
                 .send(colors)
         } catch (error) {
-            res.status(error?.status || 500)
-                .send({
-                    code: error?.code ?? "Unknown", 
-                    message: error?.message || error, 
-                    origin: error?.origin
-                })
+            throw new Errors.Application(error)
         }
     }
 
     async patchUserDefaultEventTagColors(req, res) {
         const { body } = req.body, userId = req.auth.uid;
         if(!userId || !body.holiday || !body.default) {
-            res.status(400)
-                .send({
-                    code: "InvalidParameter", 
-                    message: "user id, holiday or default tag color is missing." 
-                })
-            return
+            throw new Errors.BadRequest('user id, holiday or default tag color is missing.')
         }
 
         const payload = {
@@ -50,12 +36,7 @@ class AppSetingController {
             res.status(201)
                 .send(colors)
         } catch (error) {
-            res.status(error?.status || 500)
-                .send({
-                    code: error?.code ?? "Unknown", 
-                    message: error?.message || error, 
-                    origin: error?.origin
-                })
+            throw new Errors.Application(error)
         }
     }
 }

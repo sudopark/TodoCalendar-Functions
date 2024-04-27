@@ -1,4 +1,5 @@
 
+const Errors = require('../models/Errors');
 
 class EventTagController {
 
@@ -12,12 +13,7 @@ class EventTagController {
         if(
             !userId || !body.name
         ) {
-            res.status(400)
-                .send({
-                    code: "InvalidParameter", 
-                    message: "user id or tag name is missing." 
-                })
-            return;
+            throw new Errors.BadRequest('user id or tag name is missing.')
         }
 
         const payload = {
@@ -30,12 +26,7 @@ class EventTagController {
             res.status(201)
                 .send(tag)
         } catch (error) {
-            res.status(error?.status || 500)
-                .send({
-                    code: error?.code ?? "Unknown", 
-                    message: error?.message || error, 
-                    origin: error?.origin
-                })
+            throw new Errors.Application(error)
         }
     }
 
@@ -44,12 +35,7 @@ class EventTagController {
         if(
             !tagId || !body.name || !userId
         ) {
-            res.status(400)
-                .send({
-                    code: "InvalidParameter", 
-                    message: "tag id, user id or tag name is missing." 
-                })
-            return;
+            throw new Errors.BadRequest('tag id, user id or tag name is missing.')
         }
 
         const payload = {
@@ -62,12 +48,7 @@ class EventTagController {
             res.status(201)
                 .send(tag)
         } catch (error) {
-            res.status(error?.status || 500)
-                .send({
-                    code: error?.code ?? "Unknown", 
-                    message: error?.message || error, 
-                    origin: error?.origin
-                })
+            throw new Errors.Application(error)
         }
     }
 
@@ -76,12 +57,7 @@ class EventTagController {
         if(
             !tagId
         ) {
-            res.status(400)
-                .send({
-                    code: "InvalidParameter", 
-                    message: "tag id is missing." 
-                })
-            return
+            throw new Errors.BadRequest('tag id is missing.')
         }
 
         try {
@@ -89,12 +65,7 @@ class EventTagController {
             res.status(200)
                 .send({ status: 'ok' })
         } catch (error) {
-            res.status(error?.status || 500)
-                .send({
-                    code: error?.code ?? "Unknown", 
-                    message: error?.message || error, 
-                    origin: error?.origin
-                })
+            throw new Errors.Application(error)
         }
     }
 
@@ -103,12 +74,7 @@ class EventTagController {
         if(
             !userId
         ) {
-            res.status(400)
-                .send({
-                    code: "InvalidParameter", 
-                    message: "user id is missing." 
-                })
-            return
+            throw new Errors.BadRequest('user id is missing.')
         }
 
         try {
@@ -116,12 +82,7 @@ class EventTagController {
             res.status(200)
                 .send(tags)
         } catch (error) {
-            res.status(error?.status || 500)
-                .send({
-                    code: error?.code ?? "Unknown", 
-                    message: error?.message || error, 
-                    origin: error?.origin
-                })
+            throw new Errors.Application(error)
         }
     }
 
@@ -130,12 +91,7 @@ class EventTagController {
         if(
             !ids
         ) {
-            res.status(400)
-                .send({
-                    code: "InvalidParameter", 
-                    message: "user id is missing." 
-                })
-            return
+            throw new Errors.BadRequest('user id is missing.')
         }
 
         try {
@@ -143,12 +99,7 @@ class EventTagController {
             res.status(200)
                 .send(tags)
         } catch (error) {
-            res.status(error?.status || 500)
-                .send({
-                    code: error?.code ?? "Unknown", 
-                    message: error?.message || error, 
-                    origin: error?.origin
-                })
+            throw new Errors.Application(error)
         }
     }
 }

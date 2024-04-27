@@ -1,6 +1,8 @@
 // The cloud functions fore Firebase SDK to create Cloud functions and trigger
 const functions = require("firebase-functions");
 const express = require("express");
+require('express-async-errors');
+
 // const cors = require("cors");
 const bodyParser = require("body-parser");
 const authValidator = require("./middlewares/authMiddleware.js");
@@ -38,6 +40,10 @@ app.use('/v1/event_details', authValidator, v1EventDetailRouter);
 app.use('/v1/migration', authValidator, v1MigrationRouter);
 app.use('/v1/setting', authValidator, v1SettingRouter);
 // app.use('/v1/tests', v1TestRouter);
+app.use((err, req, res, next) => {
+    res.status(err?.status ?? 500)
+        .send(err)
+});
 
 exports.api = functions.https.onRequest(app);
 

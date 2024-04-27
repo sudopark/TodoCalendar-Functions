@@ -1,5 +1,7 @@
 
 
+const Errors = require('../models/Errors');
+
 class TodooController {
 
     constructor(todoService) {
@@ -9,12 +11,7 @@ class TodooController {
     async getTodo(req, res) {
         let todoId = req.params.id
         if( !todoId ) {
-            res.status(400)
-                .send({
-                    code: "InvalidParameter", 
-                    message: "todo name or user id is missing." 
-                })
-            return;
+            throw new Errors.BadRequest('todo name or user id is missing.')
         }
 
         try {
@@ -24,12 +21,7 @@ class TodooController {
                 .send(todo)
 
         } catch(error) {
-            res.status(error?.status || 500)
-                .send({
-                    code: error?.code ?? "Unknown", 
-                    message: error?.message || error, 
-                    origin: error?.origin
-                })
+            throw new Errors.Application(error)
         }
     }
 
@@ -39,12 +31,7 @@ class TodooController {
         const lower = req.query.lower; const upper = req.query.upper
 
         if( !userId ) {
-            res.status(400)
-                .send({
-                    code: "InvalidParameter", 
-                    message: "user id is missing." 
-                })
-            return;
+            throw new Errors.BadRequest('user id is missing.')
         }
 
         try {
@@ -60,12 +47,7 @@ class TodooController {
             }
 
         } catch (error) {
-            res.status(error?.status || 500)
-                .send({
-                    code: error?.code ?? "Unknown", 
-                    message: error?.message || error, 
-                    origin: error?.origin
-                })
+            throw new Errors.Application(error)
         }
     }
 
@@ -75,12 +57,7 @@ class TodooController {
         if(
             !body.name || !userId
         ) {
-            res.status(400)
-                .send({
-                    code: "InvalidParameter", 
-                    message: "todo name or user id is missing." 
-                })
-            return;
+            throw new Errors.BadRequest('todo name or user id is missing.')
         }
     
         const payload = {
@@ -98,12 +75,7 @@ class TodooController {
             res.status(201).send(newTodo);
     
         } catch(error) {
-            res.status(error?.status || 500)
-                .send({
-                    code: error?.code ?? "Unknown", 
-                    message: error?.message || error, 
-                    origin: error?.origin
-                })
+            throw new Errors.Application(error)
         }
     }
 
@@ -115,12 +87,7 @@ class TodooController {
         if(
             !body.name || !todoId || !userId
         ) {
-            res.status(400)
-                .send({
-                    code: "InvalidParameter", 
-                    message: "todo name, user id or todoId is missing." 
-                })
-            return;
+            throw new Errors.BadRequest('todo name, user id or todoId is missing.')
         }
 
         try {
@@ -130,12 +97,7 @@ class TodooController {
                 .send(todo);
 
         } catch (error) {
-            res.status(error?.status || 500)
-                .send({
-                    code: error?.code ?? "Unknown", 
-                    message: error?.message || error, 
-                    origin: error?.origin
-                })
+            throw new Errors.Application(error)
         }
     }
 
@@ -148,12 +110,7 @@ class TodooController {
         if(
             !todoId || !userId
         ) {
-            res.status(400)
-                .send({
-                    code: "InvalidParameter", 
-                    message: "user id or todoId is missing." 
-                })
-            return;
+            throw new Errors.BadRequest('user id or todoId is missing.')
         }
 
         try {
@@ -163,12 +120,7 @@ class TodooController {
                 .send(todo);
 
         } catch (error) {
-            res.status(error?.status || 500)
-                .send({
-                    code: error?.code ?? "Unknown", 
-                    message: error?.message || error, 
-                    origin: error?.origin
-                })
+            throw new Errors.Application(error)
         }
     };
 
@@ -180,12 +132,7 @@ class TodooController {
         if(
             !userId || !originId  || !origin
         ) {
-            res.status(400)
-                .send({
-                    code: "InvalidParameter", 
-                    message: "todoId is missing." 
-                })
-            return;
+            throw new Errors.BadRequest('todoId is missing.')
         }
         
         try {
@@ -194,12 +141,7 @@ class TodooController {
             res.status(201)
                 .send(result);
         } catch(error) {
-            res.status(error?.status || 500)
-                .send({
-                    code: error?.code ?? "Unknown", 
-                    message: error?.message || error, 
-                    origin: error?.origin
-                })
+            throw new Errors.Application(error)
         }
     };
 
@@ -211,12 +153,7 @@ class TodooController {
         if(
             !originId || !newPayload || !userId
         ) {
-            res.status(400)
-                .send({
-                    code: "InvalidParameter", 
-                    message: "todoId is missing." 
-                })
-            return;
+            throw new Errors.BadRequest('todoId is missing.')
         }
 
         try {
@@ -225,36 +162,21 @@ class TodooController {
             res.status(201)
                 .send(result)
         } catch (error) {
-            res.status(error?.status || 500)
-                .send({
-                    code: error?.code ?? "Unknown", 
-                    message: error?.message || error, 
-                    origin: error?.origin
-                })
+            throw new Errors.Application(error)
         }
     }
 
     async removeTodo(req, res) {
         const todoId = req.params.id;
         if( !todoId ) {
-            res.status(400)
-                .send({
-                    code: "InvalidParameter", 
-                    message: "todoId is missing." 
-                })
-            return;
+            throw new Errors.BadRequest('todoId is missing.')
         }
         try {
             await this.todoService.removeTodo(todoId);
             res.status(200)
                 .send({ status: 'ok'})
         } catch (error) {
-            res.status(error?.status || 500)
-                .send({
-                    code: error?.code ?? "Unknown", 
-                    message: error?.message || error, 
-                    origin: error?.origin
-                })
+            throw new Errors.Application(error)
         }
     }
 }

@@ -14,31 +14,31 @@ const scheduleEventController = new ScheduleEventController(scheduleEventService
 
 
 router.get('/', async (req, res) => {
-    scheduleEventController.getEvents(req, res);
+    await scheduleEventController.getEvents(req, res);
 });
 
 router.get('/schedule/:id', async (req, res) => {
-    scheduleEventController.getEvent(req, res);
+    await scheduleEventController.getEvent(req, res);
 });
 
 router.post("/schedule", async (req, res) => {
-    scheduleEventController.makeEvent(req, res);
+    await scheduleEventController.makeEvent(req, res);
 });
 
 router.put('/schedule/:id', async (req, res) => {
-    scheduleEventController.putEvent(req, res);
+    await scheduleEventController.putEvent(req, res);
 });
 
 router.patch('/schedule/:id', async (req, res) => {
-    scheduleEventController.patchEvent(req, res);
+    await scheduleEventController.patchEvent(req, res);
 });
 
 router.post('/schedule/:id/exclude', async (req, res) => {
-    scheduleEventController.excludeRepeatingTime(req, res);
+    await scheduleEventController.excludeRepeatingTime(req, res);
 });
 
 router.delete('/schedule/:id', async (req, res) => {
-    scheduleEventController.removeEvent(req, res);
+    await scheduleEventController.removeEvent(req, res);
 });
 
 module.exports = router;

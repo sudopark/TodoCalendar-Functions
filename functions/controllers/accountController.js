@@ -1,4 +1,5 @@
 
+const Errors = require('../models/Errors');
 
 class AccountController {
 
@@ -10,12 +11,7 @@ class AccountController {
 
         const auth = req.auth;
         if(!auth) {
-            res.status(400)
-                .send({
-                    code: "InvalidParameter", 
-                    message: "auth not exists" 
-                })
-            return;
+            throw new Errors.BadRequest("auth not exists")
         }
 
         try {
@@ -23,12 +19,7 @@ class AccountController {
             res.status(201).send(result);
 
         } catch(error) {
-            res.status(error?.status || 500)
-                .send({
-                    code: error?.code || "Unknown", 
-                    message: error?.message || error, 
-                    origin: error?.origin
-                })
+            throw new Errors.Application(error)
         }
     }
 }

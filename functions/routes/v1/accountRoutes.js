@@ -13,7 +13,7 @@ const accountController = new AccountController(
 )
 
 router.put('/info', validateToken, async (req, res) => {
-    accountController.putAccountInfo(req, res);
+    await accountController.putAccountInfo(req, res);
 });
 
 module.exports = router;

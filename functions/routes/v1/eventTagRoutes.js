@@ -13,23 +13,23 @@ const controller = new EventTagController(
 )
 
 router.post('/tag', async (req, res) => {
-    controller.postEventTag(req, res);
+    await controller.postEventTag(req, res);
 });
 
 router.put('/tag/:id', async (req, res) => {
-    controller.putEventTag(req, res);
+    await controller.putEventTag(req, res);
 });
 
 router.delete('/tag/:id', async (req, res) => {
-    controller.deleteTag(req, res);
+    await controller.deleteTag(req, res);
 });
 
 router.get('/all', async (req, res) => {
-    controller.getAllTags(req, res);
+    await controller.getAllTags(req, res);
 });
 
 router.get('/', async (req, res) => {
-    controller.getTags(req, res);
+    await controller.getTags(req, res);
 });
 
 module.exports = router;

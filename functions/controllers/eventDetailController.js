@@ -1,4 +1,5 @@
 
+const Errors = require('../models/Errors');
 
 class EventDetailDataController {
  
@@ -9,12 +10,7 @@ class EventDetailDataController {
     async putData(req, res) {
         const { body } = req, eventid = req.params.id;
         if(!eventid) {
-            res.status(400)
-                .send({
-                    code: "InvalidParameter", 
-                    message: "event id is missing." 
-                })
-            return;
+            throw new Errors.BadRequest('event id is missing.')
         }
 
         const payload = {
@@ -28,24 +24,14 @@ class EventDetailDataController {
             res.status(201)
                 .send(newData)
         } catch(error) {
-            res.status(error?.status || 500)
-                .send({
-                    code: error?.code ?? "Unknown", 
-                    message: error?.message || error, 
-                    origin: error?.origin
-                })
+            throw new Errors.Application(error)
         }
     }
 
     async getData(req, res) {
         const eventid = req.params.id;
         if(!eventid) {
-            res.status(400)
-                .send({
-                    code: "InvalidParameter", 
-                    message: "event id is missing." 
-                })
-            return;
+            throw new Errors.BadRequest('event id is missing.')
         }
 
         try {
@@ -54,24 +40,16 @@ class EventDetailDataController {
                 .send(data)
 
         } catch(error) {
-            res.status(error?.status || 500)
-            .send({
-                code: error?.code ?? "Unknown", 
-                message: error?.message || error, 
-                origin: error?.origin
-            })
+            throw new Errors.Application(error)
         }
     }
 
     async deleteData(req, res) {
         const eventid = req.params.id;
         if(!eventid) {
-            res.status(400)
-                .send({
-                    code: "InvalidParameter", 
-                    message: "event id is missing." 
-                })
-            return;
+            if(!eventid) {
+                throw new Errors.BadRequest('event id is missing.')
+            }
         }
         try {
             await this.eventdetailDataService.removeData(eventid)
@@ -79,12 +57,7 @@ class EventDetailDataController {
                 .send({ status: 'ok' })
 
         } catch (error) {
-            res.status(error?.status || 500)
-            .send({
-                code: error?.code ?? "Unknown", 
-                message: error?.message || error, 
-                origin: error?.origin
-            })
+            throw new Errors.Application(error)
         }
     }
 }

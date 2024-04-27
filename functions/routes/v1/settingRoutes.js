@@ -13,11 +13,11 @@ const controller = new AppSettingController(
 )
 
 router.get('/event/tag/default/color', async (req, res) => {
-    controller.getUserDefaultEventTagColors(req, res);
+    await controller.getUserDefaultEventTagColors(req, res);
 });
 
 router.patch('/event/tag/default/color', async (req, res) => {
-    controller.patchUserDefaultEventTagColors(req, res);
+    await controller.patchUserDefaultEventTagColors(req, res);
 });
 
 module.exports = router;
