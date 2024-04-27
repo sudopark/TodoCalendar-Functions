@@ -51,8 +51,8 @@ class EventTimeRangeRepository {
             const eventIds = snapShot.docs.map(doc => doc.id);
             return  eventIds
                 
-        } catch {
-            throw { status: 500, message: error?.message || error };
+        } catch (error) {
+            throw { status: 500, message: error?.message || error, origin: error };
         }
     }
 }

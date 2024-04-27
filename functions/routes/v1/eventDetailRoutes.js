@@ -12,11 +12,11 @@ const controller = new EventDetailDataController(
 )
 
 router.get('/:id', async (req, res) => {
-    controller.putData(req, res);
+    controller.getData(req, res);
 });
 
 router.put('/:id', async (req, res) => {
-    controller.getData(req, res);
+    controller.putData(req, res);
 });
 
 router.delete('/:id', async (req, res) => {
