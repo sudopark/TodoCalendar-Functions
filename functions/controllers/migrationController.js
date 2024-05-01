@@ -9,7 +9,7 @@ class MigrationController {
     }
 
     async postMigrationTags(req, res) {
-        const { tags } = req, userId = req.auth.uid;
+        const tags = req.body, userId = req.auth.uid;
         if(!userId) {
             throw new Errors.BadRequest('user id is missing.')
         }
@@ -27,7 +27,7 @@ class MigrationController {
     }
 
     async postMigrationTodos(req, res) {
-        const { todos } = req, userId = req.auth.uid;
+        const todos = req.body, userId = req.auth.uid;
         if(!userId) {
             throw new Errors.BadRequest('user id is missing.')
         }
@@ -45,7 +45,7 @@ class MigrationController {
     }
 
     async postMigrationSchedules(req, res) {
-        const { schedules } = req, userId = req.auth.uid;
+        const schedules = req.body, userId = req.auth.uid;
         if(!userId) {
             throw new Errors.BadRequest('user id is missing.')
         }
@@ -63,7 +63,7 @@ class MigrationController {
     }
 
     async postMigrationEventDetails(req, res) {
-        const { details } = req
+        const details = req.body
         
         try {
             await this.migrationService.migrationEventDetails(details);
@@ -75,7 +75,7 @@ class MigrationController {
     }
 
     async postMigrationDoneTodoEvents(req, res) {
-        const { dones } = req, userId = req.auth.uid;
+        const dones = req.body, userId = req.auth.uid;
         if(!userId) {
             throw new Errors.BadRequest('user id is missing.')
         }
