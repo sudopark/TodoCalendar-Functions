@@ -95,10 +95,7 @@ class TodoRepository {
 
     async removeTodo(id) {
         try {
-            await admin.firestore()
-                .collection("todos")
-                .doc(id)
-                .delete()
+            return collectionRef.doc(id).delete()
         } catch (error) {
             throw { status: 500, message: error?.message || error};
         }
