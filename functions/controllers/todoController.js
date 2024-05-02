@@ -125,14 +125,14 @@ class TodooController {
     };
 
     async completeTodo(req, res) {
-        const userId = req.auth.userId;
+        const userId = req.auth.uid;
         const originId = req.params.id;
         const origin = req.body.origin
         const nextEventTime = req.body.next_event_time
         if(
             !userId || !originId  || !origin
         ) {
-            throw new Errors.BadRequest('todoId is missing.')
+            throw new Errors.BadRequest('userId, originId or origin is missing.')
         }
         
         try {
