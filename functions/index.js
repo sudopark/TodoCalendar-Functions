@@ -20,6 +20,7 @@ getFirestore().settings({ignoreUndefinedProperties: true});
 // router instance
 const v1AccountRouter = require('./routes/v1/accountRoutes');
 const v1TodoRouter = require("./routes/v1/todoRoutes");
+const v1DoneTodoRouter = require('./routes/v1/doneTodoRoutes');
 const v1ScheduleRouter = require('./routes/v1/schedulesRoutes');
 const v1EventTagRouter = require('./routes/v1/eventTagRoutes');
 const v1EventDetailRouter = require('./routes/v1/eventDetailRoutes');
@@ -34,6 +35,7 @@ app.use(bodyParser.json());
 // setup router
 app.use("/v1/accounts", v1AccountRouter);
 app.use("/v1/todos", authValidator, v1TodoRouter);
+app.use('/v1/todos/dones', authValidator, v1DoneTodoRouter);
 app.use("/v1/schedules", authValidator, v1ScheduleRouter);
 app.use('/v1/tags', authValidator, v1EventTagRouter);
 app.use('/v1/event_details', authValidator, v1EventDetailRouter);

@@ -46,7 +46,7 @@ class TodoEventService {
 
     async completeTodo(userId, originId, origin, nextEventTime) {
 
-        const done = await this.doneTodoRepository.save(originId, origin);
+        const done = await this.doneTodoRepository.save(originId, origin, userId);
         if(nextEventTime != null) {
             const payload = { event_time: nextEventTime }
             let updatedTodo = await this.todoRepository.updateTodo(originId, payload);
