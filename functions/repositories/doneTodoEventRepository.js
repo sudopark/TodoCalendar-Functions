@@ -1,7 +1,7 @@
 
 const { getFirestore } = require('firebase-admin/firestore');
 const db = getFirestore();
-const collectionRef = db.collection('event_details');
+const collectionRef = db.collection('done_todos');
 
 class DoneTodoEventRepository {
 
