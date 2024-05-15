@@ -1,24 +1,61 @@
 
-const admin = require('firebase-admin');
+const { getFirestore } = require('firebase-admin/firestore');
+const db = getFirestore();
+const collectionRef = db.collection('done_todos');
 
 class DoneTodoEventRepository {
 
-    async save(originId, origin) {
+    async save(originId, origin, userId) {
 
-        try {
-            const payload = {
-                origin_event_id: originId, ...origin,
-                done_at: (new Date()).getTime() / 1000
-            }
-        
-            const ref = await admin.firestore()
-                .collection('done_todos')
-                .add(payload)
-            const snapshot = await ref.get();
-            return {uuid: snapshot.id, ...snapshot.data() };
-        } catch {
-            throw { status: 500, message: error?.message || error};
+        const payload = {
+            origin_event_id: originId, ...origin,
+            done_at: (new Date()).getTime() / 1000, 
+            userId: userId
         }
+    
+        const ref = await collectionRef.add(payload)
+        const snapshot = await ref.get();
+        return {uuid: snapshot.id, ...snapshot.data() };
+    }
+
+    async loadDoneTodos(userId, size, cursor) {
+        let query = collectionRef
+                .where('userId', '==', userId)
+                .orderBy('done_at', 'desc')
+        if(cursor) {
+            query = query.startAfter(cursor)
+        }
+        const snapshot = await query.limit(size).get();
+        const dones = snapshot.docs.map(doc => {
+            return {uuid: doc.id, ...doc.data()}
+        })
+        return dones
+    }
+
+    async removeDoneTodos(userId, pastThan) {
+        let query = collectionRef.where('userId', '==', userId)
+        if(pastThan) {
+            query = query.where('done_at', '<', pastThan)
+        }
+        const snapshot = await query.get();
+        const ids = snapshot.docs.map(doc => doc.id)
+
+        const batch = db.batch();
+        ids.forEach(id => {
+            const ref = collectionRef.doc(id);
+            batch.delete(ref)
+        })
+        await batch.commit()
+    }
+
+    async loadDoneTodo(eventid) {
+        let snapshot = await collectionRef.doc(eventid).get();
+        return { uuid: snapshot.id, ...snapshot.data() }
+    }
+
+    async removeDoneTodo(eventId) {
+        const ref = collectionRef.doc(eventId)
+        await ref.delete()
     }
 }
 

@@ -214,14 +214,73 @@ class StubDoneTodoEventRepository {
 
     constructor()  {
         this.shouldFailSave = false
+        this.totalDones = [...Array(10).keys()].map(i => {
+            return {
+                uuid: `id:${i}`, 
+                done_at: i, 
+                name: 'done', 
+                event_time: { time_type: 'at', timestamp: i }, 
+                userId: 'owner'
+            }
+        })
+        this.shouldFailLoad = false
+        this.shouldFailRemove = false
+        this.didRemovedDoneEventId = null
     }
 
-    async save(originId, origin) {
+    async save(originId, origin, userId) {
         if(this.shouldFailSave) {
-            throw { message: 'failed'  }
+            throw { message: 'failed' }
         } else {
-            return {uuid: 'new-done', origin_event_id: originId, ...origin }
+            return {uuid: 'new-done', origin_event_id: originId, ...origin, userId: userId }
         }
+    }
+
+    async loadDoneTodos(userId, size, cursor) {
+        if(this.shouldFailLoad) {
+            throw { message: 'failed' }
+        }
+    
+        if(cursor) {
+            return this.totalDones.filter((d) => d.done_at < cursor)
+                .sort((l, r) => r.done_at - l.done_at)
+                .slice(0, size)
+        } else {
+            return this.totalDones
+                .sort((l, r) => r.done_at - l.done_at)
+                .slice(0, size)
+        }
+    }
+
+    async loadDoneTodo(eventid) {
+        if(this.shouldFailLoad) {
+            throw { message: 'failed' }
+        }
+        return {
+            uuid: eventid, 
+            done_at: 4, 
+            name: 'done', 
+            event_time: { time_type: 'at', timestamp: 4 }
+        }
+    }
+
+    async removeDoneTodos(userId, pastThan) {
+        if(this.shouldFailRemove) {
+            throw { message: 'failed' }
+        }
+        if(pastThan) {
+            this.totalDones = this.totalDones.filter((d) => d.done_at >= pastThan)
+        } else {
+            this.totalDones = []
+        }
+    }
+
+    async removeDoneTodo(eventId) {
+        if(this.shouldFailRemove) {
+            throw { message: 'failed' }
+        }
+        this.totalDones = this.totalDones.filter((d) => d.uuid != eventId)
+        this.didRemovedDoneEventId = eventId
     }
 }
 
