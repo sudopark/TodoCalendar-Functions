@@ -10,9 +10,10 @@ class DoneTodoController {
 
     async getDoneTodos(req, res) {
         const userId = req.auth.uid
-        const size = req.query.size ?? 100, cursor = req.query.cursor
-        if(!userId) {
-            throw new Errors.BadRequest('user id is missing.');
+        const size = parseInt(req.query.size)
+        const cursor = parseFloat(req.query.cursor)
+        if(!userId || !size) {
+            throw new Errors.BadRequest('user id or size is missing.');
         }
 
         try {
@@ -26,7 +27,7 @@ class DoneTodoController {
 
     async deleteDoneTodos(req, res) {
         const userId = req.auth.uid;
-        const pastThan = req.query.past_than
+        const pastThan = parseFloat(req.query.past_than)
 
         if(!userId) {
             throw new Errors.BadRequest('user id is missing.');

@@ -1,7 +1,7 @@
 
 const { getFirestore } = require('firebase-admin/firestore');
 const db = getFirestore();
-const collectionRef = db.collection('event_details');
+const collectionRef = db.collection('done_todos');
 
 class DoneTodoEventRepository {
 
@@ -38,13 +38,13 @@ class DoneTodoEventRepository {
             query = query.where('done_at', '<', pastThan)
         }
         const snapshot = await query.get();
-        const ids = snapshot.docs(doc => doc.id)
+        const ids = snapshot.docs.map(doc => doc.id)
 
         const batch = db.batch();
-        for(const id in ids) {
+        ids.forEach(id => {
             const ref = collectionRef.doc(id);
             batch.delete(ref)
-        }
+        })
         await batch.commit()
     }
 

@@ -12,6 +12,9 @@ const todoReposiotry = new TodoRepository()
 const SettingRepository = require('../../repositories/appSettingRepository');
 const settingRepository = new SettingRepository();
 
+const DoneRepository = require('../../repositories/doneTodoEventRepository');
+const doneRepo = new DoneRepository();
+
 const { chunk } = require('../../Utils/functions')
 const Errors = require('../../models/Errors');
 
@@ -142,5 +145,18 @@ router.get('/throwing', async (req, res) => {
             throw new Errors.Application({})
     }
 });
+
+router.get('/done', async (req, res) => {
+    const after = parseFloat(req.query.after)
+    const size = parseInt(req.query.size)
+
+    try {
+        const dones = await doneRepo.loadDoneTodos('ToOhacunNdP0bPGNJTYfgxcGYBSa', size, after)
+        res.status(200).send(dones)
+    } catch(error) {
+        res.status(500)
+        .send(error)
+    }
+})
 
 module.exports = router;
