@@ -208,6 +208,38 @@ class StubEventTimeRangeRepository {
     }
 }
 
+// MARK: - foremost event id repository
+
+class StubForemostEventIdRepository {
+
+    constructor() {
+        this.eventIdMap = new Map();
+        this.shouldFail = false
+    }
+
+    async foremostEventId(userId) {
+        if(this.shouldFail) {
+            throw { message: 'failed' }
+        }
+        return this.eventIdMap.get(userId)
+    }
+
+    async updateForemostEventId(userId, foremostId) {
+        if(this.shouldFail) {
+            throw { message: 'failed' }
+        }
+        this.eventIdMap.set(userId, foremostId)
+        return foremostId
+    }
+    async removeForemostEventId(userId) { 
+        if(this.shouldFail) {
+            throw { message: 'failed' }
+        }
+        this.eventIdMap.delete(userId)
+        return
+    }
+}
+
 // MARK: done todo event repository
 
 class StubDoneTodoEventRepository {
@@ -494,6 +526,7 @@ module.exports = {
     EventTime: StubEventTimeRangeRepository, 
     DoneTodo: StubDoneTodoEventRepository, 
     ScheduleEvent: StubScheduleEventRepository,
+    Foremost: StubForemostEventIdRepository,
     EventTag: StubEventTagRepository, 
     EventDetailData: StubEventDetailDataRepository, 
     Migration: StubMigrationReposiotry, 
