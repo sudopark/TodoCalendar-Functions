@@ -1,4 +1,5 @@
 
+const constants = require('../Utils/constants');
 
 class EventTimeRangeService {
 
@@ -77,7 +78,7 @@ class EventTimeRangeService {
 
     #markNotEndTimeIfNeed(payload) {
         if(payload.lower && !payload.upper) {
-            payload.no_endtime = true
+            payload.upper = constants.eventTimeMaxUpperBound
         }
     };
 }
