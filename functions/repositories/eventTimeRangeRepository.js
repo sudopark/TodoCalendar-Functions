@@ -38,8 +38,7 @@ class EventTimeRangeRepository {
                     Filter.and(
                         Filter.or(
                             Filter.where('lower', '>=', start), 
-                            Filter.where('upper', '>=', start), 
-                            Filter.where('no_endtime', '==', true)
+                            Filter.where('upper', '>=', start)
                         ), 
                         Filter.or(
                             Filter.where('lower', '<', end), 
