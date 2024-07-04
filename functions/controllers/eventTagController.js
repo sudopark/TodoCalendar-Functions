@@ -31,7 +31,7 @@ class EventTagController {
     }
 
     async putEventTag(req, res) {
-        const { body } = req, tagId = req.params.id, userId = req.auth.userId;
+        const { body } = req, tagId = req.params.id, userId = req.auth.uid;
         if(
             !tagId || !body.name || !userId
         ) {
