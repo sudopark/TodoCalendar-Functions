@@ -11,6 +11,7 @@ class TodoRepository {
         if(!payload.event_time) {
             payload.is_current = true
         }
+        payload.create_timestamp = Date.now() / 1000;
         try {
             const ref = await collectionRef.add(payload);
             const snapshot = await ref.get()
