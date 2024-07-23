@@ -158,7 +158,7 @@ class TodooController {
 
         try {
             const payload = {userId: userId, ...newPayload}
-            const result = await this.todoService.replaceRepeatingTodo(originId, payload, originNextEventTime);
+            const result = await this.todoService.replaceRepeatingTodo(userId, originId, payload, originNextEventTime);
             res.status(201)
                 .send(result)
         } catch (error) {

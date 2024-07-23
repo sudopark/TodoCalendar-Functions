@@ -79,6 +79,12 @@ class TodoEventService {
         return { status: 'ok' }
     }
 
+    async restoreTodo(userId, todoId, originPayload) {
+        const restored = await this.todoRepository.restoreTodo(todoId, originPayload)
+        await this.#updateEventtime(userId, restored)
+        return restored
+    }
+
     async #updateEventtime(userId, todo) {
         const payload = this.eventTimeRangeService.todoEventTimeRange(userId, todo)
         await this.eventTimeRangeService.updateEventTime(todo.uuid, payload);

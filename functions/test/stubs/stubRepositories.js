@@ -40,6 +40,7 @@ class StubTodoRepository {
         this.shouldFailPutTodo = false
         this.shouldfailUpdateTodo = false
         this.removedTodoId = null;
+        this.shouldFailRestore = false;
     }
 
     async makeNewTodo(payload) {
@@ -103,6 +104,14 @@ class StubTodoRepository {
 
     async removeTodo(id) {
         this.removedTodoId = id;
+    }
+
+    async restoreTodo(id, originPayload) {
+        if(this.shouldFailRestore) {
+            throw { message: 'not exists' }
+        } else {
+            return { uuid: id, ...originPayload }
+        }
     }
 }
 
@@ -258,6 +267,7 @@ class StubDoneTodoEventRepository {
         this.shouldFailLoad = false
         this.shouldFailRemove = false
         this.didRemovedDoneEventId = null
+        this.hasMatchingDoneTodoId = true
     }
 
     async save(originId, origin, userId) {
@@ -313,6 +323,17 @@ class StubDoneTodoEventRepository {
         }
         this.totalDones = this.totalDones.filter((d) => d.uuid != eventId)
         this.didRemovedDoneEventId = eventId
+    }
+
+    async removeMatchingDoneTodo(originEventId, eventTime) {
+        if(this.shouldFailRemove) {
+            throw { message: 'failed' }
+        }
+        if(this.hasMatchingDoneTodoId) {
+            return "done_id"
+        } else {
+            return null
+        }
     }
 }
 

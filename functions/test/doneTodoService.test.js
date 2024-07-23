@@ -105,4 +105,79 @@ describe("DoneTodoService", () => {
             }
         })
     })
+
+    describe('cancel done todo', () => {
+
+
+        beforeEach(() => {
+            spyTodoRepository.shouldFailRestore = false
+            spyDoneRepository.shouldFailRemove = false
+            spyDoneRepository.hasMatchingDoneTodoId = false
+        })
+
+        // cancel current todo
+        it('cancel current todo', async () => {
+            const origin = {name: 'current todo'}
+            const canceled = await service.cancelDone("owner", 'current_todo', origin)
+            assert(canceled.reverted != null, true)
+            assert(canceled.done_id == null, true)
+        })
+
+        // cancel current todo fail
+        it('cancel current todo fail', async () => {
+            spyTodoRepository.shouldFailRestore = true
+
+            const origin = {name: 'current todo'}
+
+            try  {
+                const canceled = await service.cancelDone("owner", 'current_todo', origin)
+            } catch (error) {
+                assert(error?.message, 'failed')
+            }
+        })
+
+        // cancel todo with time
+        describe('cancel todo with time', () => {
+
+            const origin = {name: 'current todo', event_time: {
+                time_type: 'at', timestamp: 12323.123123
+            }}
+
+            // not yet completed: done id not exists
+            it('not yet completed + done not exists', async () => {
+
+                spyDoneRepository.hasMatchingDoneTodoId = false
+
+                const canceled = await service.cancelDone("owner", 'todo', origin)
+                assert(canceled.reverted != null, true)
+                assert(canceled.done_id == null, true)
+            })
+
+            it('already completed + done exists', async () => {
+
+                spyDoneRepository.hasMatchingDoneTodoId = true
+
+                const canceled = await service.cancelDone("owner", 'todo', origin)
+                assert(canceled.reverted != null, true)
+                assert(canceled.done_id != null, true)
+            })
+
+            it('already completed + done exists + fail to remove done, ignore', async () => {
+
+                spyDoneRepository.shouldFailRemove = true
+                spyDoneRepository.hasMatchingDoneTodoId = true
+
+                const canceled = await service.cancelDone("owner", 'todo', origin)
+                assert(canceled.reverted != null, true)
+                assert(canceled.done_id == null, true)
+            })
+
+            // cancel todo with done id
+            it('cancel todo with done id', async () => {
+                const canceled = await service.cancelDone("owner", 'todo', origin, 'done_id')
+                assert(canceled.reverted != null, true)
+                assert(canceled.done_id != null, true)
+            })
+        })
+    })
 })
