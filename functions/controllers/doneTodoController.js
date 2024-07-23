@@ -58,6 +58,33 @@ class DoneTodoController {
             throw new Errors.Application(error)
         }
     }
+
+    async cancelDoneTodo(req, res) {
+        const userId = req.auth.uid
+        const origin = req.body.origin; 
+        const todoId = origin.uuid; const doneId = req.body.done_id
+
+        if(!userId || !todoId || !origin) {
+            throw new Errors.BadRequest('user id, todo id, or origin is missing.');
+        }
+
+        try {
+            const payload = {
+                userId: userId, 
+                name: origin.name, 
+                event_tag_id: origin.event_tag_id, 
+                event_time: origin.event_time, 
+                repeating: origin.repeating, 
+                notification_options: origin.notification_options, 
+                create_timestamp: origin.create_timestamp
+            }
+            const canceled = await this.doneTodoService.cancelDone(userId, todoId, payload, doneId);
+            res.status(201)
+                .send(canceled)
+        } catch (error) {
+            throw new Errors.Application(error)
+        }
+    }
 }
 
 module.exports = DoneTodoController;

@@ -57,6 +57,50 @@ class DoneTodoEventRepository {
         const ref = collectionRef.doc(eventId)
         await ref.delete()
     }
+
+    async removeMatchingDoneTodo(originEventId, eventTime) {
+        if(eventTime) {
+            return this.#removeDoneTodoWithTime(originEventId, eventTime)
+        } else {
+            return this.#removeCurrentTodo(originEventId)
+        }
+    }
+
+    async #removeCurrentTodo(originEventId) {
+        const snapshot = await collectionRef
+            .where('origin_event_id', '==', originEventId)
+            .get()
+        if(snapshot.empty) {
+            return null
+        }
+        const targetId = snapshot.docs[0].id
+        await this.removeDoneTodo(targetId)
+        return targetId
+    }
+
+    async #removeDoneTodoWithTime(originEventId, eventTime) {
+        const snapshot = await collectionRef
+            .where('origin_event_id', '==', originEventId)
+            .orderBy('done_at', 'desc')
+            .limit(10)
+            .get()
+        
+        const dones = snapshot.docs.map(d => { 
+            return {uuid: d.id, ...d.data()} 
+        })
+        const matching = dones.find(d => {
+            return d.time_type == eventTime.time_type
+                && d.timestamp?.toFixed(0) == eventTime.timestamp?.toFixed(0)
+                && d.period_start?.toFixed(0) == eventTime.period_start?.toFixed(0)
+                && d.period_end?.toFixed(0) == eventTime.period_end?.toFixed(0)
+        })
+
+        if(!matching) { return null }
+
+        const targetId = matching.uuid
+        await this.removeDoneTodo(targetId)
+        return targetId
+    }
 }
 
 module.exports = DoneTodoEventRepository;

@@ -101,6 +101,13 @@ class TodoRepository {
             throw { status: 500, message: error?.message || error};
         }
     }
+
+    async restoreTodo(id, originPayload) {
+        const ref = collectionRef.doc(id)
+        await ref.set(originPayload, {merge: false})
+        const snapshot = await ref.get()
+        return { uuid: snapshot.id, ...snapshot.data() };
+    }
 }
 
 module.exports = TodoRepository

@@ -37,4 +37,8 @@ router.post('/:id/revert', async (req, res) => {
     await controller.revertDoneTodo(req, res);
 });
 
+router.post("/cancel", async (req, res) => {
+    await controller.cancelDoneTodo(req, res);
+});
+
 module.exports = router;

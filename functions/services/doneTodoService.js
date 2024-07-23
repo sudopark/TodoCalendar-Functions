@@ -23,6 +23,22 @@ class DoneTodoService {
         return revertTodo
     }
 
+    async cancelDone(userId, todoId, origin, doneEventId) {
+
+        const restored = await this.todoService.restoreTodo(userId, todoId, origin)
+        try {
+            if(doneEventId) {
+                await this.doneTodoRepository.removeDoneTodo(doneEventId)
+                return { reverted: restored, done_id: doneEventId }
+            } else {
+                const removedDoneEventId = await this.doneTodoRepository.removeMatchingDoneTodo(todoId, restored.event_time)
+                return { reverted: restored, done_id: removedDoneEventId }
+            }
+        } catch(error) {
+            return { reverted: restored }
+        }
+    }
+
     #revertTodoPayload(done, userId) {
         return {
             userId: userId, 
