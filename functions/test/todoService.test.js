@@ -299,7 +299,7 @@ describe('TodoService', () => {
 
         it('다음 반복이벤트 있는 경우에 기존 todo 업데이트', async () => {
             const nextTime = { time_type: 'at', timestamp: 100 }    
-            const result = await todoService.replaceReaptingTodo('uid', 'origin', newPayload, nextTime)
+            const result = await todoService.replaceRepeatingTodo('uid', 'origin', newPayload, nextTime)
             assert.equal(result.new_todo.name, 'replaced')
             assert.equal(result.next_repeating.uuid, 'origin')
             assert.equal(result.next_repeating.event_time.time_type, 'at')
@@ -309,7 +309,7 @@ describe('TodoService', () => {
         }); 
 
         it('다음 반복이벤트 없는 경우에 기존 todo 삭제', async () => {
-            const result = await todoService.replaceReaptingTodo('uid', 'origin', newPayload)
+            const result = await todoService.replaceRepeatingTodo('uid', 'origin', newPayload)
             assert.equal(result.new_todo.name, 'replaced')
             assert.equal(result.next_repeating == null, true)
             assert.equal(todoRepository.removedTodoId, 'origin')
@@ -319,7 +319,7 @@ describe('TodoService', () => {
         it('교체 실패', async () => {
             todoRepository.shouldFailMakeTodo = true
             try {
-                const result = await todoService.replaceReaptingTodo('uid', 'origin', newPayload);
+                const result = await todoService.replaceRepeatingTodo('uid', 'origin', newPayload);
             } catch (error) {
                 assert.equal(error != null, true)
             }
