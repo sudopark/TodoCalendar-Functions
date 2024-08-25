@@ -131,7 +131,7 @@ class ScheduleEventController {
         }
 
         try {
-            const result = this.scheduleEventService.excludeRepeatingEventTime(
+            const result = await this.scheduleEventService.excludeRepeatingEventTime(
                 userId, eventId, excludeTime, payload
             )
             res.status(201)
