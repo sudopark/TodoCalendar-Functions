@@ -150,6 +150,12 @@ describe('eventTagService', () => {
             assert.equal(tags.length, 2)
         })
 
+        it('success when ids array has single element', async () => {
+            const ids = 't0'
+            const tags = await service.findTags(ids)
+            assert.equal(tags.length, 1)
+        })
+
         it('success when ids size bigger than 30', async () => {
             const ids = Array.from(Array(100).keys()).map(i => `t${i}`)
             const tags = await service.findTags(ids)

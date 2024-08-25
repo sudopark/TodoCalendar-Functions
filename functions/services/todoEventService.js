@@ -58,7 +58,7 @@ class TodoEventService {
         }
     }
 
-    async replaceReaptingTodo(userId, originId, newPayload, originNextEventTime) {
+    async replaceRepeatingTodo(userId, originId, newPayload, originNextEventTime) {
 
         const newTodo = await this.todoRepository.makeNewTodo(newPayload);
 

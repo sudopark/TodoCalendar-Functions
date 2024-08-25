@@ -42,7 +42,12 @@ class EventTagService {
     }
 
     async findTags(ids) {
-        const idSlices = chunk(ids, 30)
+        let idSlices;
+        if(Array.isArray(ids)) {
+            idSlices = chunk(ids, 30)
+        } else {
+            idSlices = [[ids]]
+        }
         const loadings = idSlices.map(slice => {
             return this.eventTagRepository.findTags(slice)
         })
