@@ -52,7 +52,7 @@ class ScheduleEventController {
         const payload = {
             userId: userId, 
             name: body.name, 
-            evnet_tag_id: body.evnet_tag_id, 
+            event_tag_id: body.event_tag_id, 
             event_time: body.event_time,
             repeating: body.repeating, 
             notification_options: body.notification_options, 
@@ -123,7 +123,7 @@ class ScheduleEventController {
         const payload = {
             userId: userId, 
             name: newPayload.name, 
-            evnet_tag_id: newPayload.evnet_tag_id, 
+            event_tag_id: newPayload.event_tag_id, 
             event_time: newPayload.event_time,
             repeating: newPayload.repeating, 
             notification_options: newPayload.notification_options, 
