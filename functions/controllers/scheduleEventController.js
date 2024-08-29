@@ -105,9 +105,9 @@ class ScheduleEventController {
         }
     }
 
-    async excludeRepeatingTime(req, res) {
+    async makeNewEventWithExcludeFromRepeating(req, res) {
         const eventId = req.params.id, userId = req.auth.uid
-        const newPayload = req.body.new, excludeTime = req.body.exlcude_time
+        const newPayload = req.body.new, excludeTime = req.body.exclude_repeatings
         if(
             !eventId || !userId 
         ) {
@@ -131,11 +131,29 @@ class ScheduleEventController {
         }
 
         try {
-            const result = await this.scheduleEventService.excludeRepeatingEventTime(
+            const result = await this.scheduleEventService.makeNewEventWithExcludeFromRepeating(
                 userId, eventId, excludeTime, payload
             )
             res.status(201)
                 .send(result)
+        } catch (error) {
+            throw new Errors.Application(error)
+        }
+    }
+
+    async excludeRepeatingTime(req, res) {
+        const eventId = req.params.id, excludeTime = req.body.exclude_repeatings
+        if(!eventId || !excludeTime) {
+            throw new Errors.BadRequest('eventId or excludeTime is missing.')
+        }
+        try {
+            const result = await this.scheduleEventService.excludeRepeating(
+                eventId, excludeTime
+            )
+
+            res.status(200)
+                .send(result)
+
         } catch (error) {
             throw new Errors.Application(error)
         }

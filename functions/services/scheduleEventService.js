@@ -39,7 +39,7 @@ class ScheduleEventService {
         return updated
     }
 
-    async excludeRepeatingEventTime(userId, eventId, excludeTime, newPayload) {
+    async makeNewEventWithExcludeFromRepeating(userId, eventId, excludeTime, newPayload) {
         const origin = await this.scheduleEventRepository.findEvent(eventId);
 
         let newExcludeTimes = [...(origin.exclude_repeatings ?? [])]
@@ -51,6 +51,17 @@ class ScheduleEventService {
         const newEvent = await this.scheduleEventRepository.makeEvent(newPayload);
         await this.#updateEventtime(userId, newEvent);
         return { updated_origin: updated, new_schedule: newEvent }
+    }
+
+    async excludeRepeating(eventId, excludeTime) {
+        const origin = await this.scheduleEventRepository.findEvent(eventId);
+        let newExcludeTimes = [...(origin.exclude_repeatings ?? [])]
+        newExcludeTimes.push(excludeTime);
+
+        const updated = await this.scheduleEventRepository.updateEvent(
+            eventId, { exclude_repeatings: newExcludeTimes }
+        )
+        return updated
     }
 
     async removeEvent(eventId) {

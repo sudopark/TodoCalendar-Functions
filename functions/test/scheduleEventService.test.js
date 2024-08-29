@@ -162,7 +162,7 @@ describe('ScheduleEventService', () => {
         })
     });
 
-    describe('exclude repeating time', () => {
+    describe('make new event with exclude repeating time', () => {
 
         const payload = {
             name: 'copy event', 
@@ -178,7 +178,7 @@ describe('ScheduleEventService', () => {
         })
 
         it('success - old value has exclude', async () => {
-            const result = await scheduleService.excludeRepeatingEventTime(
+            const result = await scheduleService.makeNewEventWithExcludeFromRepeating(
                 'owner', 'with_exclude', 'some_time', payload
             )
             assert.equal(result.new_schedule.name, 'copy event')
@@ -190,7 +190,7 @@ describe('ScheduleEventService', () => {
         })
 
         it('success - old value has no exclude', async () => {
-            const result = await scheduleService.excludeRepeatingEventTime(
+            const result = await scheduleService.makeNewEventWithExcludeFromRepeating(
                 'owner', 'without_exclude', 'some_time', payload
             )
             assert.equal(result.new_schedule.name, 'copy event')
@@ -205,7 +205,7 @@ describe('ScheduleEventService', () => {
 
             stubScheduleReopository.shouldFailMake = true
             try {
-                await scheduleService.excludeRepeatingEventTime(
+                await scheduleService.makeNewEventWithExcludeFromRepeating(
                     'owner', 'without_exclude', 'some_time', payload
                 )
             } catch (error) {
@@ -214,13 +214,43 @@ describe('ScheduleEventService', () => {
         })
 
         it('also save time range', async () => {
-            const result = await scheduleService.excludeRepeatingEventTime(
+            const result = await scheduleService.makeNewEventWithExcludeFromRepeating(
                 'owner', 'with_exclude', 'some_time', payload
             )
             const range = stubEventTimeRepository.eventTimeMap.get(result.new_schedule.uuid)
             assert.equal(range.lower, 100);
             assert.equal(range.upper, 100);
             assert.equal(range.isTodo, false);
+        })
+    })
+
+    describe('exclude repeating', () => {
+        const payload = {
+            name: 'repeating event', 
+            event_time: { time_type: 'at', timestamp: 100 }, 
+        }
+        beforeEach(async () => {
+            stubScheduleReopository.shouldFailUpdate = false
+            const old = {...payload, exclude_repeatings: ['time1', 'time2']}
+            await stubScheduleReopository.putEvent('origin', old)
+        })
+
+        it('success', async () => {
+            const result = await scheduleService.excludeRepeating('origin', 'new_time')
+            assert.equal(result.uuid, 'origin')
+            assert.equal(result.name, 'repeating event')
+        })
+
+        it('fail', async () => {
+            stubScheduleReopository.shouldFailUpdate = true
+
+            try {
+                await scheduleService.excludeRepeating(
+                    'origin', 'new_time'
+                )
+            } catch (error) {
+                assert.equal(error != null, true)
+            }
         })
     })
 
