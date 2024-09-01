@@ -1,3 +1,4 @@
+const Errors = require("../models/Errors");
 const { chunk } = require("../Utils/functions")
 
 class ScheduleEventService {
@@ -62,6 +63,21 @@ class ScheduleEventService {
             eventId, { exclude_repeatings: newExcludeTimes }
         )
         return updated
+    }
+
+    async branchNewRepeatingEvent(userId, originEventId, endTime, newPayload) {
+        const origin = await this.scheduleEventRepository.findEvent(originEventId);
+        if (!origin.repeating) {
+            throw new Errors.Application({status: 400, message: 'origin event not repeating'});
+        }
+        const updated = await this.scheduleEventRepository.updateEvent(
+            originEventId, { repeating: {...origin.repeating, end: endTime} }
+        )
+        await this.#updateEventtime(userId, updated);
+        const newEvent = await this.scheduleEventRepository.makeEvent(newPayload);
+        await this.#updateEventtime(userId, newEvent);
+        
+        return { new: newEvent, origin: updated }
     }
 
     async removeEvent(eventId) {

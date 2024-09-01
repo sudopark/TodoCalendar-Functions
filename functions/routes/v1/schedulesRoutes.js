@@ -37,6 +37,10 @@ router.post('/schedule/:id/exclude', async (req, res) => {
     await scheduleEventController.makeNewEventWithExcludeFromRepeating(req, res);
 });
 
+router.post('/schedule/:id/branch_repeating', async (req, res) => {
+    await scheduleEventController.branchRepeatingEvent(req, res);
+});
+
 router.patch('/schedule/:id/exclude', async (req, res) => {
     await scheduleEventController.excludeRepeatingTime(req, res);
 });
