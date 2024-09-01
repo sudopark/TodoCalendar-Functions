@@ -3,6 +3,7 @@ const ScheduleEventService = require('../services/scheduleEventService');
 const assert = require('assert');
 const EventTimeRangeService = require('../services/eventTimeRangeService');
 const StubRepos = require("./stubs/stubRepositories");
+const constants = require('../Utils/constants');
 
 
 describe('ScheduleEventService', () => {
@@ -251,6 +252,61 @@ describe('ScheduleEventService', () => {
             } catch (error) {
                 assert.equal(error != null, true)
             }
+        })
+    })
+
+    describe('branch new repeating event from origin', () => {
+
+        const payload = {
+            name: 'origin', 
+            event_time: { time_type: 'at', timestamp: 100 }, 
+            repeating: { start: 100, option: { optionType: 'every_day', interval: 1 }}
+        }
+
+        const newPayload = {
+            name: 'branch', 
+            event_time: { time_type: 'at', timestamp: 200 }, 
+            repeating: { start: 200, option: { optionType: 'every_day', interval: 1 }}
+        }
+
+        beforeEach(async () => {
+            stubScheduleReopository.shouldFailUpdate = false
+            await stubScheduleReopository.putEvent('origin', {...payload})
+        })
+
+        it('success', async () => {
+            const result = await scheduleService.branchNewRepeatingEvent(
+                'owner', 'origin', 200, newPayload
+            )
+            assert.equal(result.new.name, 'branch')
+            assert.equal(result.origin.uuid, 'origin')
+            assert.equal(result.origin.repeating.end, 200)
+        })
+
+        it('fail', async () => {
+
+            stubScheduleReopository.shouldFailUpdate = true
+            try {
+                await scheduleService.branchNewRepeatingEvent(
+                    'owner', 'origin', 200, newPayload
+                )
+            } catch (error) {
+                assert.equal(error != null, true)
+            }
+        })
+
+        it('also save time range', async () => {
+            const result = await scheduleService.branchNewRepeatingEvent(
+                'owner', 'origin', 200, newPayload
+            )
+            const updatedOriginRange = stubEventTimeRepository.eventTimeMap.get(result.origin.uuid)
+            assert.equal(updatedOriginRange.lower, 100)
+            assert.equal(updatedOriginRange.upper, 200)
+            assert.equal(updatedOriginRange.isTodo, false)
+            const newRange = stubEventTimeRepository.eventTimeMap.get(result.new.uuid)
+            assert.equal(newRange.lower, 200);
+            assert.equal(newRange.upper, constants.eventTimeMaxUpperBound);
+            assert.equal(newRange.isTodo, false);
         })
     })
 

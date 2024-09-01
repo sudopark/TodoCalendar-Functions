@@ -141,6 +141,41 @@ class ScheduleEventController {
         }
     }
 
+    async branchRepeatingEvent(req, res) {
+        const eventId = req.params.id, userId = req.auth.uid;
+        const endtime = req.body.end_time, newPayload = req.body.new
+
+        if(
+            !eventId || !userId
+        ) {
+            throw new Errors.BadRequest('user id or eventId is missing.')
+        }
+
+        if(
+            !endtime || !(newPayload.name) || !(newPayload.event_time) 
+        ) {
+            throw new Errors.BadRequest('new payload event name, event_time or endtime is missing')
+        }
+
+        const payload = {
+            userId: userId, 
+            name: newPayload.name, 
+            event_tag_id: newPayload.event_tag_id, 
+            event_time: newPayload.event_time,
+            repeating: newPayload.repeating, 
+            notification_options: newPayload.notification_options, 
+            show_turns: newPayload.show_turns
+        }
+
+        try {
+            const result = await this.scheduleEventService.branchNewRepeatingEvent(userId, eventId, endtime, payload);
+            res.status(201)
+                .send(result)
+        } catch (error) {
+            throw new Errors.Application(error)
+        }
+    }
+
     async excludeRepeatingTime(req, res) {
         const eventId = req.params.id, excludeTime = req.body.exclude_repeatings
         if(!eventId || !excludeTime) {
