@@ -23,8 +23,12 @@ class MigrationRepository {
         const toodCollectionRef = db.collection('todos');
 
         for(const id in todos) {
+            const todo = todos[id]
+            if(!todo.event_time) {
+                todo.is_current = true
+            }
             const ref = toodCollectionRef.doc(id);
-            batch.set(ref, todos[id]);
+            batch.set(ref, todo);
         }
 
         const timeRangeCollectionRef = db.collection('event_times');
