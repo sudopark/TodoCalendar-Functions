@@ -16,4 +16,8 @@ router.put('/info', validateToken, async (req, res) => {
     await accountController.putAccountInfo(req, res);
 });
 
+router.delete('/account', validateToken, async (req, res) => {
+    await accountController.deleteAccount(req, res);
+});
+
 module.exports = router;
