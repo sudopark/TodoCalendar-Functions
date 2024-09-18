@@ -39,6 +39,17 @@ class AccountRepository {
             throw { status: 500, message: error?.message || error };
         }
     }
+
+    async deleteAccountInfo(uid) {
+        try {
+            const ref = adimn.firestore()
+                .collection('account_infos')
+                .doc(uid)
+            await ref.delete()
+        } catch {
+            throw { status: 500, message: error?.message || error };
+        }
+    }
 }
 
 module.exports = AccountRepository;

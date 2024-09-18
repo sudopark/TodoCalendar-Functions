@@ -124,4 +124,28 @@ describe('AccountService', () => {
             assert.equal(account.first_signed_in, null);
         })
     });
+
+    describe('계정 삭재', () => {
+
+        beforeEach(() => {
+            stubAccountRepository.shouldFailDeleate = false
+        })
+        
+        it("식제 완료", async () => {
+            const auth = { uid: 'some' }
+            const result = await service.deleteAccount(auth)
+            assert.equal(result.status, 'ok')
+        });
+
+        it('삭제 실패', async () => {
+            stubAccountRepository.shouldFailDeleate = true
+
+            const auth = { uid: 'some' }
+            try {
+                await service.deleteAccount(auth)
+            } catch(error) {
+                assert.equal(error.message, 'failed')
+            }         
+        })
+    })
 })

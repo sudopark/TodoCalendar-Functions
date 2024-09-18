@@ -8,6 +8,7 @@ class StubAccountRepository {
         this.noAccountInfoExists = false
         this.shouldFailFindAccountInfo = false
         this.shouldFailSaveAccountInfo = false
+        this.shouldFailDeleate = false
     }
 
     async findAccountInfo(uid, auth_time) {
@@ -25,6 +26,14 @@ class StubAccountRepository {
             throw { message: 'failed' };
         } else {
             return { uid: uid, ...payload };
+        }
+    }
+
+    async deleteAccountInfo(uid)  {
+        if(this.shouldFailDeleate) {
+            throw { message: 'failed' };
+        } else {
+            return;
         }
     }
 }

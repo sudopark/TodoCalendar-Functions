@@ -22,6 +22,19 @@ class AccountController {
             throw new Errors.Application(error)
         }
     }
+
+    async deleteAccount(req, res) {
+        const auth = req.auth;
+        if(!auth) {
+            throw new Errors.BadRequest("auth not exists")
+        }
+        try {
+            const result = await this.accountService.deleteAccount(auth);
+            res.status(200).send(result);
+        } catch(error) {
+            throw new Errors.Application(error)
+        }
+    }
 }
 
 module.exports = AccountController

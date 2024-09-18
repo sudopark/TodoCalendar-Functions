@@ -25,6 +25,11 @@ class AccountService {
             throw error;
         }
     }
+
+    async deleteAccount(auth) {
+        await this.accountRepository.deleteAccountInfo(auth.uid);
+        return { status: 'ok' }
+    }
 }
 
 module.exports = AccountService;
