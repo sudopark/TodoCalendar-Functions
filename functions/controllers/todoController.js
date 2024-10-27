@@ -51,6 +51,23 @@ class TodooController {
         }
     }
 
+    async getUncompletedTodos(req, res) {
+        const userId = req.auth.uid;
+        const refTime = req.query.refTime;
+
+        if(!userId || !refTime) {
+            throw new Errors.BadRequest('user id or refTime is missing.')
+        }
+
+        try {
+            const todos = await this.todoService.findUncompletedTodos(userId, refTime)
+            res.status(200)
+                .send(todos)
+        } catch (error) {
+            throw new Errors.Application(error)
+        }
+    }
+
     async makeTodo(req, res) {
 
         const { body } = req; const userId = req.auth.uid

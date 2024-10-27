@@ -34,6 +34,8 @@ describe("EventTimeService", () => {
             assert.equal(result.eventId, "id")
             assert.equal(result.lower, null)
             assert.equal(result.upper, null)
+            assert.equal(result.eventTimeLower, null)
+            assert.equal(result.eventTimeUpper, null)
         })
         it("time은 없는데 repeating은 있는 경우", async () => {
             const time = service.todoEventTimeRange('uid', { repeating: dummyRepeatWithEndTime })
@@ -41,6 +43,8 @@ describe("EventTimeService", () => {
             assert.equal(result.eventId, "id")
             assert.equal(result.lower, null)
             assert.equal(result.upper, null)
+            assert.equal(result.eventTimeLower, null)
+            assert.equal(result.eventTimeUpper, null)
         })
     }) 
 
@@ -55,6 +59,8 @@ describe("EventTimeService", () => {
             assert.equal(result.eventId, "id")
             assert.equal(result.lower, 10)
             assert.equal(result.upper, constants.eventTimeMaxUpperBound)
+            assert.equal(result.eventTimeLower, 300)
+            assert.equal(result.eventTimeUpper, 300)
         })
         it("repeat 있고 종료시간 있는 경우 => repeat.start..<repeat.end", async () => {
             const time = service.todoEventTimeRange('uid', { event_time: at, repeating: dummyRepeatWithEndTime })
@@ -62,6 +68,8 @@ describe("EventTimeService", () => {
             assert.equal(result.eventId, "id")
             assert.equal(result.lower, 10)
             assert.equal(result.upper, 1000)
+            assert.equal(result.eventTimeLower, 300)
+            assert.equal(result.eventTimeUpper, 300)
         })
         it("repeat 없는 경우 => time.timestamp..<time.timestamp", async () => {
             const time = service.todoEventTimeRange('uid', { event_time: at })
@@ -69,6 +77,8 @@ describe("EventTimeService", () => {
             assert.equal(result.eventId, "id")
             assert.equal(result.lower, 300)
             assert.equal(result.upper, 300)
+            assert.equal(result.eventTimeLower, 300)
+            assert.equal(result.eventTimeUpper, 300)
         })
     })
     
@@ -84,6 +94,8 @@ describe("EventTimeService", () => {
             assert.equal(result.eventId, "id")
             assert.equal(result.lower, 10)
             assert.equal(result.upper, constants.eventTimeMaxUpperBound)
+            assert.equal(result.eventTimeLower, 20)
+            assert.equal(result.eventTimeUpper, 200)
         })
         it("repeat 있고 종료시간 있는 경우 => repeat.start..<repeat.end", async () => {
             const time = service.todoEventTimeRange('uid', { event_time: period, repeating: dummyRepeatWithEndTime })
@@ -91,6 +103,8 @@ describe("EventTimeService", () => {
             assert.equal(result.eventId, "id")
             assert.equal(result.lower, 10)
             assert.equal(result.upper, 1000)
+            assert.equal(result.eventTimeLower, 20)
+            assert.equal(result.eventTimeUpper, 200)
         })
         it("repeat 없는 경우 => time.period_start..<time.period_end", async () => {
             const time = service.todoEventTimeRange('uid', { event_time: period })
@@ -98,6 +112,8 @@ describe("EventTimeService", () => {
             assert.equal(result.eventId, "id")
             assert.equal(result.lower, 20)
             assert.equal(result.upper, 200)
+            assert.equal(result.eventTimeLower, 20)
+            assert.equal(result.eventTimeUpper, 200)
         })
     })
 
@@ -120,6 +136,8 @@ describe("EventTimeService", () => {
             assert.equal(result.eventId, "id")
             assert.equal(result.lower, null)
             assert.equal(result.upper, null)
+            assert.equal(result.eventTimeLower, null)
+            assert.equal(result.eventTimeUpper, null)
         })
         it("repeat 있고 종료시간 없는 경우 => 조정(repeat.start)...", async () => {
             const time = service.todoEventTimeRange('uid', { event_time: allday, repeating: dummyRepeatWithoutEndTime })
@@ -127,6 +145,8 @@ describe("EventTimeService", () => {
             assert.equal(result.eventId, "id")
             assert.equal(result.lower, 10+7-14*3600)
             assert.equal(result.upper, constants.eventTimeMaxUpperBound)
+            assert.equal(result.eventTimeLower, 40)
+            assert.equal(result.eventTimeUpper, 400)
         })
         it("repeat 있고 종료시간 있는 경우 => 조정(repeat.start)..<(repeat.end)", async () => {
             const time = service.todoEventTimeRange('uid', { event_time: allday, repeating: dummyRepeatWithEndTime })
@@ -134,6 +154,8 @@ describe("EventTimeService", () => {
             assert.equal(result.eventId, "id")
             assert.equal(result.lower, 10+7-14*3600)
             assert.equal(result.upper, 1000+7+12*3600)
+            assert.equal(result.eventTimeLower, 40)
+            assert.equal(result.eventTimeUpper, 400)
         })
         it("repeat 없는 경우 => time.period_start..<time.period_end", async () => {
             const time = service.todoEventTimeRange('uid', { event_time: allday })
@@ -141,6 +163,65 @@ describe("EventTimeService", () => {
             assert.equal(result.eventId, "id")
             assert.equal(result.lower, 40+7-14*3600)
             assert.equal(result.upper, 400+7+12*3600)
+            assert.equal(result.eventTimeLower, 40)
+            assert.equal(result.eventTimeUpper, 400)
+        })
+    })
+
+    // 완료되지않은 todo id 조회
+    describe('완료되지않은 todo id 조회', () => {
+
+        beforeEach( async () => {
+            const todoAt = {
+                time_type: "at", 
+                timestamp: 300
+            }
+            const todoAtTime = service.todoEventTimeRange('this_user', { event_time: todoAt })
+            await stubRepository.updateTime('todo_at', todoAtTime)
+
+            const todoPeriod = {
+                time_type: "period", 
+                period_start: 20, 
+                period_end: 200
+            }
+            const todoPeriodTime = service.todoEventTimeRange('this_user', { event_time: todoPeriod })
+            await stubRepository.updateTime('todo_period', todoPeriodTime)
+
+            const todoAllday = {
+                time_type: "allday", 
+                period_start: 40, 
+                period_end: 400, 
+                seconds_from_gmt: 7
+            }
+            const todoAlldayTime = service.todoEventTimeRange('this_user', { event_time: todoAllday })
+            await stubRepository.updateTime('todo_allday', todoAlldayTime)
+
+            const otherUserTodo = {
+                time_type: "at", 
+                timestamp: 300
+            }
+            const otherUserTodoTime = service.todoEventTimeRange('other_user', { event_time: otherUserTodo })
+            await stubRepository.updateTime('otherUser_todo', otherUserTodoTime)
+
+            const notPastTodo = {
+                time_type: "at", 
+                timestamp: 3000
+            }
+            const notPastTodoTime = service.todoEventTimeRange('this_user', { event_time: notPastTodo })
+            await stubRepository.updateTime('future_todo', notPastTodoTime)
+
+            const schedule = {
+                time_type: "at", 
+                timestamp: 300
+            }
+            const scheduleTime = service.scheduleTimeRange('this_user', { event_time: notPastTodo })
+            await stubRepository.updateTime('schedule', scheduleTime)
+        })
+
+        it('완료되지않은 유저의 할일만 조회', async () => {
+            const ids = await service.uncompletedTodoIds('this_user', 500)
+            const expects = ['todo_at', 'todo_period', 'todo_allday']
+            assert.deepEqual(ids, expects)
         })
     })
 })

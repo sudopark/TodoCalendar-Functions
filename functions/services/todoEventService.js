@@ -26,6 +26,18 @@ class TodoEventService {
         return this.todoRepository.findCurrentTodos(userId)
     }
 
+    async findUncompletedTodos(userId, refTime) {
+        const eventIds = await this.eventTimeRangeService.uncompletedTodoIds(userId, refTime);
+        if(eventIds.length == 0) {
+            return []
+        }
+        const eventIdSlices = chunk(eventIds, 30)
+        const loadTodods = eventIdSlices.map((ids) => {
+            return this.todoRepository.findTodos(ids)
+        })
+        return (await Promise.all(loadTodods)).flat();
+    }
+
     async makeTodo (userId, payload) {
         const newTodo = await this.todoRepository.makeNewTodo(payload);
         await this.#updateEventtime(userId, newTodo)
