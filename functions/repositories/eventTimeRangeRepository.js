@@ -54,6 +54,21 @@ class EventTimeRangeRepository {
             throw { status: 500, message: error?.message || error, origin: error };
         }
     }
+
+    async uncompletedTodoIds(userId, refTime) {
+        try {
+            const refTimeNumber = Number(refTime)
+            const query = admin.firestore().collection('event_times')
+                .where('userId', '==', userId)
+                .where('isTodo', '==', true)
+                .where('eventTimeUpper', '<', refTimeNumber)
+            const snapShot = await query.get();
+            const eventIds = snapShot.docs.map(doc => doc.id);
+            return eventIds
+        } catch (error) {
+            throw { status: 500, message: error?.message || error, origin: error };
+        }
+    }
 }
 
 module.exports = EventTimeRangeRepository;

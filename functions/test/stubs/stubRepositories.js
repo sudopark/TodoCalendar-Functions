@@ -224,6 +224,15 @@ class StubEventTimeRangeRepository {
         const array = Array.from({length: len}, (v, i) => i+lower)
         return array.map(i => `id:${i}`)
     }
+
+    async uncompletedTodoIds(userId, refTime) {
+        const todoIds = [...this.eventTimeMap]
+            .filter(([k, v]) => v.isTodo == true)
+            .filter(([k, v]) => v.userId == userId)
+            .filter(([k, v]) => v.eventTimeUpper < refTime)
+            .map(([k, v]) => k)
+        return [...todoIds]
+    }
 }
 
 // MARK: - foremost event id repository

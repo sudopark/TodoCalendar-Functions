@@ -21,6 +21,10 @@ class EventTimeRangeService {
         return result
     }
 
+    async uncompletedTodoIds(userId, refTime) {
+        return this.eventTimeRepository.uncompletedTodoIds(userId, refTime)
+    }
+
     todoEventTimeRange(userId, todo) {
         const range = this.#range(todo.event_time, todo.repeating)
         const payload = { userId: userId, isTodo: true, ...range }
