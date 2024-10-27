@@ -378,4 +378,33 @@ describe('TodoService', () => {
             assert.equal(todos.length, 100)
         })
     })
+
+    describe('find uncompleted todos', () => {
+
+        beforeEach(() => {
+            stubEventTimeRepository.uncompletedEventIdsMocking = ['t1', 't2']
+        })
+
+        it('조회 성공', async () => {
+            const todos = await todoService.findUncompletedTodos('owner', 100)
+            const ids = todos.map(t => t.uuid)
+            assert.deepEqual(ids, ['t1', 't2'])
+        })
+
+        it('데이터 없는 경우에도 조회 성공', async () => {
+            stubEventTimeRepository.uncompletedEventIdsMocking = []
+            const todos = await todoService.findUncompletedTodos('owner', 100)
+            const ids = todos.map(t => t.uuid)
+            assert.deepEqual(ids, [])
+        })
+
+        it('30개 이상인 경우에도 성공', async () => {
+            const ids = Array.from(Array(100).keys()).map(int => `t${int}`)
+            stubEventTimeRepository.uncompletedEventIdsMocking = ids
+            
+            const todos = await todoService.findUncompletedTodos('owner', 100)
+            const todoIds = todos.map(t => t.uuid)
+            assert.deepEqual(todoIds, ids)
+        })
+    })
 })

@@ -201,6 +201,7 @@ class StubEventTimeRangeRepository {
         this.shouldFailUpdateTime = false
         this.didRemovedEventId = null
         this.eventTimeMap = new Map();
+        this.uncompletedEventIdsMocking = null
     }
 
     async updateTime(eventId, payload) {
@@ -226,6 +227,9 @@ class StubEventTimeRangeRepository {
     }
 
     async uncompletedTodoIds(userId, refTime) {
+        if(this.uncompletedEventIdsMocking != null) {
+            return this.uncompletedEventIdsMocking
+        }
         const todoIds = [...this.eventTimeMap]
             .filter(([k, v]) => v.isTodo == true)
             .filter(([k, v]) => v.userId == userId)

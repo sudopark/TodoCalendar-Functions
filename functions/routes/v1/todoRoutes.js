@@ -23,6 +23,10 @@ router.get('/', async (req, res) => {
     await todoController.getTodos(req, res);
 });
 
+router.get('/uncompleted', async (req, res) => {
+    await todoController.getUncompletedTodos(req, res);
+});
+
 router.post("/todo", async (req, res) => {
     await todoController.makeTodo(req, res);
 });
