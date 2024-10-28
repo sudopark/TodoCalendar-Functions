@@ -37,8 +37,4 @@ router.post('/todos/done', async (req, res) => {
     await migrationController.postMigrationDoneTodoEvents(req, res);
 });
 
-router.post('/batch/eventTimes_migration', async (req, res) => {
-    await migrationController.runMigrateEventTimeBatch(req, res)
-})
-
 module.exports = router;

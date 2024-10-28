@@ -83,34 +83,6 @@ class MigrationRepository {
         }
         await batch.commit();
     }
-
-    async loadAllTodos() {
-        const collectionRef = db.collection('todos');
-        const snapshot = await collectionRef.get();
-        const todos = snapshot.docs.map(doc => {
-            return {uuid: doc.id, ...doc.data()}
-        })
-        return todos
-    }
-
-    async loadAllSchedules() {
-        const collectionRef = db.collection('schedules');
-        const snapshot = await collectionRef.get();
-        const schedules = snapshot.docs.map(doc => {
-            return {uuid: doc.id, ...doc.data()}
-        })
-        return schedules
-    }
-
-    async migrateEventTimes(timesMap) {
-        const batch = db.batch();
-        const timeCollectionRef = db.collection('event_times');
-        timesMap.forEach((payload, eventId) => {
-            const ref = timeCollectionRef.doc(eventId);
-            batch.set(ref, payload)
-        })
-        await batch.commit();
-    }
 }
 
 module.exports = MigrationRepository;

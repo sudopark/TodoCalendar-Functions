@@ -493,7 +493,6 @@ class StubMigrationReposiotry {
 
     constructor() {
         this.shouldFail = false
-        this.didMigratedEventTimesMap = new Map()
     } 
 
     async migrateEventTags(tags) {
@@ -531,29 +530,6 @@ class StubMigrationReposiotry {
             throw { message: 'failed' }
         }
         this.didMigratedDoneTodoEvents = dones;
-    }
-
-    async loadAllTodos() {
-        const currentTodo = { uuid: 'current_todo', name: 'current', userId: 'owner' }
-        const todoTimeAt = { 
-            uuid: 'todo_time_at', name: 'todo_time_at', userId: 'owner',
-            event_time: { time_type: 'at', timestamp: 100 }
-        }
-        return [currentTodo, todoTimeAt]
-    }
-
-    async loadAllSchedules() {
-        const schedule = {
-            uuid: 'scheudle', name: 'schedule', userId: 'owner',
-            event_time: { time_type: 'at', timestamp: 300 }
-        }
-        return [schedule]
-    }
-
-    async migrateEventTimes(timesMap) {
-        timesMap.forEach((value, key) => {
-            this.didMigratedEventTimesMap.set(key, value)
-        })
     }
 }
 
