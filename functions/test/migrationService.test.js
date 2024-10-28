@@ -145,4 +145,42 @@ describe('MigrationService', () => {
             assert.equal(Object.keys(stubReposiotry.didMigratedDoneTodoEvents || {}).length, 0)
         })
     })
+
+    describe('run event time migration batch', () => {
+
+        it('success', async () => {
+            await service.migrateEventTimes()
+            const expectMap = new Map(
+                [
+                    ['current_todo', { userId: 'owner', isTodo: true }],
+                    [
+                        'todo_time_at', 
+                        {
+                            userId: 'owner',
+                            isTodo: true,
+                            lower: 100,
+                            upper: 100,
+                            eventTimeLower: 100,
+                            eventTimeUpper: 100
+                        }
+                    ], 
+                    [
+                        'scheudle', 
+                        {
+                            userId: 'owner',
+                            isTodo: false,
+                            lower: 300,
+                            upper: 300,
+                            eventTimeLower: 300,
+                            eventTimeUpper: 300
+                        }
+                    ]
+                ]
+            )
+            assert.deepEqual(
+                stubReposiotry.didMigratedEventTimesMap, 
+                expectMap
+            )
+        })
+    })
 });

@@ -90,6 +90,16 @@ class MigrationController {
             throw new Errors.Application(error);
         }
     }
+
+    async runMigrateEventTimeBatch(req, res) {
+        try {
+            await this.migrationService.migrateEventTimes()
+            res.status(201)
+                .send({ status: 'ok' })
+        } catch (error) {
+            throw new Errors.Application(error);
+        }
+    }
 }
 
 module.exports = MigrationController;
