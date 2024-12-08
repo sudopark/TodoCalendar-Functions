@@ -1,5 +1,5 @@
 // The cloud functions fore Firebase SDK to create Cloud functions and trigger
-const functions = require("firebase-functions");
+const functions = require("firebase-functions/v1");
 const express = require("express");
 require('express-async-errors');
 
