@@ -85,6 +85,12 @@ class ScheduleEventService {
         await this.eventTimeRangeService.removeEventTime(eventId);
     }
 
+    async removeAllEventsWithTagId(tagId) {
+        const ids = await this.scheduleEventRepository.removeAllEventWithTagId(tagId)
+        await this.eventTimeRangeService.removeEventTimes(ids)
+        return ids
+    }
+
     async #updateEventtime(userId, event) {
         const payload = this.eventTimeRangeService.scheduleTimeRange(userId, event);
         await this.eventTimeRangeService.updateEventTime(event.uuid, payload);

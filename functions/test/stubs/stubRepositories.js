@@ -143,6 +143,7 @@ class StubScheduleEventRepository {
         this.shouldFailPut = false
         this.shouldFailUpdate = false
         this.eventMap = new Map();
+        this.spyEventMap = new Map();
     }
 
     async findEvent(eventId) {
@@ -197,6 +198,14 @@ class StubScheduleEventRepository {
 
     async removeEvent(eventId) {
         this.eventMap.delete(eventId)
+    }
+
+    async removeAllEventWithTagId(tagId)  {
+        const events = [...this.spyEventMap].filter(([k, v]) => v.event_tag_id == tagId)
+        events.forEach(([k, v]) => {
+            this.spyEventMap.delete(k)
+        })
+        return events.map(([k, v]) => k)
     }
 }
 
