@@ -3,8 +3,10 @@ const Errors = require('../models/Errors');
 
 class EventTagController {
 
-    constructor(eventTagService) {
+    constructor(eventTagService, todoEventService, scheduleEventService) {
         this.eventTagService = eventTagService
+        this.todoEventService = todoEventService
+        this.scheduleEventService = scheduleEventService
     }
 
     async postEventTag(req, res) {
@@ -64,6 +66,23 @@ class EventTagController {
             await this.eventTagService.removeTag(tagId)
             res.status(200)
                 .send({ status: 'ok' })
+        } catch (error) {
+            throw new Errors.Application(error)
+        }
+    }
+
+    async deleteTagAndEvents(req, res) {
+        const tagId = req.params.id;
+        if(!tagId) {
+            throw new Errors.BadRequest('tag id is missing.')
+        }
+        try {
+            await this.eventTagService.removeTag(tagId)
+            const todoIds = await this.todoEventService.removeAllTodoWithTagId(tagId)
+            const scheduleIds = await this.scheduleEventService.removeAllEventsWithTagId(tagId)
+            res.status(200)
+                .send({ todos: todoIds, schedules: scheduleIds })
+
         } catch (error) {
             throw new Errors.Application(error)
         }

@@ -75,15 +75,14 @@ class ScheduleEventRepository {
 
     async removeAllEventWithTagId(tagId) {
         const batch = db.batch();
-        const batchCollectionRef = batch.collection('schedules')
-        const query = batchCollectionRef
-            .where('event_tag_id', '==', tagId)
+        const query = collectionRef.where('event_tag_id', '==', tagId)
         const snapShot = await query.get();
         const ids = snapShot.docs.map(d => d.id)
 
-        for(const id in ids) {
-            batchCollectionRef.doc(id).delete()
-        }
+        ids.forEach(id => {
+            const ref = collectionRef.doc(id)
+            batch.delete(ref)
+        })
 
         await batch.commit()
         return ids
