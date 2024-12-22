@@ -329,6 +329,35 @@ describe('ScheduleEventService', () => {
         })
     })
 
+    describe('remove event with tagId', () => {
+
+        beforeEach(() => {
+            stubEventTimeRepository.removeIds = null;
+            stubScheduleReopository.spyEventMap = new Map()
+            stubScheduleReopository.spyEventMap.set(
+                'event_without_tag', {uuid: 'event_without_tag'}
+            )
+            stubScheduleReopository.spyEventMap.set(
+                'event_with_tag1', {uuid: 'event_with_tag1', event_tag_id: 'tag1'}
+            )
+            stubScheduleReopository.spyEventMap.set(
+                'event_with_tag2', {uuid: 'event_with_tag2', event_tag_id: 'tag2'}
+            )
+            stubScheduleReopository.spyEventMap.set(
+                'event_with_tag1_1', {uuid: 'event_with_tag1_1', event_tag_id: 'tag1'}
+            )
+        })
+
+        it('tagId에 해당하는 schedule 삭제', async () => {
+
+            const ids = await scheduleService.removeAllEventsWithTagId('tag1')
+            const eventAfterRemoveIds = [...stubScheduleReopository.spyEventMap].map(([k, v]) => k)
+            assert.deepEqual(ids, ['event_with_tag1', 'event_with_tag1_1'])
+            assert.deepEqual(eventAfterRemoveIds, ['event_without_tag', 'event_with_tag2'])
+            assert.deepEqual(stubEventTimeRepository.removeIds, ['event_with_tag1', 'event_with_tag1_1'])
+        })
+    })
+
     describe('get event', () => {
 
         beforeEach(async () => {

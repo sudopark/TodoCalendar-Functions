@@ -28,6 +28,17 @@ class EventTimeRangeRepository {
         }
     }
 
+    async removeTimes(ids) {
+        const db = admin.firestore()
+        const batch = db.batch()
+        const collectionRef = db.collection('event_times')
+        ids.forEach(id => {
+            const ref = collectionRef.doc(id)
+            batch.delete(ref)
+        })
+        await batch.commit()
+    }
+
     async eventIds(userId, isTodo, lower, upper) {
         try {
             const start = Number(lower), end = Number(upper);

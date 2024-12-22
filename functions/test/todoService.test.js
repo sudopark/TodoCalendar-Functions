@@ -342,6 +342,35 @@ describe('TodoService', () => {
         })
     })
 
+    describe('remove todo with tagId', () => {
+
+        beforeEach(() => {
+            stubEventTimeRepository.removeIds = null;
+            todoRepository.spyEventMap = new Map()
+            todoRepository.spyEventMap.set(
+                'todo_without_tag', {uuid: 'todo_without_tag'}
+            )
+            todoRepository.spyEventMap.set(
+                'todo_with_tag1', {uuid: 'todo_with_tag1', event_tag_id: 'tag1'}
+            )
+            todoRepository.spyEventMap.set(
+                'todo_with_tag2', {uuid: 'todo_with_tag2', event_tag_id: 'tag2'}
+            )
+            todoRepository.spyEventMap.set(
+                'todo_with_tag1_1', {uuid: 'todo_with_tag1_1', event_tag_id: 'tag1'}
+            )
+        })
+
+        it('tagId에 해당하는 todo 삭제', async () => {
+            
+            const ids = await todoService.removeAllTodoWithTagId('tag1')
+            const todoAfterRemoveIds = [...todoRepository.spyEventMap].map(([k, v]) => k)
+            assert.deepEqual(ids, ['todo_with_tag1', 'todo_with_tag1_1'])
+            assert.deepEqual(todoAfterRemoveIds, ['todo_without_tag', 'todo_with_tag2'])
+            assert.deepEqual(stubEventTimeRepository.removeIds, ['todo_with_tag1', 'todo_with_tag1_1'])
+        })
+    })
+
     describe('find todo', () => {
 
         it('조회 성공', async () => {

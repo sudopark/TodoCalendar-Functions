@@ -102,6 +102,21 @@ class TodoRepository {
         }
     }
 
+    async removeAllTodoWithTagId(tagId) {
+        const batch = db.batch();
+        const query = collectionRef.where('event_tag_id', '==', tagId)
+        const snapShot = await query.get();
+        const ids = snapShot.docs.map(d => d.id)
+
+        ids.forEach(id => {
+            const ref = collectionRef.doc(id)
+            batch.delete(ref)
+        })
+        
+        await batch.commit()
+        return ids
+    }
+
     async restoreTodo(id, originPayload) {
         const ref = collectionRef.doc(id)
         await ref.set(originPayload, {merge: false})

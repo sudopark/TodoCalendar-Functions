@@ -12,6 +12,10 @@ class EventTimeRangeService {
         return result
     }
 
+    async removeEventTimes(ids) {
+        return this.eventTimeRepository.removeTimes(ids)
+    }
+
     async updateEventTime(eventId, payload) {
         return this.eventTimeRepository.updateTime(eventId, payload);
     }

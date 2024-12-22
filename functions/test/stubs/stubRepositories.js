@@ -50,6 +50,7 @@ class StubTodoRepository {
         this.shouldfailUpdateTodo = false
         this.removedTodoId = null;
         this.shouldFailRestore = false;
+        this.spyEventMap = new Map();
     }
 
     async makeNewTodo(payload) {
@@ -115,6 +116,14 @@ class StubTodoRepository {
         this.removedTodoId = id;
     }
 
+    async removeAllTodoWithTagId(tagId) {
+        const todos = [...this.spyEventMap].filter(([k, v]) => v.event_tag_id == tagId)
+        todos.forEach(([k, v]) => {
+            this.spyEventMap.delete(k)
+        })
+        return todos.map(([k, v]) => k)
+    }
+
     async restoreTodo(id, originPayload) {
         if(this.shouldFailRestore) {
             throw { message: 'not exists' }
@@ -134,6 +143,7 @@ class StubScheduleEventRepository {
         this.shouldFailPut = false
         this.shouldFailUpdate = false
         this.eventMap = new Map();
+        this.spyEventMap = new Map();
     }
 
     async findEvent(eventId) {
@@ -189,6 +199,14 @@ class StubScheduleEventRepository {
     async removeEvent(eventId) {
         this.eventMap.delete(eventId)
     }
+
+    async removeAllEventWithTagId(tagId)  {
+        const events = [...this.spyEventMap].filter(([k, v]) => v.event_tag_id == tagId)
+        events.forEach(([k, v]) => {
+            this.spyEventMap.delete(k)
+        })
+        return events.map(([k, v]) => k)
+    }
 }
 
 
@@ -202,6 +220,7 @@ class StubEventTimeRangeRepository {
         this.didRemovedEventId = null
         this.eventTimeMap = new Map();
         this.uncompletedEventIdsMocking = null
+        this.removeIds = null;
     }
 
     async updateTime(eventId, payload) {
@@ -218,6 +237,13 @@ class StubEventTimeRangeRepository {
     async remove(eventId) {
         this.didRemovedEventId = eventId
         this.eventTimeMap.delete(eventId)
+    }
+
+    async removeTimes(ids) {
+        for(const id in ids) {
+            this.eventTimeMap.delete(id)
+        }
+        this.removeIds = ids
     }
 
     async eventIds(userId, isTodo, lower, upper) {

@@ -72,6 +72,21 @@ class ScheduleEventRepository {
             throw { status: 500, message: error?.message || error};
         }
     }
+
+    async removeAllEventWithTagId(tagId) {
+        const batch = db.batch();
+        const query = collectionRef.where('event_tag_id', '==', tagId)
+        const snapShot = await query.get();
+        const ids = snapShot.docs.map(d => d.id)
+
+        ids.forEach(id => {
+            const ref = collectionRef.doc(id)
+            batch.delete(ref)
+        })
+
+        await batch.commit()
+        return ids
+    }
 }
 
 module.exports = ScheduleEventRepository;

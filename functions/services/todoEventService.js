@@ -91,6 +91,12 @@ class TodoEventService {
         return { status: 'ok' }
     }
 
+    async removeAllTodoWithTagId(tagId) {
+        const ids = await this.todoRepository.removeAllTodoWithTagId(tagId)
+        await this.eventTimeRangeService.removeEventTimes(ids)
+        return ids
+    }
+
     async restoreTodo(userId, todoId, originPayload) {
         const restored = await this.todoRepository.restoreTodo(todoId, originPayload)
         await this.#updateEventtime(userId, restored)
