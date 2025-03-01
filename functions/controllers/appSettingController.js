@@ -23,8 +23,8 @@ class AppSetingController {
     }
 
     async patchUserDefaultEventTagColors(req, res) {
-        const { body } = req.body, userId = req.auth.uid;
-        if(!userId || !body.holiday || !body.default) {
+        const body  = req.body, userId = req.auth.uid;
+        if(!userId || (!body.holiday && !body.default)) {
             throw new Errors.BadRequest('user id, holiday or default tag color is missing.')
         }
 

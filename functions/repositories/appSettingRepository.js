@@ -10,7 +10,7 @@ class AppSettingRepository {
         try {
             const ref = collectionRef.doc(userId)
             const snapShot = await ref.get();
-            return snapShot.data()?.defaultEventTagColors ?? { }
+            return snapShot.data()?.defaultTagColor ?? { }
         } catch (error) {
             throw { status: 500, message: error?.message || error }
         }
@@ -21,7 +21,7 @@ class AppSettingRepository {
             const ref = collectionRef.doc(userId)
             await ref.set({ defaultTagColor: payload }, {merge: true})
             const updated = await ref.get();
-            return updated.data().defaultEventTagColors
+            return updated.data().defaultTagColor
         } catch (error) {
             throw { status: 500, message: error?.message || error }
         }
