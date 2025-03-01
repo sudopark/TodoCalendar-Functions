@@ -575,7 +575,7 @@ class StubAppSettingRepository {
             throw { message: 'failed' }
         }
         const setting = this.userSettingMap.get(userId)
-        return setting?.defaultEventTagColors ?? {}
+        return setting?.defaultTagColor ?? {}
     }
 
     async updateUserDefaultEventTagColors(userId, payload) {
@@ -583,9 +583,10 @@ class StubAppSettingRepository {
             throw { message: 'failed' }
         }
         const setting = this.userSettingMap.get(userId) ?? {}
-        setting.defaultEventTagColors = payload
+        const newColorSetting = {...setting.defaultTagColor, ...payload}
+        setting.defaultTagColor = newColorSetting
         this.userSettingMap.set(userId, setting)
-        return setting
+        return setting.defaultTagColor
     }
 }
 
