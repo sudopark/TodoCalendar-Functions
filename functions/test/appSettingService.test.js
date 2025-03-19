@@ -64,7 +64,7 @@ describe('AppSettingService', () => {
         });
     })
 
-    describe.only('update color setting', () => {
+    describe('update color setting', () => {
 
         // 없는데 일부만 저장 -> 저장된 값과, 디폴트값 반환
         it('and parital update to setting not exists, return partial updated and default value', async () => {
