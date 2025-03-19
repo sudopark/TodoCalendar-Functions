@@ -11,6 +11,7 @@ const authValidator = require("./middlewares/authMiddleware.js");
 const { initializeApp, applicationDefault, cert} = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
 const serviceAccount = require('./secrets/todocalendar-serviceAccountKey.json');
+require('dotenv').config({ path: './secrets/.env' })
 
 initializeApp({
     credential: cert(serviceAccount)
@@ -27,6 +28,7 @@ const v1EventTagRouter = require('./routes/v1/eventTagRoutes');
 const v1EventDetailRouter = require('./routes/v1/eventDetailRoutes');
 const v1MigrationRouter = require('./routes/v1/migrationRoutes');
 const v1SettingRouter = require('./routes/v1/settingRoutes');
+const v1HolidayRouter = require('./routes/v1/holidayRoutes');
 const v1TestRouter = require('./routes/v1/testRoutes');
 
 const app = express();
@@ -43,6 +45,7 @@ app.use('/v1/tags', authValidator, v1EventTagRouter);
 app.use('/v1/event_details', authValidator, v1EventDetailRouter);
 app.use('/v1/migration', authValidator, v1MigrationRouter);
 app.use('/v1/setting', authValidator, v1SettingRouter);
+app.use('/v1/holiday', v1HolidayRouter);
 // app.use('/v1/tests', v1TestRouter);
 app.use((err, req, res, next) => {
     res.status(err?.status ?? 500)

@@ -590,6 +590,29 @@ class StubAppSettingRepository {
     }
 }
 
+class StubHolidayRepository {
+
+    constructor() {
+        this.didRequestedCalendarId = null;
+        this.didRequestedTimeMin = null;
+        this.didRequestedTimeMax = null;
+        this.shouldLoadFail = false
+    }
+
+    async getHoliday(calendarId, timeMin, timeMax) {
+
+        if(this.shouldLoadFail) {
+            throw { message: 'failed' }
+        }
+
+        this.didRequestedCalendarId = calendarId
+        this.didRequestedTimeMin = timeMin
+        this.didRequestedTimeMax = timeMax
+
+        return { holiday: 'dummy' }
+    }
+}
+
 module.exports = {
     Account: StubAccountRepository,
     Todo: StubTodoRepository, 
@@ -600,5 +623,6 @@ module.exports = {
     EventTag: StubEventTagRepository, 
     EventDetailData: StubEventDetailDataRepository, 
     Migration: StubMigrationReposiotry, 
-    ApPSetting: StubAppSettingRepository
+    ApPSetting: StubAppSettingRepository, 
+    Holiday: StubHolidayRepository
 };
