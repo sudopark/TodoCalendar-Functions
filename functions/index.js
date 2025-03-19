@@ -11,6 +11,7 @@ const authValidator = require("./middlewares/authMiddleware.js");
 const { initializeApp, applicationDefault, cert} = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
 const serviceAccount = require('./secrets/todocalendar-serviceAccountKey.json');
+require('dotenv').config({ path: './secrets/.env' })
 
 initializeApp({
     credential: cert(serviceAccount)
