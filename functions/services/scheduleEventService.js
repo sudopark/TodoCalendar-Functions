@@ -70,8 +70,10 @@ class ScheduleEventService {
         if (!origin.repeating) {
             throw new Errors.Application({status: 400, message: 'origin event not repeating'});
         }
-        const updated = await this.scheduleEventRepository.updateEvent(
-            originEventId, { repeating: {...origin.repeating, end: endTime} }
+        origin.repeating.end = endTime
+        delete origin.repeating.end_count
+        const updated = await this.scheduleEventRepository.putEvent(
+            originEventId, origin
         )
         await this.#updateEventtime(userId, updated);
         const newEvent = await this.scheduleEventRepository.makeEvent(newPayload);

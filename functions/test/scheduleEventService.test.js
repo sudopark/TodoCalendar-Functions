@@ -263,6 +263,12 @@ describe('ScheduleEventService', () => {
             repeating: { start: 100, option: { optionType: 'every_day', interval: 1 }}
         }
 
+        const payloadHasEndcount = {
+            name: 'origin', 
+            event_time: { time_type: 'at', timestamp: 100 }, 
+            repeating: { start: 100, option: { optionType: 'every_day', interval: 1 }, end_count: 10}
+        }
+
         const newPayload = {
             name: 'branch', 
             event_time: { time_type: 'at', timestamp: 200 }, 
@@ -270,8 +276,9 @@ describe('ScheduleEventService', () => {
         }
 
         beforeEach(async () => {
-            stubScheduleReopository.shouldFailUpdate = false
+            stubScheduleReopository.shouldFailPut = false
             await stubScheduleReopository.putEvent('origin', {...payload})
+            await stubScheduleReopository.putEvent('origin_has_endcount', payloadHasEndcount)
         })
 
         it('success', async () => {
@@ -283,9 +290,19 @@ describe('ScheduleEventService', () => {
             assert.equal(result.origin.repeating.end, 200)
         })
 
+        it('if origin event has end count, remove and save end time', async () => {
+            const result = await scheduleService.branchNewRepeatingEvent(
+                'owner', 'origin_has_endcount', 200, newPayload
+            )
+            assert.equal(result.new.name, 'branch')
+            assert.equal(result.origin.uuid, 'origin_has_endcount')
+            assert.equal(result.origin.repeating.end, 200)
+            assert.equal(result.origin.repeating.end_count, null)
+        })
+
         it('fail', async () => {
 
-            stubScheduleReopository.shouldFailUpdate = true
+            stubScheduleReopository.shouldFailPut = true
             try {
                 await scheduleService.branchNewRepeatingEvent(
                     'owner', 'origin', 200, newPayload
