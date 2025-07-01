@@ -77,6 +77,16 @@ class TodoRepository {
         }
     }
 
+    async getAllTodos(userId) {
+        const query = collectionRef
+            .where('userId', '==', userId)
+        const snapShot = await query.get();
+        const todos = snapShot.docs.map(doc => {
+            return { uuid: doc.id, ...doc.data() }
+        });
+        return todos
+    }
+
     async findTodos(eventIds) {
         if(!eventIds.length) {
             return []
