@@ -17,11 +17,20 @@ Object.freeze(DataChangeCase.DELETED);
 
 class DataChangeLog {
 
-    constructor(data) {
-        this.uuid = data.uuid
-        this.userId = data.userId
-        this.changeCase = new DataChangeCase(data.changeCase)
-        this.timestamp = data.timestamp
+    constructor(uuid, userId, changeCase, timestamp) {
+        this.uuid = uuid
+        this.userId = userId
+        this.changeCase = changeCase
+        this.timestamp = timestamp
+    }
+
+    static fromData(data) {
+        return new DataChangeLog(
+            data.uuid, 
+            data.userId,
+            new DataChangeCase(data.changeCase), 
+            data.timestamp
+        )
     }
 
     toJSON() {

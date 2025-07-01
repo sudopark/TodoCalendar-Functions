@@ -629,6 +629,50 @@ class StubHolidayRepository {
     }
 }
 
+// MARK: - DataChangeLog
+
+class StubDataChangeLogRepository {
+
+    constructor() {
+        this.allLogsMap = new Map();
+    }
+
+    async findChanges(userId, dataType, timestamp) {
+        const thisDataTypeLogs = this.allLogsMap.get(dataType) ?? []
+        const logs = thisDataTypeLogs
+            .filter(log => { return log.userId === userId })
+            .filter(log => { return log.timestamp > timestamp })
+        return logs
+    }
+
+    async updateLog(log, dataType) {
+        const thisDataTypeLogs = (this.allLogsMap.get(dataType) ?? [])
+            .filter(log => { return log.uuid !== log.uuid })
+        thisDataTypeLogs.push(log)
+        this.allLogsMap.set(dataType, thisDataTypeLogs)
+    }
+}
+
+// MARK: - SyncTime 
+
+class StubSyncTimeStampRepository {
+
+    constructor()  {
+        this.syncTimestampMap = new Map();
+    }
+
+    async syncTimestamp(userId, dataType) {
+        const dataTypeMap = this.syncTimestampMap.get(dataType)
+        return dataTypeMap?.get(userId)
+    } 
+    
+    async updateTimestamp(timeStamp) {
+        const dataTypeMap = this.syncTimestampMap.get(timeStamp.dataType) ?? new Map()
+        dataTypeMap.set(timeStamp.userId, timeStamp)
+        this.syncTimestampMap.set(timeStamp.dataType, dataTypeMap)
+    }
+}
+
 module.exports = {
     Account: StubAccountRepository,
     Todo: StubTodoRepository, 
@@ -640,5 +684,7 @@ module.exports = {
     EventDetailData: StubEventDetailDataRepository, 
     Migration: StubMigrationReposiotry, 
     ApPSetting: StubAppSettingRepository, 
-    Holiday: StubHolidayRepository
+    Holiday: StubHolidayRepository, 
+    ChangeLog: StubDataChangeLogRepository,
+    SyncTimeStamp: StubSyncTimeStampRepository
 };
