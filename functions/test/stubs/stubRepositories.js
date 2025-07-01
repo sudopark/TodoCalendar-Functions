@@ -131,6 +131,14 @@ class StubTodoRepository {
             return { uuid: id, ...originPayload }
         }
     }
+
+    async getAllTodos(userId) {
+        const range = Array.from({ length: 10}, (_, i) => i);
+        const todos = range.map(i => {
+            return { uuid: `todo:${i}`, userId: userId }
+        })
+        return todos
+    }
 }
 
 
@@ -206,6 +214,14 @@ class StubScheduleEventRepository {
             this.spyEventMap.delete(k)
         })
         return events.map(([k, v]) => k)
+    }
+
+    async getAllEvents(userId) {
+        const range = Array.from({ length: 10}, (_, i) => i);
+        const events = range.map(i => {
+            return { uuid: `sc:${i}`, userId: userId }
+        })
+        return events
     }
 }
 
