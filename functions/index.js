@@ -29,6 +29,7 @@ const v1EventDetailRouter = require('./routes/v1/eventDetailRoutes');
 const v1MigrationRouter = require('./routes/v1/migrationRoutes');
 const v1SettingRouter = require('./routes/v1/settingRoutes');
 const v1HolidayRouter = require('./routes/v1/holidayRoutes');
+const v1SyncRouter = require('./routes/v1/dataSyncRoutes.js');
 const v1TestRouter = require('./routes/v1/testRoutes');
 
 const app = express();
@@ -46,6 +47,7 @@ app.use('/v1/event_details', authValidator, v1EventDetailRouter);
 app.use('/v1/migration', authValidator, v1MigrationRouter);
 app.use('/v1/setting', authValidator, v1SettingRouter);
 app.use('/v1/holiday', v1HolidayRouter);
+app.use('/v1/sync', authValidator, v1SyncRouter);
 // app.use('/v1/tests', v1TestRouter);
 app.use((err, req, res, next) => {
     res.status(err?.status ?? 500)
