@@ -335,4 +335,52 @@ describe('DataSyncService', () => {
             assert.deepEqual(response.newSyncTime, new SyncTimestamp('some_user', DataType.Schedule, 200))
         })
     })
+
+    describe('sync all datas', () => {
+
+        beforeEach(async () => {
+            await syncTimeRepository.updateTimestamp(
+                new SyncTimestamp('some_user', DataType.EventTag, 200)
+            )
+            await syncTimeRepository.updateTimestamp(
+                new SyncTimestamp('some_user', DataType.Todo, 200)
+            )
+            await syncTimeRepository.updateTimestamp(
+                new SyncTimestamp('some_user', DataType.Schedule, 200)
+            )
+        })
+
+        it('event tag', async () => {
+            const response = await service.syncAll('some_user', DataType.EventTag);
+            assert.deepEqual(response.checkResult, Sync.CheckResult.migrationNeeds)
+            assert.deepEqual(response.created, null)
+            assert.deepEqual(response.updated.map(t => t.uuid), allTagIds)
+            assert.deepEqual(response.deleted, null)
+            assert.deepEqual(response.newSyncTime.userId, 'some_user')
+            assert.deepEqual(response.newSyncTime.dataType, DataType.EventTag)
+            assert.deepEqual( response.newSyncTime.timestamp, 200)
+        })
+
+        it('todo', async () => {
+            const response = await service.syncAll('some_user', DataType.Todo);
+            assert.deepEqual(response.checkResult, Sync.CheckResult.migrationNeeds)
+            assert.deepEqual(response.created, null)
+            assert.deepEqual(response.updated.map(t => t.uuid), allTodoIds)
+            assert.deepEqual(response.deleted, null)
+            assert.deepEqual(response.newSyncTime.userId, 'some_user')
+            assert.deepEqual(response.newSyncTime.dataType, DataType.Todo)
+            assert.deepEqual( response.newSyncTime.timestamp, 200)
+        })
+
+        it('schedule', async () => {
+            const response = await service.syncAll('some_user', DataType.Schedule);
+            assert.deepEqual(response.checkResult, Sync.CheckResult.migrationNeeds)
+            assert.deepEqual(response.created, null)
+            assert.deepEqual(response.updated.map(t => t.uuid), allScheduleIds)
+            assert.deepEqual(response.deleted, null)
+            assert.deepEqual(response.newSyncTime.userId, 'some_user')
+            assert.deepEqual(response.newSyncTime.dataType, DataType.Schedule)
+            assert.deepEqual( response.newSyncTime.timestamp, 200)
+        })
+    })
 });

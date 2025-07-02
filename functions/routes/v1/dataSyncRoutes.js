@@ -24,4 +24,8 @@ router.get('/sync', async (req, res) => {
     await dataSyncController.sync(req, res)
 });
 
+router.get('/sync/all', async (req, res) => {
+    await dataSyncController.syncAll(req, res);
+});
+
 module.exports = router;

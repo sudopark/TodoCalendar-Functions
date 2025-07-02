@@ -34,6 +34,23 @@ class DataSyncController {
             throw new Errors.Application(error)
         }
     }
+
+    async syncAll(req, res) {
+        const userId = req.auth.uid, dataType = req.params.dataType;
+        if(!userId || !dataType) {
+            throw new Errors.BadRequest('userId, dataType or timestamp is missing.')
+        }
+
+        try {
+            const responseModel = await this.dataSyncService.syncAll(userId, dataType);
+            const responseJSON = JSON.stringify(responseModel);
+            res.status(200)
+                .send(responseJSON)
+
+        } catch (error) {
+            throw new Errors.Application(error)
+        }
+    } 
 }
 
 module.exports = DataSyncController;

@@ -34,6 +34,15 @@ class DataSyncService {
         }
     }
 
+    async syncAll(userId, dataType) {
+        const allDatas = await this.#loadAllDatas(dataType, userId);
+        const serverTimestamp = await this.synctimeRepository.syncTimestamp(userId, dataType);
+        const response = new SyncResponse.Response(SyncResponse.CheckResult.migrationNeeds)
+            .setUpdated(allDatas)
+            .setSynctime(serverTimestamp)
+        return response
+    }
+
     async #syncAllData(userId, dataType) {
 
         const allDatas = await this.#loadAllDatas(dataType, userId)
