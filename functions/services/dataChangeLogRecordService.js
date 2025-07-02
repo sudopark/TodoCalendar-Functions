@@ -12,8 +12,14 @@ class DataChangeLogRecordService {
         try {
             await this.changeLogRepository.updateLog(log, dataType)
             
-            const syncTime = new SyncTimestamp(log.userId, dataType, log.timestamp)
-            await this.syncTimeRepository.updateTimestamp(syncTime)
+            const serverTimestamp = await this.syncTimeRepository.syncTimestamp(log.userId, dataType)
+            if(serverTimestamp && serverTimestamp.timestamp > log.timestamp) {
+                return
+            }
+
+            const newSyncTime = new SyncTimestamp(log.userId, dataType, log.timestamp)
+            await this.syncTimeRepository.updateTimestamp(newSyncTime)
+
         } catch (error) { }
     }
 }
