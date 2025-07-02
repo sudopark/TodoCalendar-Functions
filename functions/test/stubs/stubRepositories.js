@@ -635,6 +635,7 @@ class StubDataChangeLogRepository {
 
     constructor() {
         this.allLogsMap = new Map();
+        this.shouldFailUpdateLog = false
     }
 
     async findChanges(userId, dataType, timestamp) {
@@ -646,6 +647,11 @@ class StubDataChangeLogRepository {
     }
 
     async updateLog(log, dataType) {
+
+        if(this.shouldFailUpdateLog) {
+            throw { message: 'failed' };
+        }
+
         const thisDataTypeLogs = (this.allLogsMap.get(dataType) ?? [])
             .filter(log => { return log.uuid !== log.uuid })
         thisDataTypeLogs.push(log)
