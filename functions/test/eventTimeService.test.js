@@ -1,7 +1,7 @@
 
 
 const assert = require('assert');
-const StubRepos = require("./stubs/stubRepositories");
+const StubRepos = require("./doubles/stubRepositories");
 const EventTimeRangeService = require("../services/eventTimeRangeService");
 const constants = require('../Utils/constants');
 
