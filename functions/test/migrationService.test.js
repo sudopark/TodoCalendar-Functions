@@ -2,7 +2,7 @@
 const MigrationService = require('../services/migrationService');
 const EventTimeRangeService = require('../services/eventTimeRangeService');
 const assert = require('assert');
-const StubRepos = require('./stubs/stubRepositories');
+const StubRepos = require('./doubles/stubRepositories');
 
 describe('MigrationService', () => {
 

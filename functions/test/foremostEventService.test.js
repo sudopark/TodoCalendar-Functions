@@ -1,7 +1,7 @@
 
 const ForemostEventService = require('../services/foremostEventService');
 const assert = require('assert');
-const StubRepos = require('./stubs/stubRepositories');
+const StubRepos = require('./doubles/stubRepositories');
 
 
 describe('ForemostEventService', () => {

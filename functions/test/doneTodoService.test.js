@@ -3,7 +3,7 @@ const DoneTodoService = require('../services/doneTodoService');
 const EventTimeRangeService = require('../services/eventTimeRangeService');
 const TodoServie = require('../services/todoEventService');
 const assert = require('assert');
-const StubRepos = require('./stubs/stubRepositories');
+const StubRepos = require('./doubles/stubRepositories');
 
 describe("DoneTodoService", () => {
 

@@ -2,7 +2,7 @@
 const ScheduleEventService = require('../services/scheduleEventService');
 const assert = require('assert');
 const EventTimeRangeService = require('../services/eventTimeRangeService');
-const StubRepos = require("./stubs/stubRepositories");
+const StubRepos = require("./doubles/stubRepositories");
 const constants = require('../Utils/constants');
 
 
