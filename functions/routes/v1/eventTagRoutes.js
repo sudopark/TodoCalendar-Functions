@@ -12,6 +12,9 @@ const TodoRepository = require('../../repositories/todoRepository');
 const ScheduleService = require('../../services/scheduleEventService');
 const ScheduleRepository = require('../../repositories/scheduleEventRepository');
 const DoneTodoEventRepository = require('../../repositories/doneTodoEventRepository');
+const SyncTimestampRepository = require('../../repositories/syncTimestampRepository');
+const ChangeLogRepository = require('../../repositories/dataChangeLogRepository');
+const ChangeLogRecordService = require('../../services/dataChangeLogRecordService');
 
 const todoRepository = new TodoRepository();
 const eventTimeRepository = new EventTimeRepository();
@@ -21,7 +24,11 @@ const scheduleRepository = new ScheduleRepository();
 
 const controller = new EventTagController(
     new EventTagService(
-        new EventTagRepository()
+        new EventTagRepository(), 
+        new ChangeLogRecordService(
+            new SyncTimestampRepository(), 
+            new ChangeLogRepository()
+        )
     ), 
     new TodoService({todoRepository, eventTimeRangeService, doneTodoRepository}), 
     new ScheduleService(scheduleRepository, eventTimeRangeService)
