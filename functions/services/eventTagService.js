@@ -1,10 +1,13 @@
 
 const { chunk } = require('../Utils/functions');
+const ChangeLog = require('../models/DataChangeLog');
+const DataType = require('../models/DataTypes');
 
 class EventTagService {
 
-    constructor(eventTagRepository) {
+    constructor(eventTagRepository, changeLogRecordService) {
         this.eventTagRepository = eventTagRepository
+        this.changeLogRecordService = changeLogRecordService
     }
 
     async makeTag(payload) {
@@ -16,7 +19,12 @@ class EventTagService {
                 message: `same name: ${payload.name} tag already exists`
             };
         }
-        return this.eventTagRepository.makeTag(payload)
+        const newTag = await this.eventTagRepository.makeTag(payload)
+        const log = new ChangeLog.DataChangeLog(
+            newTag.uuid, payload.userId, ChangeLog.DataChangeCase.CREATED, parseInt(Date.now(), 10)
+        )
+        await this.changeLogRecordService.record(DataType.EventTag, log)
+        return newTag
     }
 
     async putTag(tagId, payload) {
@@ -30,11 +38,20 @@ class EventTagService {
                 message: `same name: ${payload.name} tag already exists`
             };
         }
-        return this.eventTagRepository.updateTag(tagId, payload)
+        const updated = await this.eventTagRepository.updateTag(tagId, payload)
+        const log = new ChangeLog.DataChangeLog(
+            updated.uuid, payload.userId, ChangeLog.DataChangeCase.UPDATED, parseInt(Date.now(), 10)
+        )
+        await this.changeLogRecordService.record(DataType.EventTag, log);
+        return updated
     }
 
-    async removeTag(tagId) {
-        return this.eventTagRepository.removeTag(tagId);
+    async removeTag(userId, tagId) {
+        await this.eventTagRepository.removeTag(tagId);
+        const log = new ChangeLog.DataChangeLog(
+            tagId, userId, ChangeLog.DataChangeCase.DELETED, parseInt(Date.now(), 10)
+        )
+        await this.changeLogRecordService.record(DataType.EventTag, log)
     }
 
     async findAllTags(userId) {
