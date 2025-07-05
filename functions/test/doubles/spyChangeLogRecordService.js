@@ -9,6 +9,10 @@ class SpyChangeLogRecordService {
     async record(dataType, log) {
         this.logMap.set(dataType, log)
     }
+
+    async recordLogs(dataType, logs)  {
+        this.logMap.set(dataType, logs)
+    }
 }
 
 module.exports = SpyChangeLogRecordService;

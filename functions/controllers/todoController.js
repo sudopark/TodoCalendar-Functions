@@ -184,12 +184,12 @@ class TodooController {
     }
 
     async removeTodo(req, res) {
-        const todoId = req.params.id;
-        if( !todoId ) {
-            throw new Errors.BadRequest('todoId is missing.')
+        const todoId = req.params.id, userId = req.auth.uid;
+        if( !todoId || !userId ) {
+            throw new Errors.BadRequest('todoId or userId is missing.')
         }
         try {
-            await this.todoService.removeTodo(todoId);
+            await this.todoService.removeTodo(userId, todoId);
             res.status(200)
                 .send({ status: 'ok'})
         } catch (error) {

@@ -21,16 +21,17 @@ const eventTimeRepository = new EventTimeRepository();
 const eventTimeRangeService = new EventTimeService(eventTimeRepository);
 const doneTodoRepository = new DoneTodoEventRepository();
 const scheduleRepository = new ScheduleRepository();
+const changeLogRecordService = new ChangeLogRecordService(
+    new SyncTimestampRepository(), 
+    new ChangeLogRepository()
+)
 
 const controller = new EventTagController(
     new EventTagService(
         new EventTagRepository(), 
-        new ChangeLogRecordService(
-            new SyncTimestampRepository(), 
-            new ChangeLogRepository()
-        )
+        changeLogRecordService
     ), 
-    new TodoService({todoRepository, eventTimeRangeService, doneTodoRepository}), 
+    new TodoService({todoRepository, eventTimeRangeService, doneTodoRepository, changeLogRecordService}), 
     new ScheduleService(scheduleRepository, eventTimeRangeService)
 )
 
