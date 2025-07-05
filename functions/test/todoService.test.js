@@ -4,16 +4,19 @@ const TodoService = require('../services/todoEventService');
 const assert = require('assert');
 const EventTimeRangeService = require('../services/eventTimeRangeService');
 const StubRepos = require("./doubles/stubRepositories");
+const SpyChangeLogRecordService = require('./doubles/spyChangeLogRecordService');
+const DataTypes = require('../models/DataTypes');
+const { DataChangeCase } = require('../models/DataChangeLog');
 
 
 describe('TodoService', () => {
-    
     
     const stubEventTimeRepository = new StubRepos.EventTime();
     const eventTimeRangeService = new EventTimeRangeService(stubEventTimeRepository)
     const todoRepository = new StubRepos.Todo();
     const doneTodoRepository = new StubRepos.DoneTodo();
-    const todoService = new TodoService( { todoRepository, eventTimeRangeService, doneTodoRepository })
+    const changeLogRecordService = new SpyChangeLogRecordService()
+    const todoService = new TodoService( { todoRepository, eventTimeRangeService, doneTodoRepository, changeLogRecordService })
 
     
     describe('save todo', () => {
@@ -39,6 +42,14 @@ describe('TodoService', () => {
             const newTodo = await todoService.makeTodo('uid', payload2)
             assert.equal(newTodo.uuid, "new")
             assert.equal(newTodo.is_current, null)
+        })
+
+        it('when success, record log', async () => {
+            const newTodo = await todoService.makeTodo('uid', makePayload)
+
+            const log = changeLogRecordService.logMap.get(DataTypes.Todo)
+            assert.deepEqual(log.uuid, newTodo.uuid)
+            assert.deepEqual(log.changeCase, DataChangeCase.CREATED)
         })
 
         // todo 저장 실패
@@ -141,6 +152,14 @@ describe('TodoService', () => {
             assert.equal(todo.notification_options[0].type_text, 'at_time')
         });
 
+        it('record updated log', async () => {
+            const todo = await todoService.putTodo('uid', 'origin', payload);
+
+            const log = changeLogRecordService.logMap.get(DataTypes.Todo)
+            assert.deepEqual(log.uuid, todo.uuid)
+            assert.deepEqual(log.changeCase, DataChangeCase.UPDATED)
+        })
+
         it('이벤트타임 업데이트 실패하면 에러', async () => {
             
             stubEventTimeRepository.shouldFailUpdateTime = true
@@ -220,6 +239,14 @@ describe('TodoService', () => {
             assert.equal(todo.is_current, null)
         });
 
+        it('record updated log', async () => {
+            const todo = await todoService.updateTodo('uid', 'origin', payload)
+
+            const log = changeLogRecordService.logMap.get(DataTypes.Todo)
+            assert.deepEqual(log.uuid, todo.uuid)
+            assert.deepEqual(log.changeCase, DataChangeCase.UPDATED)
+        })
+
         it('이벤트타임 업데이트 실패하면 에러', async () => {
             
             stubEventTimeRepository.shouldFailUpdateTime = true
@@ -265,6 +292,10 @@ describe('TodoService', () => {
             assert.equal(result.next_repeating.event_time.timestamp, 100)
             assert.equal(todoRepository.removedTodoId, null)
             assert.equal(stubEventTimeRepository.didRemovedEventId, null)
+
+            const log = changeLogRecordService.logMap.get(DataTypes.Todo)
+            assert.deepEqual(log.uuid, result.next_repeating.uuid)
+            assert.deepEqual(log.changeCase, DataChangeCase.UPDATED)
         });
         
         it('origin 다음 반본시간 없는경우 기존 todo 삭제', async () => {
@@ -273,6 +304,10 @@ describe('TodoService', () => {
             assert.equal(result.next_repeating == null, true)
             assert.equal(todoRepository.removedTodoId, 'origin')
             assert.equal(stubEventTimeRepository.didRemovedEventId, 'origin')
+
+            const log = changeLogRecordService.logMap.get(DataTypes.Todo)
+            assert.deepEqual(log.uuid, 'origin')
+            assert.deepEqual(log.changeCase, DataChangeCase.DELETED)
         });
 
         it('완료 실패', async () => {
@@ -306,6 +341,10 @@ describe('TodoService', () => {
             assert.equal(result.next_repeating.event_time.timestamp, 100)
             assert.equal(todoRepository.removedTodoId, null)
             assert.equal(stubEventTimeRepository.didRemovedEventId, null)
+
+            const log = changeLogRecordService.logMap.get(DataTypes.Todo)
+            assert.deepEqual(log.uuid, result.next_repeating.uuid)
+            assert.deepEqual(log.changeCase, DataChangeCase.UPDATED)
         }); 
 
         it('다음 반복이벤트 없는 경우에 기존 todo 삭제', async () => {
@@ -314,6 +353,10 @@ describe('TodoService', () => {
             assert.equal(result.next_repeating == null, true)
             assert.equal(todoRepository.removedTodoId, 'origin')
             assert.equal(stubEventTimeRepository.didRemovedEventId, 'origin')
+
+            const log = changeLogRecordService.logMap.get(DataTypes.Todo)
+            assert.deepEqual(log.uuid, 'origin')
+            assert.deepEqual(log.changeCase, DataChangeCase.DELETED)
         });
 
         it('교체 실패', async () => {
@@ -335,10 +378,14 @@ describe('TodoService', () => {
 
         it('이벤트 시간이랑 같이 삭제', async () => {
 
-            const result = await todoService.removeTodo('some');
+            const result = await todoService.removeTodo('uid', 'some');
             assert.equal(result.status, 'ok')
             assert.equal(todoRepository.removedTodoId, 'some')
             assert.equal(stubEventTimeRepository.didRemovedEventId, 'some')
+
+            const log = changeLogRecordService.logMap.get(DataTypes.Todo)
+            assert.deepEqual(log.uuid, 'some')
+            assert.deepEqual(log.changeCase, DataChangeCase.DELETED)
         })
     })
 
@@ -363,11 +410,17 @@ describe('TodoService', () => {
 
         it('tagId에 해당하는 todo 삭제', async () => {
             
-            const ids = await todoService.removeAllTodoWithTagId('tag1')
+            const ids = await todoService.removeAllTodoWithTagId('uid', 'tag1')
             const todoAfterRemoveIds = [...todoRepository.spyEventMap].map(([k, v]) => k)
             assert.deepEqual(ids, ['todo_with_tag1', 'todo_with_tag1_1'])
             assert.deepEqual(todoAfterRemoveIds, ['todo_without_tag', 'todo_with_tag2'])
             assert.deepEqual(stubEventTimeRepository.removeIds, ['todo_with_tag1', 'todo_with_tag1_1'])
+
+            const logs = changeLogRecordService.logMap.get(DataTypes.Todo)
+            const deletedLogIds = logs
+                .filter(log => { return log.changeCase == DataChangeCase.DELETED})
+                .map(log => { return log.uuid })
+            assert.deepEqual(deletedLogIds, ids)
         })
     })
 

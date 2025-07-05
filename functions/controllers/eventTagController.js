@@ -78,8 +78,8 @@ class EventTagController {
         }
         try {
             await this.eventTagService.removeTag(userId, tagId)
-            const todoIds = await this.todoEventService.removeAllTodoWithTagId(tagId)
-            const scheduleIds = await this.scheduleEventService.removeAllEventsWithTagId(tagId)
+            const todoIds = await this.todoEventService.removeAllTodoWithTagId(userId, tagId)
+            const scheduleIds = await this.scheduleEventService.removeAllEventsWithTagId(userId, tagId)
             res.status(200)
                 .send({ todos: todoIds, schedules: scheduleIds })
 

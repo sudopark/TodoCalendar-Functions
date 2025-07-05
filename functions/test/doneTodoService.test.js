@@ -4,6 +4,7 @@ const EventTimeRangeService = require('../services/eventTimeRangeService');
 const TodoServie = require('../services/todoEventService');
 const assert = require('assert');
 const StubRepos = require('./doubles/stubRepositories');
+const SpyChangeLogRecordService = require('./doubles/spyChangeLogRecordService');
 
 describe("DoneTodoService", () => {
 
@@ -17,7 +18,8 @@ describe("DoneTodoService", () => {
             new StubRepos.EventTime()
         )
         const doneTodoRepository = new StubRepos.DoneTodo();
-        const todoService = new TodoServie( {todoRepository, eventTimeRangeService, doneTodoRepository});
+        const changeLogRecordService = new SpyChangeLogRecordService()
+        const todoService = new TodoServie( {todoRepository, eventTimeRangeService, doneTodoRepository, changeLogRecordService});
         spyDoneRepository = doneTodoRepository
         spyTodoRepository = todoRepository
         service = new DoneTodoService(
