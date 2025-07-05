@@ -10,13 +10,17 @@ const { DataChangeCase } = require('../models/DataChangeLog');
 
 
 describe('TodoService', () => {
-    
+
     const stubEventTimeRepository = new StubRepos.EventTime();
     const eventTimeRangeService = new EventTimeRangeService(stubEventTimeRepository)
     const todoRepository = new StubRepos.Todo();
     const doneTodoRepository = new StubRepos.DoneTodo();
     const changeLogRecordService = new SpyChangeLogRecordService()
     const todoService = new TodoService( { todoRepository, eventTimeRangeService, doneTodoRepository, changeLogRecordService })
+
+    beforeEach(() => {
+        changeLogRecordService.logMap = new Map();
+    })
 
     
     describe('save todo', () => {
@@ -47,9 +51,9 @@ describe('TodoService', () => {
         it('when success, record log', async () => {
             const newTodo = await todoService.makeTodo('uid', makePayload)
 
-            const log = changeLogRecordService.logMap.get(DataTypes.Todo)
-            assert.deepEqual(log.uuid, newTodo.uuid)
-            assert.deepEqual(log.changeCase, DataChangeCase.CREATED)
+            const logs = changeLogRecordService.logMap.get(DataTypes.Todo) ?? []
+            assert.deepEqual(logs.map(l => l.uuid), [newTodo.uuid])
+            assert.deepEqual(logs.map(l => l.changeCase), [DataChangeCase.CREATED])
         })
 
         // todo 저장 실패
@@ -155,9 +159,9 @@ describe('TodoService', () => {
         it('record updated log', async () => {
             const todo = await todoService.putTodo('uid', 'origin', payload);
 
-            const log = changeLogRecordService.logMap.get(DataTypes.Todo)
-            assert.deepEqual(log.uuid, todo.uuid)
-            assert.deepEqual(log.changeCase, DataChangeCase.UPDATED)
+            const logs = changeLogRecordService.logMap.get(DataTypes.Todo) ?? []
+            assert.deepEqual(logs.map(l => l.uuid), [todo.uuid])
+            assert.deepEqual(logs.map(l => l.changeCase), [DataChangeCase.UPDATED])
         })
 
         it('이벤트타임 업데이트 실패하면 에러', async () => {
@@ -242,9 +246,9 @@ describe('TodoService', () => {
         it('record updated log', async () => {
             const todo = await todoService.updateTodo('uid', 'origin', payload)
 
-            const log = changeLogRecordService.logMap.get(DataTypes.Todo)
-            assert.deepEqual(log.uuid, todo.uuid)
-            assert.deepEqual(log.changeCase, DataChangeCase.UPDATED)
+            const logs = changeLogRecordService.logMap.get(DataTypes.Todo) ?? []
+            assert.deepEqual(logs.map(l => l.uuid), [todo.uuid])
+            assert.deepEqual(logs.map(l => l.changeCase), [DataChangeCase.UPDATED])
         })
 
         it('이벤트타임 업데이트 실패하면 에러', async () => {
@@ -293,9 +297,9 @@ describe('TodoService', () => {
             assert.equal(todoRepository.removedTodoId, null)
             assert.equal(stubEventTimeRepository.didRemovedEventId, null)
 
-            const log = changeLogRecordService.logMap.get(DataTypes.Todo)
-            assert.deepEqual(log.uuid, result.next_repeating.uuid)
-            assert.deepEqual(log.changeCase, DataChangeCase.UPDATED)
+            const logs = changeLogRecordService.logMap.get(DataTypes.Todo) ?? []
+            assert.deepEqual(logs.map(l => l.uuid), [result.next_repeating.uuid])
+            assert.deepEqual(logs.map(l => l.changeCase), [DataChangeCase.UPDATED])
         });
         
         it('origin 다음 반본시간 없는경우 기존 todo 삭제', async () => {
@@ -305,9 +309,9 @@ describe('TodoService', () => {
             assert.equal(todoRepository.removedTodoId, 'origin')
             assert.equal(stubEventTimeRepository.didRemovedEventId, 'origin')
 
-            const log = changeLogRecordService.logMap.get(DataTypes.Todo)
-            assert.deepEqual(log.uuid, 'origin')
-            assert.deepEqual(log.changeCase, DataChangeCase.DELETED)
+            const logs = changeLogRecordService.logMap.get(DataTypes.Todo) ?? []
+            assert.deepEqual(logs.map(l => l.uuid), ['origin'])
+            assert.deepEqual(logs.map(l => l.changeCase), [DataChangeCase.DELETED])
         });
 
         it('완료 실패', async () => {
@@ -342,9 +346,9 @@ describe('TodoService', () => {
             assert.equal(todoRepository.removedTodoId, null)
             assert.equal(stubEventTimeRepository.didRemovedEventId, null)
 
-            const log = changeLogRecordService.logMap.get(DataTypes.Todo)
-            assert.deepEqual(log.uuid, result.next_repeating.uuid)
-            assert.deepEqual(log.changeCase, DataChangeCase.UPDATED)
+            const logs = changeLogRecordService.logMap.get(DataTypes.Todo) ?? []
+            assert.deepEqual(logs.map(l => l.uuid), [result.next_repeating.uuid])
+            assert.deepEqual(logs.map(l => l.changeCase), [DataChangeCase.UPDATED])
         }); 
 
         it('다음 반복이벤트 없는 경우에 기존 todo 삭제', async () => {
@@ -354,9 +358,9 @@ describe('TodoService', () => {
             assert.equal(todoRepository.removedTodoId, 'origin')
             assert.equal(stubEventTimeRepository.didRemovedEventId, 'origin')
 
-            const log = changeLogRecordService.logMap.get(DataTypes.Todo)
-            assert.deepEqual(log.uuid, 'origin')
-            assert.deepEqual(log.changeCase, DataChangeCase.DELETED)
+            const logs = changeLogRecordService.logMap.get(DataTypes.Todo) ?? []
+            assert.deepEqual(logs.map(l => l.uuid), ['origin'])
+            assert.deepEqual(logs.map(l => l.changeCase), [DataChangeCase.DELETED])
         });
 
         it('교체 실패', async () => {
@@ -383,9 +387,9 @@ describe('TodoService', () => {
             assert.equal(todoRepository.removedTodoId, 'some')
             assert.equal(stubEventTimeRepository.didRemovedEventId, 'some')
 
-            const log = changeLogRecordService.logMap.get(DataTypes.Todo)
-            assert.deepEqual(log.uuid, 'some')
-            assert.deepEqual(log.changeCase, DataChangeCase.DELETED)
+            const logs = changeLogRecordService.logMap.get(DataTypes.Todo) ?? []
+            assert.deepEqual(logs.map(l => l.uuid), ['some'])
+            assert.deepEqual(logs.map(l => l.changeCase), [DataChangeCase.DELETED])
         })
     })
 

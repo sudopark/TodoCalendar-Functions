@@ -32,7 +32,7 @@ const controller = new EventTagController(
         changeLogRecordService
     ), 
     new TodoService({todoRepository, eventTimeRangeService, doneTodoRepository, changeLogRecordService}), 
-    new ScheduleService(scheduleRepository, eventTimeRangeService)
+    new ScheduleService(scheduleRepository, eventTimeRangeService, changeLogRecordService)
 )
 
 router.post('/tag', async (req, res) => {

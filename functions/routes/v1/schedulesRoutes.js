@@ -6,10 +6,17 @@ const ScheduleEventService = require('../../services/scheduleEventService');
 const EventTimeRangeService = require('../../services/eventTimeRangeService');
 const ScheduleRepository = require('../../repositories/scheduleEventRepository');
 const EventTimeRepository = require('../../repositories/eventTimeRangeRepository');
+const SyncTimeRepository = require('../../repositories/syncTimestampRepository');
+const ChangeLogRepository = require('../../repositories/dataChangeLogRepository');
+const ChangeLogRecordService = require('../../services/dataChangeLogRecordService');
 
 const scheduleRepository = new ScheduleRepository();
 const eventTimeRangeService = new EventTimeRangeService(new EventTimeRepository());
-const scheduleEventService = new ScheduleEventService(scheduleRepository, eventTimeRangeService);
+const changeLogRecordService = new ChangeLogRecordService(
+    new SyncTimeRepository(),  
+    new ChangeLogRepository()
+)
+const scheduleEventService = new ScheduleEventService(scheduleRepository, eventTimeRangeService, changeLogRecordService);
 const scheduleEventController = new ScheduleEventController(scheduleEventService);
 
 

@@ -195,13 +195,13 @@ class ScheduleEventController {
     }
 
     async removeEvent(req, res) {
-        const eventId = req.params.id
+        const eventId = req.params.id, userId = req.auth.uid;
         if(!eventId) {
             throw new Errors.BadRequest('event id is missing.')
         }
 
         try {
-            await this.scheduleEventService.removeEvent(eventId);
+            await this.scheduleEventService.removeEvent(userId, eventId);
             res.status(201)
                 .send({ status: 'ok' })
         } catch (error) {
