@@ -7,7 +7,9 @@ class SpyChangeLogRecordService {
     }
 
     async record(dataType, log) {
-        this.logMap.set(dataType, log)
+        const logs = (this.logMap.get(dataType) ?? [])
+        logs.push(log)
+        this.logMap.set(dataType, logs)
     }
 
     async recordLogs(dataType, logs)  {

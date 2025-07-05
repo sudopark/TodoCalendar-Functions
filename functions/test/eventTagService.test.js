@@ -39,9 +39,10 @@ describe('eventTagService', () => {
         it('record created log', async () => {
             const payload = { name: 'new tag', color_hex: 'some', userId: 'u1'}
             const tag = await service.makeTag(payload)
-            const log = spyChangeLogRecordService.logMap.get(DataType.EventTag)
-            assert.deepEqual(log.uuid, tag.uuid)
-            assert.deepEqual(log.changeCase, DataChangeCase.CREATED)
+
+            const logs = spyChangeLogRecordService.logMap.get(DataType.EventTag) ?? []
+            assert.deepEqual(logs.map(l => l.uuid), [tag.uuid])
+            assert.deepEqual(logs.map(l => l.changeCase), [DataChangeCase.CREATED])
         });
 
         it('same name already exists -> fail', async () => {
@@ -81,9 +82,10 @@ describe('eventTagService', () => {
         it('record updated log', async () => {
             const payload = { name: 'new name', color_hex: 'some', userId: 'u1' }
             const tag = await service.putTag('t1', payload)
-            const log = spyChangeLogRecordService.logMap.get(DataType.EventTag)
-            assert.deepEqual(log.uuid, tag.uuid)
-            assert.deepEqual(log.changeCase, DataChangeCase.UPDATED)
+
+            const logs = spyChangeLogRecordService.logMap.get(DataType.EventTag) ?? []
+            assert.deepEqual(logs.map(l => l.uuid), [tag.uuid])
+            assert.deepEqual(logs.map(l => l.changeCase), [DataChangeCase.UPDATED])
         }) 
 
         it('success, only update color hex', async () => {
@@ -125,9 +127,10 @@ describe('eventTagService', () => {
 
         it('record delete log', async () => {
             await service.removeTag('u1', 't1')
-            const log = spyChangeLogRecordService.logMap.get(DataType.EventTag)
-            assert.deepEqual(log.uuid, 't1')
-            assert.deepEqual(log.changeCase, DataChangeCase.DELETED)
+
+            const logs = spyChangeLogRecordService.logMap.get(DataType.EventTag) ?? []
+            assert.deepEqual(logs.map(l => l.uuid), ['t1'])
+            assert.deepEqual(logs.map(l => l.changeCase), [DataChangeCase.DELETED])
         })
 
         it('fail', async () => {
