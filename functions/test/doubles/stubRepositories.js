@@ -657,6 +657,11 @@ class StubDataChangeLogRepository {
         thisDataTypeLogs.push(log)
         this.allLogsMap.set(dataType, thisDataTypeLogs)
     }
+
+    async updateLogs(logs, dataType) {
+
+        this.allLogsMap.set(dataType, logs);
+    }
 }
 
 // MARK: - SyncTime 
