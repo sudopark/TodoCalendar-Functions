@@ -82,4 +82,39 @@ describe('DataChangeLogRecordService', () => {
         const syncTime = await syncReposiotry.syncTimestamp('some_user', DataType.EventTag)
         assert.deepEqual(syncTime, null)
     })
+
+    describe('record multiple logs', () => {
+
+        let logs;
+        beforeEach(async () => {
+            logs = [...Array(10).keys()].map(i => {
+                return new ChangeLog.DataChangeLog(
+                    `id:${i}`, 'some_user', ChangeLog.DataChangeCase.CREATED, i + 100
+                )
+            })
+        })
+
+        it('success', async () => {
+            await service.recordLogs(DataType.EventTag, logs)
+
+            const recordLogs = await changeLogRepository.findChanges('some_user', DataType.EventTag, 99)
+            assert.deepEqual(recordLogs, logs)
+
+            const syncTime = await syncReposiotry.syncTimestamp('some_user', DataType.EventTag)
+            assert.deepEqual(syncTime.timestamp, 109)
+        })
+
+        it('when server timestamp is future than latest log not update', async () => {
+            const timestamp = new SyncTimeStamp('some_user', DataType.EventTag, 200);
+            await syncReposiotry.updateTimestamp(timestamp)
+
+            await service.recordLogs(DataType.EventTag, logs)
+
+            const recordLogs = await changeLogRepository.findChanges('some_user', DataType.EventTag, 99)
+            assert.deepEqual(recordLogs, logs)
+
+            const syncTime = await syncReposiotry.syncTimestamp('some_user', DataType.EventTag)
+            assert.deepEqual(syncTime.timestamp, 200)
+        })
+    })
 })
