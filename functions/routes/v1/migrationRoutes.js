@@ -7,12 +7,19 @@ const MigrationService = require('../../services/migrationService');
 const MigrationRepository = require('../../repositories/migrationRepository');
 const EventTimeRepository = require('../../repositories/eventTimeRangeRepository');
 const EventTimeService = require('../../services/eventTimeRangeService');
+const SyncTimestampRepository = require('../../repositories/syncTimestampRepository');
+const ChangeLogRepository = require('../../repositories/dataChangeLogRepository');
+const ChangeLogRecordService = require('../../services/dataChangeLogRecordService');
 
 const migrationController = new MigrationController(
     new MigrationService(
         new MigrationRepository(), 
         new EventTimeService(
             new EventTimeRepository()
+        ), 
+        new ChangeLogRecordService(
+            new SyncTimestampRepository(), 
+            new ChangeLogRepository()
         )
     )
 )
