@@ -20,11 +20,11 @@ const dataSyncController = new DataSyncController(
     )
 )
 
-router.get('/sync', async (req, res) => {
+router.get('/', async (req, res) => {
     await dataSyncController.sync(req, res)
 });
 
-router.get('/sync/all', async (req, res) => {
+router.get('/all', async (req, res) => {
     await dataSyncController.syncAll(req, res);
 });
 
