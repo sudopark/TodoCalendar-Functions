@@ -6,15 +6,37 @@ const ChangeLogs = require('../models/DataChangeLog');
 
 class DataChangeLogRepository {
 
-    async findChanges(userId, dataType, timestamp) {
+    async findChanges(userId, dataType, timestamp, pageSize) {
         const collectionRef = this.#getCollectionRef(dataType)
-        const query = collectionRef
+        let query = collectionRef
             .where('userId', '==', userId)
-            .where('timestamp', '>', timestamp)
+            .orderBy('timestamp')
+        if(timestamp) {
+            query = query.startAfter(timestamp)
+        }
+        query = query.limit(pageSize)
+
         const snapshot = await query.get();
         const datas = snapshot.docs.map((d => {
             return { uuid: d.id, ...d.data() }
         }))
+        const logs = datas.map(d => ChangeLogs.fromData(d))
+        return logs
+    }
+
+    async loadChanges(userId, dataType, afterCursor, pageSize) {
+        const collectionRef = this.#getCollectionRef(dataType)
+        const cursor = await collectionRef.doc(afterCursor).get()
+        const query = collectionRef
+            .where('userId', '==', userId)
+            .orderBy('timestamp')
+            .startAfter(cursor)
+            .limit(pageSize)
+
+        const snapshot = await query.get()
+        const datas = snapshot.docs.map(d => {
+            return { uuid: d.id, ...d.data() }
+        })
         const logs = datas.map(d => ChangeLogs.fromData(d))
         return logs
     }

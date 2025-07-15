@@ -2,7 +2,7 @@
 const ChangeLogs = require('../models/DataChangeLog');
 const DataTypes = require('../models/DataTypes');
 const SyncTimeStamp = require('../models/SyncTimestamp');
-const SyncResponse = require('../models/SyncResponse')
+const { CheckResult, CheckResponse, Response } = require('../models/SyncResponse')
 const { chunk } = require('../Utils/functions')
 
 class DataSyncService {
@@ -18,50 +18,55 @@ class DataSyncService {
         this.scheduleRepository = scheduleRepository
     }
 
-    async sync(userId, dataType, clientTimestamp) {
+    async checkSync(userId, dataType, clientTimestamp) {
         const serverTimestamp = await this.synctimeRepository.syncTimestamp(userId, dataType);
-        if(!serverTimestamp || !clientTimestamp) {
-            return this.#syncAllData(userId, dataType)
+        if(!serverTimestamp) {
+            await this.#updateServerTimestamp(userId, dataType)
+            return new CheckResponse(CheckResult.migrationNeeds)
 
         } else if(clientTimestamp.timestamp === serverTimestamp.timestamp) {
-            return SyncResponse.Response.noNeedToSync
+            return new CheckResponse(CheckResult.noNeedToSync)
 
         } else if(clientTimestamp.timestamp > serverTimestamp.timestamp) {
-            return SyncResponse.Response.noNeedToSync
+            return new CheckResponse(CheckResult.noNeedToSync)
             
         }  else {
-            return this.#syncUpdatedData(userId, dataType, clientTimestamp, serverTimestamp)
+            return new CheckResponse(CheckResult.needToSync)
+                .setStart(clientTimestamp.timestamp)
         }
     }
 
-    async syncAll(userId, dataType) {
-        const allDatas = await this.#loadAllDatas(dataType, userId);
-        const serverTimestamp = await this.synctimeRepository.syncTimestamp(userId, dataType);
-        const response = new SyncResponse.Response(SyncResponse.CheckResult.migrationNeeds)
-            .setUpdated(allDatas)
-            .setSynctime(serverTimestamp)
+    /// timestamp는 optional, 없으면 그냥 처음부터 / 있으면 해당 타임스탬프 보다 큰 지점부터
+    async startSync(userId, dataType, timestamp, pageSize) {
+        const logs = await this.changeLogRepository.findChanges(userId, dataType, timestamp, pageSize)
+        const response = await this.#makeSyncResponseWithDatas(dataType, logs)
+        if(logs.length < pageSize) {
+            const serverTimestamp = await this.synctimeRepository.syncTimestamp(userId, dataType)
+            response.setNextPageCursor(null)
+            response.setSynctime(serverTimestamp.timestamp)
+        }
         return response
     }
 
-    async #syncAllData(userId, dataType) {
+    async continueSync(userId, dataType, afterCursor, pageSize) {
+        const logs = await this.changeLogRepository.loadChanges(userId, dataType, afterCursor, pageSize)
+        const response = await this.#makeSyncResponseWithDatas(dataType, logs)
+        if(logs.length < pageSize) {
+            const serverTimestamp = await this.synctimeRepository.syncTimestamp(userId, dataType)
+            response.setNextPageCursor(null)
+            response.setSynctime(serverTimestamp.timestamp)
+        }
+        return response
+    }
 
-        const allDatas = await this.#loadAllDatas(dataType, userId)
-
+    async #updateServerTimestamp(userId, dataType) {
         const timestamp = new SyncTimeStamp(
             userId, dataType, parseInt(Date.now(), 10)
         )
-        await this.synctimeRepository.updateTimestamp(timestamp);
-
-        const response = new SyncResponse.Response(SyncResponse.CheckResult.migrationNeeds)
-            .setUpdated(allDatas)
-            .setSynctime(timestamp)
-
-        return response
+        await this.synctimeRepository.updateTimestamp(timestamp)
     }
 
-    async #syncUpdatedData(userId, dataType, clientTimestamp, serverTimestamp) {
-
-        const logs = await this.changeLogRepository.findChanges(userId, dataType, clientTimestamp.timestamp);
+    async #makeSyncResponseWithDatas(dataType, logs) {
         const createdLogs = logs.filter(log => { return log.changeCase === ChangeLogs.DataChangeCase.CREATED })
         const createds = await this.#loadChangedDatas(dataType, createdLogs)
         const updatedLogs = logs.filter(log => { return log.changeCase === ChangeLogs.DataChangeCase.UPDATED })
@@ -70,25 +75,17 @@ class DataSyncService {
             .filter(log => { return log.changeCase === ChangeLogs.DataChangeCase.DELETED })
             .map(log => { return log.uuid })
 
-        const response = new SyncResponse.Response(SyncResponse.CheckResult.needToSync)
-            .setCreated(createds)
-            .setUpdated(updateds)
-            .setDeleted(deletedIds)
-            .setSynctime(serverTimestamp)
+        const response = new Response()
+        response.setCreated(createds)
+        response.setUpdated(updateds)
+        response.setDeleted(deletedIds)
 
-        return response
-    }
-
-    async #loadAllDatas(dataType, userId) {
-        if(dataType === DataTypes.EventTag) {
-            return await this.eventTagRepository.findAllTags(userId);
-        } else if(dataType === DataTypes.Todo) {
-            return await this.todoRepository.getAllTodos(userId);
-        } else if(dataType === DataTypes.Schedule) {
-            return await this.scheduleRepository.getAllEvents(userId);
-        } else {
-            return []
+        if(logs.length > 0) {
+            // 페이징 중이면 현재 page의 마지막 요소 uuid를 next page cursor로 제공
+            const lastLog = logs[logs.length - 1]
+            response.setNextPageCursor(lastLog.uuid)
         }
+        return response
     }
 
     async #loadChangedDatas(dataType, logs) {
