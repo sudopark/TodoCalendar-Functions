@@ -638,11 +638,33 @@ class StubDataChangeLogRepository {
         this.shouldFailUpdateLog = false
     }
 
-    async findChanges(userId, dataType, timestamp) {
+    async findChanges(userId, dataType, timestamp, pageSize) {
         const thisDataTypeLogs = this.allLogsMap.get(dataType) ?? []
-        const logs = thisDataTypeLogs
+        const logs = thisDataTypeLogs.slice()
             .filter(log => { return log.userId === userId })
-            .filter(log => { return log.timestamp > timestamp })
+            .sort((l, r) => l.timestamp - r.timestamp )
+            .filter(log => { 
+                if(!timestamp) {
+                    return true
+                }
+                return log.timestamp > timestamp 
+            })
+            .slice(0, pageSize)
+        return logs
+    }
+
+    async loadChanges(userId, dataType, afterCursor, pageSize) {
+        const thisDataTypeLogs = this.allLogsMap.get(dataType) ?? []
+        const lastElement = thisDataTypeLogs.filter(log => log.uuid == afterCursor).at(0)
+        if(!lastElement || !lastElement.timestamp) {
+            return []
+        }
+
+        const logs = thisDataTypeLogs.slice()
+            .filter(log => log.userId == userId)
+            .sort((l, r) => l.timestamp - r.timestamp)
+            .filter(log => log.timestamp >  lastElement.timestamp)
+            .slice(0, pageSize)
         return logs
     }
 

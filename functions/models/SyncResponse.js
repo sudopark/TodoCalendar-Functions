@@ -1,4 +1,6 @@
 
+// MARKL - check result
+
 class SyncCheckResult {
     constructor(key) {
         this.key = key
@@ -13,36 +15,56 @@ Object.freeze(SyncCheckResult.noNeedToSync);
 Object.freeze(SyncCheckResult.needToSync);
 Object.freeze(SyncCheckResult.migrationNeeds);
 
+class SyncCheckResponse {
+
+    start = null;
+
+    constructor(result) {
+        this.result = result
+    }
+
+    setStart(start) {
+        this.start = start
+        return this
+    }
+
+    toJSON() {
+        return {
+            result: this.result.key, 
+            start: this.start
+        }
+    }
+}
+
+// MARK: - response 
 class SyncResponse {
 
     created = null;
     updated = null;
     deleted = null;
-    checkResult;
+    nextPageCursor = null
     newSyncTime = null;
 
-    constructor(checkResult) {
-        this.checkResult = checkResult
-    }
+    constructor() { }
 
     setCreated(created) {
         this.created = created
-        return this
     }
 
     setUpdated(updated) {
         this.updated = updated
-        return this
     }
 
     setDeleted(deleted) {
         this.deleted = deleted
-        return this
     }
 
     setSynctime(timestamp) {
         this.newSyncTime = timestamp
-        return this
+    }
+
+    setNextPageCursor(cursor)  {
+        this.nextPageCursor = cursor
     }
 
     toJSON() {
@@ -50,16 +72,14 @@ class SyncResponse {
             created: this.created, 
             updated: this.updated, 
             deleted: this.deleted, 
-            checkResult: this.checkResult.key, 
-            newSyncTime: JSON.stringify(this.newSyncTime)
+            newSyncTime: JSON.stringify(this.newSyncTime), 
+            nextPageCursor: this.nextPageCursor
         }
     }
 }
 
-SyncResponse.noNeedToSync = new SyncResponse(SyncCheckResult.noNeedToSync);
-Object.freeze(SyncResponse.noNeedToSync)
-
 module.exports = {
     CheckResult: SyncCheckResult, 
+    CheckResponse: SyncCheckResponse,
     Response: SyncResponse
 }

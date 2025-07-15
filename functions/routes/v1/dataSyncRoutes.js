@@ -20,12 +20,16 @@ const dataSyncController = new DataSyncController(
     )
 )
 
-router.get('/', async (req, res) => {
-    await dataSyncController.sync(req, res)
+router.get('/check', async (req, res) => {
+    await dataSyncController.checkSync(req, res)
 });
 
-router.get('/all', async (req, res) => {
-    await dataSyncController.syncAll(req, res);
+router.get('/start', async (req, res) => {
+    await dataSyncController.startSync(req, res)
+})
+
+router.get('/continue', async (req, res) => {
+    await dataSyncController.continuteSync(req, res)
 });
 
 module.exports = router;
