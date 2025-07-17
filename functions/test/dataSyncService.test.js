@@ -56,8 +56,7 @@ describe('DataSyncService', () => {
 
             it('check result is migration need: tag', async () => {
                 
-                const clientTimestamp = new SyncTimestamp('some_user', DataType.EventTag, 100)
-                const response = await service.checkSync('some_user', DataType.EventTag, clientTimestamp);
+                const response = await service.checkSync('some_user', DataType.EventTag, 100);
                 assert.deepEqual(response.result, Sync.CheckResult.migrationNeeds)
                 assert.deepEqual(response.start, null)
                 
@@ -70,8 +69,7 @@ describe('DataSyncService', () => {
         
             it('check result is migration need: todo', async () => {
 
-                const clientTimestamp = new SyncTimestamp('some_user', DataType.Todo, 100)
-                const response = await service.checkSync('some_user', DataType.Todo, clientTimestamp);
+                const response = await service.checkSync('some_user', DataType.Todo, 100);
                 assert.deepEqual(response.result, Sync.CheckResult.migrationNeeds)
                 assert.deepEqual(response.start, null)
                 
@@ -84,8 +82,61 @@ describe('DataSyncService', () => {
 
             it('check result is migration need: schedule', async () => {
 
-                const clientTimestamp = new SyncTimestamp('some_user', DataType.Schedule, 100)
-                const response = await service.checkSync('some_user', DataType.Schedule, clientTimestamp);
+                const response = await service.checkSync('some_user', DataType.Schedule, 100);
+                assert.deepEqual(response.result, Sync.CheckResult.migrationNeeds)
+                assert.deepEqual(response.start, null)
+                
+                const updatedTimestamp = await syncTimeRepository.syncTimestamp('some_user', DataType.Schedule);
+                assert.deepEqual(
+                    parseInt(updatedTimestamp.timestamp / 1000),
+                    parseInt(Date.now() / 1000, 10)
+                )
+            })
+        })
+
+        describe('when client timestamp not exists', () => {
+            
+            beforeEach(async () => {
+                await syncTimeRepository.updateTimestamp(
+                    new SyncTimestamp('some_user', DataType.EventTag, 100)
+                )
+                await syncTimeRepository.updateTimestamp(
+                    new SyncTimestamp('some_user', DataType.Todo, 100)
+                )
+                await syncTimeRepository.updateTimestamp(
+                    new SyncTimestamp('some_user', DataType.Schedule, 100)
+                )
+            })
+
+            it('check result is migration need: tag', async () => {
+                
+                const response = await service.checkSync('some_user', DataType.EventTag);
+                assert.deepEqual(response.result, Sync.CheckResult.migrationNeeds)
+                assert.deepEqual(response.start, null)
+                
+                const updatedTimestamp = await syncTimeRepository.syncTimestamp('some_user', DataType.EventTag);
+                assert.deepEqual(
+                    parseInt(updatedTimestamp.timestamp / 1000),
+                    parseInt(Date.now() / 1000, 10)
+                )
+            })
+        
+            it('check result is migration need: todo', async () => {
+
+                const response = await service.checkSync('some_user', DataType.Todo);
+                assert.deepEqual(response.result, Sync.CheckResult.migrationNeeds)
+                assert.deepEqual(response.start, null)
+                
+                const updatedTimestamp = await syncTimeRepository.syncTimestamp('some_user', DataType.Todo);
+                assert.deepEqual(
+                    parseInt(updatedTimestamp.timestamp / 1000),
+                    parseInt(Date.now() / 1000, 10)
+                )
+            })
+
+            it('check result is migration need: schedule', async () => {
+
+                const response = await service.checkSync('some_user', DataType.Schedule, null);
                 assert.deepEqual(response.result, Sync.CheckResult.migrationNeeds)
                 assert.deepEqual(response.start, null)
                 
@@ -113,8 +164,7 @@ describe('DataSyncService', () => {
             })
 
             it('check result is no need: tag', async () => {
-                const clientTimestamp = new SyncTimestamp('some_user', DataType.EventTag, 100)
-                const response = await service.checkSync('some_user', DataType.EventTag, clientTimestamp)
+                const response = await service.checkSync('some_user', DataType.EventTag, 100)
                 assert.deepEqual(response.result, Sync.CheckResult.noNeedToSync)
 
                 const serverTimestamp = await syncTimeRepository.syncTimestamp('some_user', DataType.EventTag);
@@ -122,8 +172,7 @@ describe('DataSyncService', () => {
             })
 
             it('check result is no need: todo', async () => {
-                const clientTimestamp = new SyncTimestamp('some_user', DataType.Todo, 100)
-                const response = await service.checkSync('some_user', DataType.Todo, clientTimestamp)
+                const response = await service.checkSync('some_user', DataType.Todo, 100)
                 assert.deepEqual(response.result, Sync.CheckResult.noNeedToSync)
 
                 const serverTimestamp = await syncTimeRepository.syncTimestamp('some_user', DataType.Todo);
@@ -131,8 +180,7 @@ describe('DataSyncService', () => {
             })
 
             it('check result is no need: schedule', async () => {
-                const clientTimestamp = new SyncTimestamp('some_user', DataType.Schedule, 100)
-                const response = await service.checkSync('some_user', DataType.Schedule, clientTimestamp)
+                const response = await service.checkSync('some_user', DataType.Schedule, 100)
                 assert.deepEqual(response.result, Sync.CheckResult.noNeedToSync)
 
                 const serverTimestamp = await syncTimeRepository.syncTimestamp('some_user', DataType.Schedule);
@@ -156,8 +204,7 @@ describe('DataSyncService', () => {
             })
 
             it('check result is no need to sync: tag', async () => {
-                const clientTimestamp = new SyncTimestamp('some_user', DataType.EventTag, 200)
-                const response = await service.checkSync('some_user', DataType.EventTag, clientTimestamp)
+                const response = await service.checkSync('some_user', DataType.EventTag, 200)
                 assert.deepEqual(response.result, Sync.CheckResult.noNeedToSync)
                 assert.deepEqual(response.start, null)
 
@@ -166,8 +213,7 @@ describe('DataSyncService', () => {
             })
 
             it('check result is no need to sync: todo', async () => {
-                const clientTimestamp = new SyncTimestamp('some_user', DataType.Todo, 200)
-                const response = await service.checkSync('some_user', DataType.Todo, clientTimestamp)
+                const response = await service.checkSync('some_user', DataType.Todo, 200)
                 assert.deepEqual(response.result, Sync.CheckResult.noNeedToSync)
                 assert.deepEqual(response.start, null)
 
@@ -176,8 +222,7 @@ describe('DataSyncService', () => {
             })
 
             it('check result is no need to sync: schedule', async () => {
-                const clientTimestamp = new SyncTimestamp('some_user', DataType.Schedule, 200)
-                const response = await service.checkSync('some_user', DataType.Schedule, clientTimestamp)
+                const response = await service.checkSync('some_user', DataType.Schedule, 200)
                 assert.deepEqual(response.result, Sync.CheckResult.noNeedToSync)
                 assert.deepEqual(response.start, null)
 
@@ -201,8 +246,7 @@ describe('DataSyncService', () => {
             })
 
             it('check result is need to sync with start time: tag', async () => {
-                const clientTimestamp = new SyncTimestamp('some_user', DataType.EventTag, 100)
-                const response = await service.checkSync('some_user', DataType.EventTag, clientTimestamp)
+                const response = await service.checkSync('some_user', DataType.EventTag, 100)
                 assert.deepEqual(response.result, Sync.CheckResult.needToSync)
                 assert.deepEqual(response.start, 100)
 
@@ -211,8 +255,7 @@ describe('DataSyncService', () => {
             })
 
             it('check result is need to sync with start time: todo', async () => {
-                const clientTimestamp = new SyncTimestamp('some_user', DataType.Todo, 100)
-                const response = await service.checkSync('some_user', DataType.Todo, clientTimestamp)
+                const response = await service.checkSync('some_user', DataType.Todo, 100)
                 assert.deepEqual(response.result, Sync.CheckResult.needToSync)
                 assert.deepEqual(response.start, 100)
 
@@ -221,8 +264,7 @@ describe('DataSyncService', () => {
             })
 
             it('check result is need to sync with start time: schedule', async () => {
-                const clientTimestamp = new SyncTimestamp('some_user', DataType.Schedule, 100)
-                const response = await service.checkSync('some_user', DataType.Schedule, clientTimestamp)
+                const response = await service.checkSync('some_user', DataType.Schedule, 100)
                 assert.deepEqual(response.result, Sync.CheckResult.needToSync)
                 assert.deepEqual(response.start, 100)
 
@@ -371,7 +413,7 @@ describe('DataSyncService', () => {
             })
         })
 
-        describe.only('continue sync until end', () => {
+        describe('continue sync until end', () => {
 
             it('continue sync tag', async () => {
                 const response1 = await service.continueSync('some_user', DataType.EventTag, "tag:2", 3)

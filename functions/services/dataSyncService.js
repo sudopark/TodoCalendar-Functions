@@ -20,19 +20,19 @@ class DataSyncService {
 
     async checkSync(userId, dataType, clientTimestamp) {
         const serverTimestamp = await this.synctimeRepository.syncTimestamp(userId, dataType);
-        if(!serverTimestamp) {
+        if(!serverTimestamp || !clientTimestamp) {
             await this.#updateServerTimestamp(userId, dataType)
             return new CheckResponse(CheckResult.migrationNeeds)
 
-        } else if(clientTimestamp.timestamp === serverTimestamp.timestamp) {
+        } else if(clientTimestamp === serverTimestamp.timestamp) {
             return new CheckResponse(CheckResult.noNeedToSync)
 
-        } else if(clientTimestamp.timestamp > serverTimestamp.timestamp) {
+        } else if(clientTimestamp > serverTimestamp.timestamp) {
             return new CheckResponse(CheckResult.noNeedToSync)
             
         }  else {
             return new CheckResponse(CheckResult.needToSync)
-                .setStart(clientTimestamp.timestamp)
+                .setStart(clientTimestamp)
         }
     }
 
