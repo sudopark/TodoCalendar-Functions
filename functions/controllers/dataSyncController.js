@@ -18,15 +18,12 @@ class DataSyncController {
             throw new Errors.BadRequest(`not support data type: ${dataType}`)
         }
         const timestampValue = Number.parseInt(timestampText, 10)
-        if(isNaN(timestampValue)) {
+        if(timestampText && isNaN(timestampValue)) {
             throw new Errors.BadRequest(`invalid timestamp value: ${timestampText}`)
         }
 
-        const timestamp = new SyncTimestamp(
-            userId, dataType, parseInt(timestampText, 10)
-        )
         try {
-            const responseModel = await this.dataSyncService.checkSync(userId, dataType, timestamp)
+            const responseModel = await this.dataSyncService.checkSync(userId, dataType, timestampValue)
             const resposeJSON = JSON.stringify(responseModel)
             res.status(200)
                 .send(resposeJSON)
