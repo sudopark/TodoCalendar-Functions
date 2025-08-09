@@ -46,7 +46,9 @@ class EventTagController {
             userId: userId
         }
         try {
-            const tag = await this.eventTagService.putTag(tagId, payload)
+            const tag = await this.eventTagService.putTag(
+                tagId, payload, body.skipCheckDuplicationName
+            )
             res.status(201)
                 .send(tag)
         } catch (error) {

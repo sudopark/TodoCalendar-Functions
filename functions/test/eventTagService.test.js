@@ -106,6 +106,13 @@ describe('eventTagService', () => {
             }
         })
 
+        it('same name but skipCheckDuplicationName -> success', async () => {
+            const payload = { name: 'n2', color_hex: 'new hex', userId: 'u1' }
+            const tag = await service.putTag('t1', payload, true)
+
+            assert.equal(tag.uuid, 't1')
+        })
+
         it('update fail', async () => {
             stubRepository.shouldFail = true
             const payload = { name: 'n1', color_hex: 'new hex', userId: 'u1' }

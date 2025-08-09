@@ -27,16 +27,19 @@ class EventTagService {
         return newTag
     }
 
-    async putTag(tagId, payload) {
-        const sameNameTags = await this.eventTagRepository
-            .findTagByName(payload.name, payload.userId)
-        const sameNameTagsExcludeThisEvent = sameNameTags
-            .filter(tag => tag.uuid != tagId)
-        if(sameNameTagsExcludeThisEvent.length) {
-            throw { 
-                status: 400, code: 'DuplicatedName',
-                message: `same name: ${payload.name} tag already exists`
-            };
+    async putTag(tagId, payload, skipCheckDuplicationName) {
+        
+        if(!skipCheckDuplicationName) {
+            const sameNameTags = await this.eventTagRepository
+                .findTagByName(payload.name, payload.userId)
+            const sameNameTagsExcludeThisEvent = sameNameTags
+                .filter(tag => tag.uuid != tagId)
+            if(sameNameTagsExcludeThisEvent.length) {
+                throw { 
+                    status: 400, code: 'DuplicatedName',
+                    message: `same name: ${payload.name} tag already exists`
+                };
+            }
         }
         const updated = await this.eventTagRepository.updateTag(tagId, payload)
         const log = new ChangeLog.DataChangeLog(
