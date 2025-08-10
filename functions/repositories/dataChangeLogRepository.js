@@ -43,7 +43,7 @@ class DataChangeLogRepository {
 
     async updateLog(log, dataType) {
         const collectionRef = this.#getCollectionRef(dataType)
-        const { uuid, ...payload } = JSON.stringify(log);
+        const { uuid, ...payload } = log.toJSON();
         const ref = collectionRef.doc(uuid)
         await ref.set(payload, { merge: false })
     }
@@ -53,7 +53,7 @@ class DataChangeLogRepository {
         const collectionRef = this.#getCollectionRef(dataType)
 
         for(const log of logs) {
-            const { uuid, ...payload } = JSON.stringify(log);
+            const { uuid, ...payload } = log.toJSON();
             const ref = collectionRef.doc(uuid)
             batch.set(ref, payload)
         }

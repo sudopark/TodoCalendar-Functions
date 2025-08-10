@@ -72,7 +72,7 @@ class SyncResponse {
             created: this.created, 
             updated: this.updated, 
             deleted: this.deleted, 
-            newSyncTime: JSON.stringify(this.newSyncTime), 
+            newSyncTime: this.newSyncTime,
             nextPageCursor: this.nextPageCursor
         }
     }

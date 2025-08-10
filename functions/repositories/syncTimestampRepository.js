@@ -20,7 +20,7 @@ class SyncTimeStampRepository {
     async updateTimestamp(timeStamp) {
         const docId = `${timeStamp.dataType}_${timeStamp.userId}`
         const ref = collectionRef.doc(docId);
-        const payload = JSON.stringify(timeStamp)
+        const payload = timeStamp.toJSON();
         await ref.set(payload, {merge: false})
     }
 }
