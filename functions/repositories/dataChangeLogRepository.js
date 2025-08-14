@@ -20,7 +20,7 @@ class DataChangeLogRepository {
         const datas = snapshot.docs.map((d => {
             return { uuid: d.id, ...d.data() }
         }))
-        const logs = datas.map(d => ChangeLogs.fromData(d))
+        const logs = datas.map(d => { return ChangeLogs.DataChangeLog.fromData(d) })
         return logs
     }
 
@@ -37,7 +37,7 @@ class DataChangeLogRepository {
         const datas = snapshot.docs.map(d => {
             return { uuid: d.id, ...d.data() }
         })
-        const logs = datas.map(d => ChangeLogs.fromData(d))
+        const logs = datas.map(d => { return ChangeLogs.DataChangeLog.fromData(d) })
         return logs
     }
 
