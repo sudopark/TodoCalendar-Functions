@@ -60,6 +60,7 @@ class DataSyncService {
     }
 
     async #updateServerTimestamp(userId, dataType) {
+        // TODO: 클 경우에만 저장
         const timestamp = new SyncTimeStamp(
             userId, dataType, parseInt(Date.now(), 10)
         )
@@ -67,12 +68,12 @@ class DataSyncService {
     }
 
     async #makeSyncResponseWithDatas(dataType, logs) {
-        const createdLogs = logs.filter(log => { return log.changeCase === ChangeLogs.DataChangeCase.CREATED })
+        const createdLogs = logs.filter(log => { return log.changeCase.key === ChangeLogs.DataChangeCase.CREATED.key })
         const createds = await this.#loadChangedDatas(dataType, createdLogs)
-        const updatedLogs = logs.filter(log => { return log.changeCase === ChangeLogs.DataChangeCase.UPDATED })
+        const updatedLogs = logs.filter(log => { return log.changeCase.key === ChangeLogs.DataChangeCase.UPDATED.key })
         const updateds = await this.#loadChangedDatas(dataType, updatedLogs)
         const deletedIds = logs
-            .filter(log => { return log.changeCase === ChangeLogs.DataChangeCase.DELETED })
+            .filter(log => { return log.changeCase.key === ChangeLogs.DataChangeCase.DELETED.key })
             .map(log => { return log.uuid })
 
         const response = new Response()
