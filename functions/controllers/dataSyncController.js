@@ -10,9 +10,9 @@ class DataSyncController {
     }
 
     async checkSync(req, res) {
-        const userId = req.auth.uid, dataType = req.params.dataType, timestampText = req.params.timestamp
-        if(!userId || !dataType || !timestampText) {
-            throw new Errors.BadRequest('userId, dataType or timestamp is missing.')
+        const userId = req.auth.uid, dataType = req.query.dataType, timestampText = req.query.timestamp
+        if(!userId || !dataType) {
+            throw new Errors.BadRequest('userId or dataType is missing.')
         }
         if(dataType !== DataType.EventTag && dataType !== DataType.Todo && dataType !== DataType.Schedule ) {
             throw new Errors.BadRequest(`not support data type: ${dataType}`)
@@ -33,8 +33,8 @@ class DataSyncController {
     }
 
     async startSync(req, res) {
-        const userId = req.auth.uid, dataType = req.params.dataType;
-        const timestampText = req.params.timestamp, pageSizeText = req.params.size
+        const userId = req.auth.uid, dataType = req.query.dataType;
+        const timestampText = req.query.timestamp, pageSizeText = req.query.size
         if(!userId || !dataType) {
             throw new Errors.BadRequest('userId or dataType is missing.')
         }
@@ -66,8 +66,8 @@ class DataSyncController {
     }
 
     async continuteSync(req, res) {
-        const userId = req.auth.uid, dataType = req.params.dataType;
-        const cursor = req.params.cursor, pageSizetext = req.params.size
+        const userId = req.auth.uid, dataType = req.query.dataType;
+        const cursor = req.query.cursor, pageSizetext = req.query.size
 
         if(!userId || !dataType || !cursor) {
             throw new Errors.BadRequest('userId, dataType or cursor is missing.')
@@ -77,7 +77,7 @@ class DataSyncController {
             throw new Errors.BadRequest(`not support data type: ${dataType}`)
         }
 
-        const pageSize = parseInt(pageSizeText, 10)
+        const pageSize = parseInt(pageSizetext, 10)
         if(isNaN(pageSize)) {
             throw new Errors.BadRequest(`invalid type of pageSize value: ${pageSizeText}`)
         }
