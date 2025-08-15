@@ -55,6 +55,28 @@ describe("DoneTodoService", () => {
         })
     })
 
+    describe('put done todo' ,() => {
+
+        // success
+        it('success', async () => {
+            const done = await service.putDoneTodo('owner', 'some', { some: 'value' })
+
+            assert(done.uuid, 'some')
+            assert(done.userId, 'owner')
+        })
+
+        // fail
+        it('fail', async () => {
+            spyDoneRepository.shouldFailSave = true
+
+            try {
+                const done = await service.putDoneTodo('owner', 'some', { some: 'value' })
+            } catch (error) {
+                assert(error?.message, 'failed')
+            }
+        })
+    })
+
     describe('remove done todos', () => {
 
         // remove done todo past than

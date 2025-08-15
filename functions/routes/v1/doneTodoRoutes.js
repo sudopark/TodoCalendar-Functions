@@ -39,6 +39,10 @@ router.delete('/', async (req, res) => {
     await controller.deleteDoneTodos(req, res);
 });
 
+router.put("/:id", async (req, res) => {
+    await controller.putDoneTodo(req, res)
+})
+
 router.post('/:id/revert', async (req, res) => {
     await controller.revertDoneTodo(req, res);
 });

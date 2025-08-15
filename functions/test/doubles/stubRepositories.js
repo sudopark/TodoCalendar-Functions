@@ -342,6 +342,16 @@ class StubDoneTodoEventRepository {
         }
     }
 
+    async put(userId, doneId, payload) {
+        if(this.shouldFailSave) {
+            throw { message: 'failed' }
+        } else {
+            return {
+                uuid: doneId, origin_event_id: "origin", userId: userId, ...payload
+            }
+        }
+    }
+
     async loadDoneTodos(userId, size, cursor) {
         if(this.shouldFailLoad) {
             throw { message: 'failed' }
