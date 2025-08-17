@@ -46,7 +46,9 @@ class EventTagController {
             userId: userId
         }
         try {
-            const tag = await this.eventTagService.putTag(tagId, payload)
+            const tag = await this.eventTagService.putTag(
+                tagId, payload, body.skipCheckDuplicationName
+            )
             res.status(201)
                 .send(tag)
         } catch (error) {
@@ -55,15 +57,15 @@ class EventTagController {
     }
 
     async deleteTag(req, res) {
-        const tagId = req.params.id;
+        const tagId = req.params.id, userId = req.auth.uid;
         if(
-            !tagId
+            !tagId || !userId
         ) {
-            throw new Errors.BadRequest('tag id is missing.')
+            throw new Errors.BadRequest('tag id or userId is missing.')
         }
 
         try {
-            await this.eventTagService.removeTag(tagId)
+            await this.eventTagService.removeTag(userId, tagId)
             res.status(200)
                 .send({ status: 'ok' })
         } catch (error) {
@@ -72,14 +74,14 @@ class EventTagController {
     }
 
     async deleteTagAndEvents(req, res) {
-        const tagId = req.params.id;
-        if(!tagId) {
-            throw new Errors.BadRequest('tag id is missing.')
+        const tagId = req.params.id, userId = req.auth.uid;
+        if(!tagId || !userId) {
+            throw new Errors.BadRequest('tag id or userId is missing.')
         }
         try {
-            await this.eventTagService.removeTag(tagId)
-            const todoIds = await this.todoEventService.removeAllTodoWithTagId(tagId)
-            const scheduleIds = await this.scheduleEventService.removeAllEventsWithTagId(tagId)
+            await this.eventTagService.removeTag(userId, tagId)
+            const todoIds = await this.todoEventService.removeAllTodoWithTagId(userId, tagId)
+            const scheduleIds = await this.scheduleEventService.removeAllEventsWithTagId(userId, tagId)
             res.status(200)
                 .send({ todos: todoIds, schedules: scheduleIds })
 

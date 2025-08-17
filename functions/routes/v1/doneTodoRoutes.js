@@ -10,13 +10,19 @@ const TodoService = require("../../services/todoEventService");
 const EventTimeRangeService = require("../../services/eventTimeRangeService");
 const TodoRepository = require("../../repositories/todoRepository");
 const EventTimeRepository = require("../../repositories/eventTimeRangeRepository");
+const SyncTimeRepository = require('../../repositories/syncTimestampRepository');
+const ChangeLogRepository = require('../../repositories/dataChangeLogRepository');
+const ChangeLogRecordService = require('../../services/dataChangeLogRecordService');
 
 const doneTodoRepository = new DoneTodoRepository();
 const todoRepository = new TodoRepository();
 const eventTimeRangeService = new EventTimeRangeService(
     new EventTimeRepository()
 )
-const todoService = new TodoService({todoRepository, eventTimeRangeService, doneTodoRepository});
+const changeLogRecordService = new ChangeLogRecordService(
+    new SyncTimeRepository(), new ChangeLogRepository()
+)
+const todoService = new TodoService({todoRepository, eventTimeRangeService, doneTodoRepository, changeLogRecordService});
 
 const controller = new DoneTodoController(
     new DoneTodoService(
@@ -32,6 +38,10 @@ router.get('/', async (req, res) => {
 router.delete('/', async (req, res) => {
     await controller.deleteDoneTodos(req, res);
 });
+
+router.put("/:id", async (req, res) => {
+    await controller.putDoneTodo(req, res)
+})
 
 router.post('/:id/revert', async (req, res) => {
     await controller.revertDoneTodo(req, res);

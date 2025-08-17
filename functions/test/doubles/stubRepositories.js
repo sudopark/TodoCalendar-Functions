@@ -131,6 +131,14 @@ class StubTodoRepository {
             return { uuid: id, ...originPayload }
         }
     }
+
+    async getAllTodos(userId) {
+        const range = Array.from({ length: 10}, (_, i) => i);
+        const todos = range.map(i => {
+            return { uuid: `todo:${i}`, userId: userId }
+        })
+        return todos
+    }
 }
 
 
@@ -206,6 +214,14 @@ class StubScheduleEventRepository {
             this.spyEventMap.delete(k)
         })
         return events.map(([k, v]) => k)
+    }
+
+    async getAllEvents(userId) {
+        const range = Array.from({ length: 10}, (_, i) => i);
+        const events = range.map(i => {
+            return { uuid: `sc:${i}`, userId: userId }
+        })
+        return events
     }
 }
 
@@ -323,6 +339,16 @@ class StubDoneTodoEventRepository {
             throw { message: 'failed' }
         } else {
             return {uuid: 'new-done', origin_event_id: originId, ...origin, userId: userId }
+        }
+    }
+
+    async put(userId, doneId, payload) {
+        if(this.shouldFailSave) {
+            throw { message: 'failed' }
+        } else {
+            return {
+                uuid: doneId, origin_event_id: "origin", userId: userId, ...payload
+            }
         }
     }
 
@@ -613,6 +639,83 @@ class StubHolidayRepository {
     }
 }
 
+// MARK: - DataChangeLog
+
+class StubDataChangeLogRepository {
+
+    constructor() {
+        this.allLogsMap = new Map();
+        this.shouldFailUpdateLog = false
+    }
+
+    async findChanges(userId, dataType, timestamp, pageSize) {
+        const thisDataTypeLogs = this.allLogsMap.get(dataType) ?? []
+        const logs = thisDataTypeLogs.slice()
+            .filter(log => { return log.userId === userId })
+            .sort((l, r) => l.timestamp - r.timestamp )
+            .filter(log => { 
+                if(!timestamp) {
+                    return true
+                }
+                return log.timestamp > timestamp 
+            })
+            .slice(0, pageSize)
+        return logs
+    }
+
+    async loadChanges(userId, dataType, afterCursor, pageSize) {
+        const thisDataTypeLogs = this.allLogsMap.get(dataType) ?? []
+        const lastElement = thisDataTypeLogs.filter(log => log.uuid == afterCursor).at(0)
+        if(!lastElement || !lastElement.timestamp) {
+            return []
+        }
+
+        const logs = thisDataTypeLogs.slice()
+            .filter(log => log.userId == userId)
+            .sort((l, r) => l.timestamp - r.timestamp)
+            .filter(log => log.timestamp >  lastElement.timestamp)
+            .slice(0, pageSize)
+        return logs
+    }
+
+    async updateLog(log, dataType) {
+
+        if(this.shouldFailUpdateLog) {
+            throw { message: 'failed' };
+        }
+
+        const thisDataTypeLogs = (this.allLogsMap.get(dataType) ?? [])
+            .filter(log => { return log.uuid !== log.uuid })
+        thisDataTypeLogs.push(log)
+        this.allLogsMap.set(dataType, thisDataTypeLogs)
+    }
+
+    async updateLogs(logs, dataType) {
+
+        this.allLogsMap.set(dataType, logs);
+    }
+}
+
+// MARK: - SyncTime 
+
+class StubSyncTimeStampRepository {
+
+    constructor()  {
+        this.syncTimestampMap = new Map();
+    }
+
+    async syncTimestamp(userId, dataType) {
+        const dataTypeMap = this.syncTimestampMap.get(dataType)
+        return dataTypeMap?.get(userId)
+    } 
+    
+    async updateTimestamp(timeStamp) {
+        const dataTypeMap = this.syncTimestampMap.get(timeStamp.dataType) ?? new Map()
+        dataTypeMap.set(timeStamp.userId, timeStamp)
+        this.syncTimestampMap.set(timeStamp.dataType, dataTypeMap)
+    }
+}
+
 module.exports = {
     Account: StubAccountRepository,
     Todo: StubTodoRepository, 
@@ -624,5 +727,7 @@ module.exports = {
     EventDetailData: StubEventDetailDataRepository, 
     Migration: StubMigrationReposiotry, 
     ApPSetting: StubAppSettingRepository, 
-    Holiday: StubHolidayRepository
+    Holiday: StubHolidayRepository, 
+    ChangeLog: StubDataChangeLogRepository,
+    SyncTimeStamp: StubSyncTimeStampRepository
 };

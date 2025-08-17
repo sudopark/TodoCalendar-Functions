@@ -2,20 +2,25 @@
 const MigrationService = require('../services/migrationService');
 const EventTimeRangeService = require('../services/eventTimeRangeService');
 const assert = require('assert');
-const StubRepos = require('./stubs/stubRepositories');
+const StubRepos = require('./doubles/stubRepositories');
+const SpyChangeLogRecordService = require('./doubles/spyChangeLogRecordService');
+const DataTypes = require('../models/DataTypes');
 
 describe('MigrationService', () => {
 
     let stubReposiotry;
+    let spyChangeLogRecordService;
     let service;
 
     beforeEach(() => {
         stubReposiotry = new StubRepos.Migration();
         const evenTTimeRepository = new StubRepos.EventTime();
         const eventTimeRangeService = new EventTimeRangeService(evenTTimeRepository)
+        spyChangeLogRecordService = new SpyChangeLogRecordService()
         service = new MigrationService(
             stubReposiotry, 
-            eventTimeRangeService
+            eventTimeRangeService,
+            spyChangeLogRecordService
         )
     })
 
@@ -30,6 +35,10 @@ describe('MigrationService', () => {
 
             await service.migrationEventTags(tags)
             assert.equal(Object.keys(stubReposiotry.didMigratedTags).length, 2)
+
+            const logIds = spyChangeLogRecordService.logMap.get(DataTypes.EventTag)
+                .map(log => log.uuid)
+            assert.deepEqual(logIds, ['t1', 't2'])
         })
 
         it('fail', async () => {
@@ -55,6 +64,10 @@ describe('MigrationService', () => {
             await service.migrationTodos('uid', todos);
             assert.equal(Object.keys(stubReposiotry.didMigratedTodos).length, 2)
             assert.equal(stubReposiotry.didMigratedEventTimeRanges.size, 2)
+
+            const logIds = spyChangeLogRecordService.logMap.get(DataTypes.Todo)
+                .map(log => log.uuid)
+            assert.deepEqual(logIds, ['t1', 't2'])
         })
 
         it('failed', async () => {
@@ -81,6 +94,10 @@ describe('MigrationService', () => {
             await service.migrationSchedules('uid', schedules);
             assert.equal(Object.keys(stubReposiotry.didMigratedSchedules).length, 2)
             assert.equal(stubReposiotry.didMigratedEventTimeRanges.size, 2)
+
+            const logIds = spyChangeLogRecordService.logMap.get(DataTypes.Schedule)
+                .map(log => log.uuid)
+            assert.deepEqual(logIds, ['sc1', 'sc2'])
         })
 
         it('failed', async () => {

@@ -3,7 +3,8 @@ const DoneTodoService = require('../services/doneTodoService');
 const EventTimeRangeService = require('../services/eventTimeRangeService');
 const TodoServie = require('../services/todoEventService');
 const assert = require('assert');
-const StubRepos = require('./stubs/stubRepositories');
+const StubRepos = require('./doubles/stubRepositories');
+const SpyChangeLogRecordService = require('./doubles/spyChangeLogRecordService');
 
 describe("DoneTodoService", () => {
 
@@ -17,7 +18,8 @@ describe("DoneTodoService", () => {
             new StubRepos.EventTime()
         )
         const doneTodoRepository = new StubRepos.DoneTodo();
-        const todoService = new TodoServie( {todoRepository, eventTimeRangeService, doneTodoRepository});
+        const changeLogRecordService = new SpyChangeLogRecordService()
+        const todoService = new TodoServie( {todoRepository, eventTimeRangeService, doneTodoRepository, changeLogRecordService});
         spyDoneRepository = doneTodoRepository
         spyTodoRepository = todoRepository
         service = new DoneTodoService(
@@ -48,6 +50,28 @@ describe("DoneTodoService", () => {
             try {
                 const p = await service.loadDoneTodos('owner', 3)
             } catch(error) {
+                assert(error?.message, 'failed')
+            }
+        })
+    })
+
+    describe('put done todo' ,() => {
+
+        // success
+        it('success', async () => {
+            const done = await service.putDoneTodo('owner', 'some', { some: 'value' })
+
+            assert(done.uuid, 'some')
+            assert(done.userId, 'owner')
+        })
+
+        // fail
+        it('fail', async () => {
+            spyDoneRepository.shouldFailSave = true
+
+            try {
+                const done = await service.putDoneTodo('owner', 'some', { some: 'value' })
+            } catch (error) {
                 assert(error?.message, 'failed')
             }
         })

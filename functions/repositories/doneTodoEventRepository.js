@@ -18,6 +18,16 @@ class DoneTodoEventRepository {
         return {uuid: snapshot.id, ...snapshot.data() };
     }
 
+    async put(userId, doneId, payload) {
+        const data = {
+            userId: userId, ...payload
+        }
+        const ref = collectionRef.doc(doneId)
+        await ref.set(data, {merge: false})
+        const snapshot = await ref.get()
+        return { uuid: snapshot.id, ...snapshot.data() };
+    }
+
     async loadDoneTodos(userId, size, cursor) {
         let query = collectionRef
                 .where('userId', '==', userId)

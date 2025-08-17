@@ -1,6 +1,6 @@
 
 const assert = require('assert');
-const StubRepos = require("./stubs/stubRepositories");
+const StubRepos = require("./doubles/stubRepositories");
 const AccountService = require("../services/accountService");
 
 describe('AccountService', () => {

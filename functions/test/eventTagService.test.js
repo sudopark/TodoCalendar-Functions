@@ -1,11 +1,15 @@
 
 const EventTagService = require('../services/eventTagService');
 const assert = require('assert');
-const StubRepos = require('./stubs/stubRepositories');
+const StubRepos = require('./doubles/stubRepositories');
+const SpyChangeLogRecordService = require('./doubles/spyChangeLogRecordService');
+const DataType = require('../models/DataTypes');
+const { DataChangeCase } = require('../models/DataChangeLog');
 
 describe('eventTagService', () => {
 
     let stubRepository;
+    let spyChangeLogRecordService;
     let service;
 
     beforeEach(() => {
@@ -17,7 +21,8 @@ describe('eventTagService', () => {
         tags.set('t1_u2', { uuid: 't1_u2', name: 'n1', color_hex: 'some', userId: 'u2'})
 
         stubRepository = new StubRepos.EventTag(tags);
-        service = new EventTagService(stubRepository)
+        spyChangeLogRecordService = new SpyChangeLogRecordService();
+        service = new EventTagService(stubRepository, spyChangeLogRecordService)
     })
 
     describe('make new tag', () => {
@@ -30,6 +35,15 @@ describe('eventTagService', () => {
             assert.equal(tag.color_hex, 'some')
             assert.equal(tag.userId, 'u1')
         })
+
+        it('record created log', async () => {
+            const payload = { name: 'new tag', color_hex: 'some', userId: 'u1'}
+            const tag = await service.makeTag(payload)
+
+            const logs = spyChangeLogRecordService.logMap.get(DataType.EventTag) ?? []
+            assert.deepEqual(logs.map(l => l.uuid), [tag.uuid])
+            assert.deepEqual(logs.map(l => l.changeCase), [DataChangeCase.CREATED])
+        });
 
         it('same name already exists -> fail', async () => {
             const payload = { name: 'n1', color_hex: 'some', userId: 'u1'}
@@ -65,6 +79,15 @@ describe('eventTagService', () => {
             assert.equal(tag.userId, 'u1')
         })
 
+        it('record updated log', async () => {
+            const payload = { name: 'new name', color_hex: 'some', userId: 'u1' }
+            const tag = await service.putTag('t1', payload)
+
+            const logs = spyChangeLogRecordService.logMap.get(DataType.EventTag) ?? []
+            assert.deepEqual(logs.map(l => l.uuid), [tag.uuid])
+            assert.deepEqual(logs.map(l => l.changeCase), [DataChangeCase.UPDATED])
+        }) 
+
         it('success, only update color hex', async () => {
             const payload = { name: 'n1', color_hex: 'new hex', userId: 'u1' }
             const tag = await service.putTag('t1', payload)
@@ -83,6 +106,13 @@ describe('eventTagService', () => {
             }
         })
 
+        it('same name but skipCheckDuplicationName -> success', async () => {
+            const payload = { name: 'n2', color_hex: 'new hex', userId: 'u1' }
+            const tag = await service.putTag('t1', payload, true)
+
+            assert.equal(tag.uuid, 't1')
+        })
+
         it('update fail', async () => {
             stubRepository.shouldFail = true
             const payload = { name: 'n1', color_hex: 'new hex', userId: 'u1' }
@@ -97,17 +127,25 @@ describe('eventTagService', () => {
     describe('delete tag', () => {
 
         it('success', async () => {
-            await service.removeTag('t1')
+            await service.removeTag('u1', 't1')
             const tag = stubRepository.eventTagMap.get('t1')
             assert.equal(tag == null, true)
         });
+
+        it('record delete log', async () => {
+            await service.removeTag('u1', 't1')
+
+            const logs = spyChangeLogRecordService.logMap.get(DataType.EventTag) ?? []
+            assert.deepEqual(logs.map(l => l.uuid), ['t1'])
+            assert.deepEqual(logs.map(l => l.changeCase), [DataChangeCase.DELETED])
+        })
 
         it('fail', async () => {
 
             stubRepository.shouldFail = true
 
             try {
-                await service.removeTag('t1')
+                await service.removeTag('u1', 't1')
             } catch (error) {
                 assert.equal(error.message, 'failed')
             }

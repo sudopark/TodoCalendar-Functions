@@ -2,21 +2,27 @@
 const ScheduleEventService = require('../services/scheduleEventService');
 const assert = require('assert');
 const EventTimeRangeService = require('../services/eventTimeRangeService');
-const StubRepos = require("./stubs/stubRepositories");
+const StubRepos = require("./doubles/stubRepositories");
 const constants = require('../Utils/constants');
+const SpyChangeLogRecordService = require('./doubles/spyChangeLogRecordService');
+const DataTypes = require('../models/DataTypes');
+const { DataChangeCase } = require('../models/DataChangeLog');
 
 
 describe('ScheduleEventService', () => {
 
     let stubEventTimeRepository;
     let stubScheduleReopository;
+    let spyChangeLogRecordService;
     let scheduleService;
 
     beforeEach(() => {
         stubEventTimeRepository = new StubRepos.EventTime();
         const eventTimeRangeService = new EventTimeRangeService(stubEventTimeRepository);
         stubScheduleReopository = new StubRepos.ScheduleEvent();
-        scheduleService = new ScheduleEventService(stubScheduleReopository, eventTimeRangeService);
+        spyChangeLogRecordService = new SpyChangeLogRecordService()
+
+        scheduleService = new ScheduleEventService(stubScheduleReopository, eventTimeRangeService, spyChangeLogRecordService);
     })
 
     describe('make event', () => {
@@ -30,6 +36,10 @@ describe('ScheduleEventService', () => {
             const newEvent = await scheduleService.makeEvent('owner', makePayload);
             assert.equal(newEvent.uuid, 'some');
             assert.equal(newEvent.name, 'new event');
+
+            const logs = spyChangeLogRecordService.logMap.get(DataTypes.Schedule) ?? []
+            assert.deepEqual(logs.map(l => l.uuid), [newEvent.uuid])
+            assert.deepEqual(logs.map(l => l.changeCase), [DataChangeCase.CREATED])
         });
 
         it('failed', async  () => {
@@ -76,6 +86,10 @@ describe('ScheduleEventService', () => {
             assert.equal(updated.uuid, 'some');
             assert.equal(updated.name, 'put event');
             assert.equal(updated.event_time.timestamp, 300)
+
+            const logs = spyChangeLogRecordService.logMap.get(DataTypes.Schedule) ?? []
+            assert.deepEqual(logs.map(l => l.uuid), [updated.uuid])
+            assert.deepEqual(logs.map(l => l.changeCase), [DataChangeCase.UPDATED])
         })
 
         it('fail', async () => {
@@ -117,6 +131,7 @@ describe('ScheduleEventService', () => {
                 event_time: { time_type: 'at', timestamp: 100 }, 
             }
             await scheduleService.makeEvent('owner', makePayload);
+            spyChangeLogRecordService.logMap = new Map()
         })
         const updatePayload = {
             name: 'updated name'
@@ -127,6 +142,10 @@ describe('ScheduleEventService', () => {
             assert.equal(updated.uuid, 'some');
             assert.equal(updated.name, 'updated name');
             assert.equal(updated.event_time.timestamp, 100)
+
+            const logs = spyChangeLogRecordService.logMap.get(DataTypes.Schedule) ?? []
+            assert.deepEqual(logs.map(l => l.uuid), [updated.uuid])
+            assert.deepEqual(logs.map(l => l.changeCase), [DataChangeCase.UPDATED])
         })
 
         it('failed', async () => {
@@ -176,6 +195,8 @@ describe('ScheduleEventService', () => {
             const oldWithoutExclude = {...payload }
             await stubScheduleReopository.putEvent('with_exclude', oldWithExclude)
             await stubScheduleReopository.putEvent('without_exclude', oldWithoutExclude)
+
+            spyChangeLogRecordService.logMap = new Map();
         })
 
         it('success - old value has exclude', async () => {
@@ -188,6 +209,10 @@ describe('ScheduleEventService', () => {
                 result.updated_origin.exclude_repeatings.toString(), 
                 ['time1', 'time2', 'some_time'].toString()
             )
+
+            const logs = spyChangeLogRecordService.logMap.get(DataTypes.Schedule) ?? []
+            assert.deepEqual(logs.map(l => l.uuid), [result.updated_origin.uuid, result.new_schedule.uuid])
+            assert.deepEqual(logs.map(l => l.changeCase), [DataChangeCase.UPDATED, DataChangeCase.CREATED])
         })
 
         it('success - old value has no exclude', async () => {
@@ -234,12 +259,17 @@ describe('ScheduleEventService', () => {
             stubScheduleReopository.shouldFailUpdate = false
             const old = {...payload, exclude_repeatings: ['time1', 'time2']}
             await stubScheduleReopository.putEvent('origin', old)
+            spyChangeLogRecordService.logMap = new Map()
         })
 
         it('success', async () => {
             const result = await scheduleService.excludeRepeating('origin', 'new_time')
             assert.equal(result.uuid, 'origin')
             assert.equal(result.name, 'repeating event')
+
+            const logs = spyChangeLogRecordService.logMap.get(DataTypes.Schedule) ?? []
+            assert.deepEqual(logs.map(l => l.uuid), [result.uuid])
+            assert.deepEqual(logs.map(l => l.changeCase), [DataChangeCase.UPDATED])
         })
 
         it('fail', async () => {
@@ -288,6 +318,10 @@ describe('ScheduleEventService', () => {
             assert.equal(result.new.name, 'branch')
             assert.equal(result.origin.uuid, 'origin')
             assert.equal(result.origin.repeating.end, 200)
+
+            const logs = spyChangeLogRecordService.logMap.get(DataTypes.Schedule) ?? []
+            assert.deepEqual(logs.map(l => l.uuid), [result.new.uuid, result.origin.uuid])
+            assert.deepEqual(logs.map(l => l.changeCase), [DataChangeCase.CREATED, DataChangeCase.UPDATED])
         })
 
         it('if origin event has end count, remove and save end time', async () => {
@@ -335,14 +369,19 @@ describe('ScheduleEventService', () => {
                 event_time: { time_type: 'at', timestamp: 100 }, 
             }
             await scheduleService.putEvent('owner', 'old_event', payload)
+            spyChangeLogRecordService.logMap = new Map();
         })
 
         it('success', async () => {
-            await scheduleService.removeEvent('old_event')
+            await scheduleService.removeEvent('owner', 'old_event')
             const event = stubScheduleReopository.eventMap.get('old_event')
             const time = stubEventTimeRepository.eventTimeMap.get('old_event')
             assert.equal(event == null, true)
             assert.equal(time == null, true)
+
+            const logs = spyChangeLogRecordService.logMap.get(DataTypes.Schedule) ?? []
+            assert.deepEqual(logs.map(l => l.uuid), ['old_event'])
+            assert.deepEqual(logs.map(l => l.changeCase), [DataChangeCase.DELETED])
         })
     })
 
@@ -367,11 +406,15 @@ describe('ScheduleEventService', () => {
 
         it('tagId에 해당하는 schedule 삭제', async () => {
 
-            const ids = await scheduleService.removeAllEventsWithTagId('tag1')
+            const ids = await scheduleService.removeAllEventsWithTagId('owner', 'tag1')
             const eventAfterRemoveIds = [...stubScheduleReopository.spyEventMap].map(([k, v]) => k)
             assert.deepEqual(ids, ['event_with_tag1', 'event_with_tag1_1'])
             assert.deepEqual(eventAfterRemoveIds, ['event_without_tag', 'event_with_tag2'])
             assert.deepEqual(stubEventTimeRepository.removeIds, ['event_with_tag1', 'event_with_tag1_1'])
+
+            const logs = spyChangeLogRecordService.logMap.get(DataTypes.Schedule) ?? []
+            assert.deepEqual(logs.map(l => l.uuid), ids)
+            assert.deepEqual(logs.map(l => l.changeCase), ids.map(i => DataChangeCase.DELETED))
         })
     })
 

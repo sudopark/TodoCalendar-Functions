@@ -12,19 +12,27 @@ const TodoRepository = require('../../repositories/todoRepository');
 const ScheduleService = require('../../services/scheduleEventService');
 const ScheduleRepository = require('../../repositories/scheduleEventRepository');
 const DoneTodoEventRepository = require('../../repositories/doneTodoEventRepository');
+const SyncTimestampRepository = require('../../repositories/syncTimestampRepository');
+const ChangeLogRepository = require('../../repositories/dataChangeLogRepository');
+const ChangeLogRecordService = require('../../services/dataChangeLogRecordService');
 
 const todoRepository = new TodoRepository();
 const eventTimeRepository = new EventTimeRepository();
 const eventTimeRangeService = new EventTimeService(eventTimeRepository);
 const doneTodoRepository = new DoneTodoEventRepository();
 const scheduleRepository = new ScheduleRepository();
+const changeLogRecordService = new ChangeLogRecordService(
+    new SyncTimestampRepository(), 
+    new ChangeLogRepository()
+)
 
 const controller = new EventTagController(
     new EventTagService(
-        new EventTagRepository()
+        new EventTagRepository(), 
+        changeLogRecordService
     ), 
-    new TodoService({todoRepository, eventTimeRangeService, doneTodoRepository}), 
-    new ScheduleService(scheduleRepository, eventTimeRangeService)
+    new TodoService({todoRepository, eventTimeRangeService, doneTodoRepository, changeLogRecordService}), 
+    new ScheduleService(scheduleRepository, eventTimeRangeService, changeLogRecordService)
 )
 
 router.post('/tag', async (req, res) => {

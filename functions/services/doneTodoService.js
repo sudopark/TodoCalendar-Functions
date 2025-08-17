@@ -15,6 +15,10 @@ class DoneTodoService {
         return this.doneTodoRepository.removeDoneTodos(userId, pastThan)
     }
 
+    async putDoneTodo(userId, doneId, payload) {
+        return this.doneTodoRepository.put(userId, doneId, payload)
+    }
+
     async revertDoneTodo(userId, doneEventId) {
         const doneTodo = await this.doneTodoRepository.loadDoneTodo(doneEventId)
         const payload = this.#revertTodoPayload(doneTodo, userId)

@@ -31,6 +31,16 @@ class ScheduleEventRepository {
             throw { status: 500, message: error?.message || error};
         }
     }
+    
+    async getAllEvents(userId) {
+        const query = collectionRef
+            .where('userId', '==', userId)
+        const snapShot = await query.get();
+        const events = snapShot.docs.map(doc => {
+            return { uuid: doc.id, ...doc.data() }
+        });
+        return events
+    }
 
     async makeEvent(payload) {
 
