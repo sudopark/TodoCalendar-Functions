@@ -82,7 +82,7 @@ describe("DoneTodoService", () => {
         // remove done todo past than
         it('past than 4', async () => {
             await service.removeDoneTodos('owner', 4);
-            const all = await service.loadDoneTodos('owber', 10)
+            const all = await service.loadDoneTodos('owner', 10)
             assert(
                 all.map(d => d.uuid), 
                 ['id:9', 'id:8', 'id:7', 'id:6', 'id:5', 'id:4']
@@ -103,6 +103,28 @@ describe("DoneTodoService", () => {
             try {
                 await service.removeDoneTodos('owner');
             } catch(error) {
+                assert(error?.message, 'failed')
+            }
+        })
+    })
+
+    describe('remove done todo', () => {
+
+        it('success', async () => {
+            await service.removeDoneTodo('id:3')
+            const all = await service.loadDoneTodos('owner', 10)
+            assert(
+                all.map(d => d.uuid), 
+                ['id:9', 'id:8', 'id:7', 'id:6', 'id:5', 'id:4', 'id:2', 'id:1', 'id:0']
+            )
+        })
+
+        it('failed', async () => {
+            spyDoneRepository.shouldFailRemove = true
+
+            try {
+                await service.removeDoneTodo('id:3')
+            } catch (error) {
                 assert(error?.message, 'failed')
             }
         })
