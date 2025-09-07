@@ -63,6 +63,23 @@ class DoneTodoController {
         }
     }
 
+    async deleteDoneTodo(req, res) {
+        const userId = req.auth.uid; const doneEventId = req.params.id
+
+        if( !userId || !doneEventId) {
+            throw new Errors.BadRequest('user id or doneEvetId is missing.')
+        }
+
+        try {
+            await this.doneTodoService.removeDoneTodo(doneEventId)
+            res.status(200)
+                .send({status: 'ok'})
+
+        } catch (error) {
+            throw new Errors.Application(error)
+        }
+    }
+
     async revertDoneTodo(req, res) {
         const userId = req.auth.uid;
         const doneEventId = req.params.id;
