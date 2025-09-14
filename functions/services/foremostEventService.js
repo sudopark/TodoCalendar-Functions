@@ -30,7 +30,7 @@ class ForemostEventService {
     async #getForemostEvent(foremostId) {
         const eventId = foremostId?.event_id
         if(!eventId) {
-            return null
+            return { }
         }
         
         let event;
