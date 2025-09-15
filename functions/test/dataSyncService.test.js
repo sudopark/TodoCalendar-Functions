@@ -331,7 +331,7 @@ describe('DataSyncService', () => {
                     assert.deepEqual(response.created.map(t => t.uuid), ["tag:2"])
                     assert.deepEqual(response.updated.map(t => t.uuid), ["tag:4"])
                     assert.deepEqual(response.deleted, [])
-                    assert.deepEqual(response.newSyncTime, null)
+                    assert.deepEqual(response.newSyncTime, 80)
                     assert.deepEqual(response.nextPageCursor, 'tag:4')
                 })
 
@@ -340,7 +340,7 @@ describe('DataSyncService', () => {
                     assert.deepEqual(response.created.map(t => t.uuid), ["todo:2"])
                     assert.deepEqual(response.updated.map(t => t.uuid), ["todo:4"])
                     assert.deepEqual(response.deleted, [])
-                    assert.deepEqual(response.newSyncTime, null)
+                    assert.deepEqual(response.newSyncTime, 80)
                     assert.deepEqual(response.nextPageCursor, 'todo:4')
                 })
 
@@ -349,7 +349,7 @@ describe('DataSyncService', () => {
                     assert.deepEqual(response.created.map(t => t.uuid), ["sc:2"])
                     assert.deepEqual(response.updated.map(t => t.uuid), ["sc:4"])
                     assert.deepEqual(response.deleted, [])
-                    assert.deepEqual(response.newSyncTime, null)
+                    assert.deepEqual(response.newSyncTime, 80)
                     assert.deepEqual(response.nextPageCursor, 'sc:4')
                 })
             })
@@ -360,7 +360,7 @@ describe('DataSyncService', () => {
                     assert.deepEqual(response.created.map(t => t.uuid), ["tag:1"])
                     assert.deepEqual(response.updated.map(t => t.uuid), [])
                     assert.deepEqual(response.deleted, ["tag:5"])
-                    assert.deepEqual(response.newSyncTime, null)
+                    assert.deepEqual(response.newSyncTime, 180)
                     assert.deepEqual(response.nextPageCursor, 'tag:1')
                 })
 
@@ -369,7 +369,7 @@ describe('DataSyncService', () => {
                     assert.deepEqual(response.created.map(t => t.uuid), ["todo:1"])
                     assert.deepEqual(response.updated.map(t => t.uuid), [])
                     assert.deepEqual(response.deleted, ["todo:5"])
-                    assert.deepEqual(response.newSyncTime, null)
+                    assert.deepEqual(response.newSyncTime, 180)
                     assert.deepEqual(response.nextPageCursor, 'todo:1')
                 })
 
@@ -378,7 +378,7 @@ describe('DataSyncService', () => {
                     assert.deepEqual(response.created.map(t => t.uuid), ["sc:1"])
                     assert.deepEqual(response.updated.map(t => t.uuid), [])
                     assert.deepEqual(response.deleted, ["sc:5"])
-                    assert.deepEqual(response.newSyncTime, null)
+                    assert.deepEqual(response.newSyncTime, 180)
                     assert.deepEqual(response.nextPageCursor, 'sc:1')
                 })
             })
@@ -420,7 +420,7 @@ describe('DataSyncService', () => {
                 assert.deepEqual(response1.created.map(t => t.uuid), [])
                 assert.deepEqual(response1.updated.map(t => t.uuid), ['tag:4'])
                 assert.deepEqual(response1.deleted, ['tag:6', 'tag:5'])
-                assert.deepEqual(response1.newSyncTime, null)
+                assert.deepEqual(response1.newSyncTime, 130)
                 assert.deepEqual(response1.nextPageCursor, 'tag:5')
 
                 const response2 = await service.continueSync('some_user', DataType.EventTag, "tag:5", 3)
@@ -436,7 +436,7 @@ describe('DataSyncService', () => {
                 assert.deepEqual(response1.created.map(t => t.uuid), [])
                 assert.deepEqual(response1.updated.map(t => t.uuid), ['todo:4'])
                 assert.deepEqual(response1.deleted, ['todo:6', 'todo:5'])
-                assert.deepEqual(response1.newSyncTime, null)
+                assert.deepEqual(response1.newSyncTime, 130)
                 assert.deepEqual(response1.nextPageCursor, 'todo:5')
 
                 const response2 = await service.continueSync('some_user', DataType.Todo, "todo:5", 3)
@@ -452,7 +452,7 @@ describe('DataSyncService', () => {
                 assert.deepEqual(response1.created.map(t => t.uuid), [])
                 assert.deepEqual(response1.updated.map(t => t.uuid), ['sc:4'])
                 assert.deepEqual(response1.deleted, ['sc:6', 'sc:5'])
-                assert.deepEqual(response1.newSyncTime, null)
+                assert.deepEqual(response1.newSyncTime, 130)
                 assert.deepEqual(response1.nextPageCursor, 'sc:5')
 
                 const response2 = await service.continueSync('some_user', DataType.Schedule, "sc:5", 3)

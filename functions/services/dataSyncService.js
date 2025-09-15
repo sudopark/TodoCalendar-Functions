@@ -39,23 +39,13 @@ class DataSyncService {
     /// timestamp는 optional, 없으면 그냥 처음부터 / 있으면 해당 타임스탬프 보다 큰 지점부터
     async startSync(userId, dataType, timestamp, pageSize) {
         const logs = await this.changeLogRepository.findChanges(userId, dataType, timestamp, pageSize)
-        const response = await this.#makeSyncResponseWithDatas(dataType, logs)
-        if(logs.length < pageSize) {
-            const serverTimestamp = await this.synctimeRepository.syncTimestamp(userId, dataType)
-            response.setNextPageCursor(null)
-            response.setSynctime(serverTimestamp.timestamp)
-        }
+        const response = await this.#makeSyncResponseWithDatas(userId, dataType, logs, pageSize)
         return response
     }
 
     async continueSync(userId, dataType, afterCursor, pageSize) {
         const logs = await this.changeLogRepository.loadChanges(userId, dataType, afterCursor, pageSize)
-        const response = await this.#makeSyncResponseWithDatas(dataType, logs)
-        if(logs.length < pageSize) {
-            const serverTimestamp = await this.synctimeRepository.syncTimestamp(userId, dataType)
-            response.setNextPageCursor(null)
-            response.setSynctime(serverTimestamp.timestamp)
-        }
+        const response = await this.#makeSyncResponseWithDatas(userId, dataType, logs, pageSize)
         return response
     }
 
@@ -67,7 +57,7 @@ class DataSyncService {
         await this.synctimeRepository.updateTimestamp(timestamp)
     }
 
-    async #makeSyncResponseWithDatas(dataType, logs) {
+    async #makeSyncResponseWithDatas(userId, dataType, logs, pageSize) {
         const createdLogs = logs.filter(log => { return log.changeCase.key === ChangeLogs.DataChangeCase.CREATED.key })
         const createds = await this.#loadChangedDatas(dataType, createdLogs)
         const updatedLogs = logs.filter(log => { return log.changeCase.key === ChangeLogs.DataChangeCase.UPDATED.key })
@@ -81,10 +71,15 @@ class DataSyncService {
         response.setUpdated(updateds)
         response.setDeleted(deletedIds)
 
-        if(logs.length > 0) {
+        if(logs.length < pageSize) {
+            const serverTimestamp = await this.synctimeRepository.syncTimestamp(userId, dataType)
+            response.setNextPageCursor(null)
+            response.setSynctime(serverTimestamp.timestamp)
+        } else if(logs.length > 0) {
             // 페이징 중이면 현재 page의 마지막 요소 uuid를 next page cursor로 제공
             const lastLog = logs[logs.length - 1]
             response.setNextPageCursor(lastLog.uuid)
+            response.setSynctime(lastLog.timestamp)
         }
         return response
     }

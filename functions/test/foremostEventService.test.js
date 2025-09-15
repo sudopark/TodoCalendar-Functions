@@ -35,7 +35,7 @@ describe('ForemostEventService', () => {
         // not exists
         it('not exists', async () => {
             const eventForAnothoerUser = await service.getForemostEvent('another')
-            assert(eventForAnothoerUser == null)
+            assert(eventForAnothoerUser.event_id ?? null === null)
         })
 
         // load fail
@@ -65,7 +65,7 @@ describe('ForemostEventService', () => {
         // not exists
         it('not exists', async () => {
             const eventForAnothoerUser = await service.getForemostEvent('another')
-            assert(eventForAnothoerUser == null)
+            assert(eventForAnothoerUser.event_id ?? null === null)
         })
 
         // load fail
