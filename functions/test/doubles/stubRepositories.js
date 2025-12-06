@@ -716,8 +716,37 @@ class StubSyncTimeStampRepository {
     }
 }
 
+// MARK: - user 
+
+class StubUserRepository {
+
+    constructor() {
+        this.userDevices = new Map();
+        this.shouldFail = false
+    }
+
+    async loadUserDevice(deviceId) {
+        return this.userDevices.get(deviceId)
+    }
+
+    async updateUserDevice(device) {
+        if(this.shouldFail) {
+            throw { message: 'failed' };
+        }
+        this.userDevices.set(device.deviceId, device)
+    }
+    
+    async removeUserDevice(deviceId) {
+        if(this.shouldFail) {
+            throw { message: 'failed' };
+        }
+        this.userDevices.delete(deviceId)
+    }
+}
+
 module.exports = {
     Account: StubAccountRepository,
+    User: StubUserRepository,
     Todo: StubTodoRepository, 
     EventTime: StubEventTimeRangeRepository, 
     DoneTodo: StubDoneTodoEventRepository, 
