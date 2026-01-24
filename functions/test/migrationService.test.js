@@ -162,4 +162,29 @@ describe('MigrationService', () => {
             assert.equal(Object.keys(stubReposiotry.didMigratedDoneTodoEvents || {}).length, 0)
         })
     })
+
+    describe('migrate done todo details', () => {
+
+        const details = {
+            'e1': {memo: 'some'}, 
+            'e2': {memo: 'some'}, 
+        }
+
+        it('success', async () => {
+
+            await service.migrationDoneTodoDetail(details)
+            assert.equal(Object.keys(stubReposiotry.didMigratedDoneTodoDetails).length, 2)
+        })
+
+        it('fail', async () => {
+            stubReposiotry.shouldFail = true
+
+            try {
+                await service.migrationDoneTodoDetail(details)
+            } catch (error) {
+                assert.equal(error != null, true)
+            }
+            assert.equal(Object.keys(stubReposiotry.didMigratedDoneTodoDetails || {}).length, 0)
+        })
+    })
 });

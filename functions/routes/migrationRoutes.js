@@ -44,4 +44,8 @@ router.post('/todos/done', async (req, res) => {
     await migrationController.postMigrationDoneTodoEvents(req, res);
 });
 
+router.post('/todos/done/details', async (req, res) => {
+    await migrationController.postDoneTodoDetails(req, res);
+});
+
 module.exports = router;

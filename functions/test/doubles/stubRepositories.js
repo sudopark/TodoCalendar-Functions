@@ -585,6 +585,13 @@ class StubMigrationReposiotry {
         }
         this.didMigratedDoneTodoEvents = dones;
     }
+
+    async migrateDoneTodoDetails(details) {
+        if(this.shouldFail) {
+            throw { message: 'failed' }
+        }
+        this.didMigratedDoneTodoDetails = details;
+    }
 }
 
 class StubAppSettingRepository {
