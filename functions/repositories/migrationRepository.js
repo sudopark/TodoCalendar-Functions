@@ -83,6 +83,19 @@ class MigrationRepository {
         }
         await batch.commit();
     }
+
+    async migrateDoneTodoDetails(details) {
+
+        const batch = db.batch();
+        const collectionRef = db.collection('done_todo_details');
+
+        for(const eventId in details) {
+            const ref = collectionRef.doc(eventId);
+            batch.set(ref, details[eventId]);
+        }
+
+        await batch.commit();
+    }
 }
 
 module.exports = MigrationRepository;
