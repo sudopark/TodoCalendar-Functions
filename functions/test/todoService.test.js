@@ -3,6 +3,7 @@
 const TodoService = require('../services/todoEventService');
 const assert = require('assert');
 const EventTimeRangeService = require('../services/eventTimeRangeService');
+const EventDetailDataService = require('../services/eventDetailService');
 const StubRepos = require("./doubles/stubRepositories");
 const SpyChangeLogRecordService = require('./doubles/spyChangeLogRecordService');
 const DataTypes = require('../models/DataTypes');
@@ -12,11 +13,14 @@ const { DataChangeCase } = require('../models/DataChangeLog');
 describe('TodoService', () => {
 
     const stubEventTimeRepository = new StubRepos.EventTime();
+    const stubEventDetailRepository = new StubRepos.EventDetailData();
+    const stubDoneEventDetailRepository = new StubRepos.EventDetailData();
     const eventTimeRangeService = new EventTimeRangeService(stubEventTimeRepository)
     const todoRepository = new StubRepos.Todo();
     const doneTodoRepository = new StubRepos.DoneTodo();
     const changeLogRecordService = new SpyChangeLogRecordService()
-    const todoService = new TodoService( { todoRepository, eventTimeRangeService, doneTodoRepository, changeLogRecordService })
+    const eventDetailDataService = new EventDetailDataService(stubEventDetailRepository, stubDoneEventDetailRepository);
+    const todoService = new TodoService( { todoRepository, eventTimeRangeService, doneTodoRepository, changeLogRecordService, eventDetailDataService })
 
     beforeEach(() => {
         changeLogRecordService.logMap = new Map();
@@ -282,6 +286,8 @@ describe('TodoService', () => {
             todoRepository.shouldfailUpdateTodo = false
             doneTodoRepository.shouldFailSave = false
             todoRepository.removedTodoId = null
+            stubEventDetailRepository.putData('origin', { memo: 'some' })
+            stubEventDetailRepository.didRemoveDataId = null
         })
 
         const originPayload = { name: 'done' }
@@ -294,7 +300,9 @@ describe('TodoService', () => {
             assert.equal(result.next_repeating.uuid, 'origin')
             assert.equal(result.next_repeating.event_time.time_type, 'at')
             assert.equal(result.next_repeating.event_time.timestamp, 100)
+            assert.equal(result.done_detail.eventId, 'new-done')
             assert.equal(todoRepository.removedTodoId, null)
+            assert.equal(stubEventDetailRepository.didRemoveDataId, null)
             assert.equal(stubEventTimeRepository.didRemovedEventId, null)
 
             const logs = changeLogRecordService.logMap.get(DataTypes.Todo) ?? []
@@ -306,7 +314,9 @@ describe('TodoService', () => {
             const result = await todoService.completeTodo('uid', 'origin', originPayload);
             assert.equal(result.done.name, 'done')
             assert.equal(result.next_repeating == null, true)
+            assert.equal(result.done_detail.eventId, 'new-done')
             assert.equal(todoRepository.removedTodoId, 'origin')
+            assert.equal(stubEventDetailRepository.didRemoveDataId, 'origin')
             assert.equal(stubEventTimeRepository.didRemovedEventId, 'origin')
 
             const logs = changeLogRecordService.logMap.get(DataTypes.Todo) ?? []

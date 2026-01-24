@@ -10,6 +10,8 @@ const DoneTodoEventRepository = require('../repositories/doneTodoEventRepository
 const SyncTimeRepository = require('../repositories/syncTimestampRepository');
 const ChangeLogRepository = require('../repositories/dataChangeLogRepository')
 const ChangeLogRecordService = require('../services/dataChangeLogRecordService');
+const EventDetailDataService = require('../services/eventDetailService');
+const EventDetailDataRepository = require('../repositories/eventDetailRepository');
 
 const todoRepository = new TodoRepository();
 const eventTimeRepository = new EventTimeRepository();
@@ -19,8 +21,12 @@ const changeLogRecordService = new ChangeLogRecordService(
     new SyncTimeRepository(), 
     new ChangeLogRepository()
 )
+const eventDetailDataService = new EventDetailDataService(
+    new EventDetailDataRepository(false), 
+    new EventDetailDataRepository(true)
+)
 
-const todoService = new TodoService({ todoRepository, eventTimeRangeService, doneTodoRepository, changeLogRecordService });
+const todoService = new TodoService({ todoRepository, eventTimeRangeService, doneTodoRepository, changeLogRecordService, eventDetailDataService });
 const todoController = new TodoController(todoService);
 
 router.get("/todo/:id", async (req, res) => {

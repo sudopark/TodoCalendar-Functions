@@ -510,6 +510,7 @@ class StubEventDetailDataRepository {
     constructor(shouldFail) {
         this.shouldFail = shouldFail
         this.detailMap = new Map()
+        this.didRemoveDataId = null
     }
 
     async putData(eventId, payload) {
@@ -534,6 +535,7 @@ class StubEventDetailDataRepository {
     }
 
     async removeData(eventId) {
+        this.didRemoveDataId = eventId
         if(this.shouldFail) {
             throw { message: 'failed' }
         }
