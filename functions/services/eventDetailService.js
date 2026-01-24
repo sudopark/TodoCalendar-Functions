@@ -7,14 +7,23 @@ class EventDetailDataService {
         this.doneTodoDetailRepository = doneTodoDetailRepository
     }
 
-    async putData(eventId, payload) {
-        return this.eventDetailDataRepository.putData(eventId, payload);
+    async putData(eventId, payload, isDoneDetail) {
+        if(isDoneDetail) {
+            return this.doneTodoDetailRepository.putData(eventId, payload);
+        } else {
+            return this.eventDetailDataRepository.putData(eventId, payload);
+        }
     }
 
-    async findData(eventId) {
+    async findData(eventId, isDoneDetail) {
         try {
-            const data = await this.eventDetailDataRepository.findData(eventId)
-            return data
+            if(isDoneDetail) {
+                const data = await this.doneTodoDetailRepository.findData(eventId)
+                return data
+            } else {
+                const data = await this.eventDetailDataRepository.findData(eventId)
+                return data
+            }
         } catch (error) {
             if(error.code == "EventDetailNotExists") {
                 return { eventId: eventId }
@@ -23,8 +32,12 @@ class EventDetailDataService {
         }
     }
 
-    async removeData(eventId) {
-        return this.eventDetailDataRepository.removeData(eventId)
+    async removeData(eventId, isDoneDetail) {
+        if(isDoneDetail) {
+            return this.doneTodoDetailRepository.removeData(eventId)
+        } else {
+            return this.eventDetailDataRepository.removeData(eventId)
+        }
     }
 
     async copyTodoDetailToDoneTodoDetail(todoId, doneEventId) {

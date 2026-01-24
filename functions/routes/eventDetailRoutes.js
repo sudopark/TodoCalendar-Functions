@@ -24,4 +24,19 @@ router.delete('/:id', async (req, res) => {
     await controller.deleteData(req, res);
 });
 
+router.get('/done/:id', async (req, res) => {
+    req.isDoneDetail = true
+    await controller.getData(req, res);
+});
+
+router.put('/done/:id', async (req, res) => {
+    req.isDoneDetail = true
+    await controller.putData(req, res);
+});
+
+router.delete('/done/:id', async (req, res) => {
+    req.isDoneDetail = true
+    await controller.deleteData(req, res);
+});
+
 module.exports = router;
