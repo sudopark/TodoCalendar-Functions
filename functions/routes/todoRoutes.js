@@ -1,15 +1,15 @@
 
 const express = require("express");
 const router = express.Router();
-const TodoController = require("../../controllers/todoController");
-const TodoService = require("../../services/todoEventService");
-const EventTimeRangeService = require("../../services/eventTimeRangeService");
-const TodoRepository = require("../../repositories/todoRepository");
-const EventTimeRepository = require("../../repositories/eventTimeRangeRepository");
-const DoneTodoEventRepository = require('../../repositories/doneTodoEventRepository');
-const SyncTimeRepository = require('../../repositories/syncTimestampRepository');
-const ChangeLogRepository = require('../../repositories/dataChangeLogRepository')
-const ChangeLogRecordService = require('../../services/dataChangeLogRecordService');
+const TodoController = require("../controllers/todoController");
+const TodoService = require("../services/todoEventService");
+const EventTimeRangeService = require("../services/eventTimeRangeService");
+const TodoRepository = require("../repositories/todoRepository");
+const EventTimeRepository = require("../repositories/eventTimeRangeRepository");
+const DoneTodoEventRepository = require('../repositories/doneTodoEventRepository');
+const SyncTimeRepository = require('../repositories/syncTimestampRepository');
+const ChangeLogRepository = require('../repositories/dataChangeLogRepository')
+const ChangeLogRecordService = require('../services/dataChangeLogRecordService');
 
 const todoRepository = new TodoRepository();
 const eventTimeRepository = new EventTimeRepository();

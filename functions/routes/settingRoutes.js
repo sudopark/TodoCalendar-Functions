@@ -2,9 +2,9 @@
 const express = require('express');
 const router = express.Router();
 
-const AppSettingRepository = require('../../repositories/appSettingRepository');
-const AppSettingService = require('../../services/appSettingService');
-const AppSettingController = require('../../controllers/appSettingController');
+const AppSettingRepository = require('../repositories/appSettingRepository');
+const AppSettingService = require('../services/appSettingService');
+const AppSettingController = require('../controllers/appSettingController');
 
 const controller = new AppSettingController(
     new AppSettingService(
