@@ -18,10 +18,10 @@ describe('HolidayRepository', () => {
         
         it('success', async () => {
             const data = await service.getHoliday('ko', 'south_korea', 2025)
-            assert(data.holiday, 'dummy')
-            assert(spyRepository.didRequestedCalendarId, 'ko.south_korea.official%23holiday%40group.v.calendar.google.com')
-            assert(spyRepository.didRequestedTimeMin, '2025-01-01T00:00:00z')
-            assert(spyRepository.didRequestedTimeMax, '2025-12-31T23:59:59z')
+            assert.deepEqual(data.holiday, 'dummy')
+            assert.deepEqual(spyRepository.didRequestedCalendarId, 'ko.south_korea.official#holiday@group.v.calendar.google.com')
+            assert.deepEqual(spyRepository.didRequestedTimeMin, '2025-01-01T00:00:00z')
+            assert.deepEqual(spyRepository.didRequestedTimeMax, '2025-12-31T23:59:59z')
         })
 
         it('failed', async () => {
@@ -30,7 +30,7 @@ describe('HolidayRepository', () => {
             try {
                 const data = await service.getHoliday('ko', 'south_korea', 2025)
             } catch (error) {
-                assert(error.message, 'failed')
+                assert.deepEqual(error.message, 'failed')
             }
         })
     })
