@@ -27,21 +27,38 @@ class EventDetailDataService {
         return this.eventDetailDataRepository.removeData(eventId)
     }
 
-    async removeDoneTodoDetail(eventId) {
-
-    }
-
     async copyTodoDetailToDoneTodoDetail(todoId, doneEventId) {
         try {
             // get todo detail
             const detail = await this.eventDetailDataRepository.findData(todoId);
             if(!detail) { return }
-            
+
             // save done detail
             const { eventId, ...payload } = detail
             
             const doneDetail = await this.doneTodoDetailRepository.putData(doneEventId, payload)
             return doneDetail
+
+        } catch (error) { }
+    }
+
+    async revertDoneTodoDetail(doneEventid, originId) {
+        try {
+
+            // get done event detail
+            const doneDetail = await this.doneTodoDetailRepository.findData(doneEventid);
+            if(!doneDetail) { return }
+
+            // save event detail
+            const { eventId, ...payload } = doneDetail
+            const revertDetail = await this.eventDetailDataRepository.putData(originId, payload);
+
+            // remove done event detail
+            try { 
+                await this.doneTodoDetailRepository.removeData(doneEventid)
+            } catch { }
+            
+            return revertDetail
 
         } catch (error) { }
     }
