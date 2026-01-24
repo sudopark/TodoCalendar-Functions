@@ -5,11 +5,12 @@ const { chunk } = require('../Utils/functions');
 
 class TodoEventService {
 
-    constructor({ todoRepository, eventTimeRangeService, doneTodoRepository, changeLogRecordService }) {
+    constructor({ todoRepository, eventTimeRangeService, doneTodoRepository, changeLogRecordService, eventDetailDataService }) {
         this.todoRepository = todoRepository
         this.eventTimeRangeService = eventTimeRangeService
         this.doneTodoRepository = doneTodoRepository
         this.changeLogRecordService = changeLogRecordService
+        this.eventDetailDataService = eventDetailDataService
     }
 
     async findTodo(todoId) {
@@ -65,15 +66,17 @@ class TodoEventService {
     async completeTodo(userId, originId, origin, nextEventTime) {
 
         const done = await this.doneTodoRepository.save(originId, origin, userId);
+        const doneDetail = await this.eventDetailDataService.copyTodoDetailToDoneTodoDetail(originId, done.uuid);
         if(nextEventTime != null) {
             const payload = { event_time: nextEventTime }
             let updatedTodo = await this.todoRepository.updateTodo(originId, payload);
             await this.#updateEventtime(userId, updatedTodo)
             await this.#updateLog(updatedTodo.uuid, userId, DataChangeLog.DataChangeCase.UPDATED)
-            return { done: done, next_repeating: updatedTodo }
+            return { done: done, next_repeating: updatedTodo, done_detail: doneDetail }
         } else {
             await this.removeTodo(userId, originId);
-            return { done: done }
+            try { await this.eventDetailDataService.removeData(originId) } catch(err) { }
+            return { done: done, done_detail: doneDetail }
         }
     }
 
