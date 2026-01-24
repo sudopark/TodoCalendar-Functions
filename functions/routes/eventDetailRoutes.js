@@ -1,9 +1,9 @@
 
 const express = require('express')
 const router = express.Router();
-const EventDetailDataRepository = require("../../repositories/eventDetailRepository");
-const EventDetailDataService = require('../../services/eventDetailService');
-const EventDetailDataController = require('../../controllers/eventDetailController');
+const EventDetailDataRepository = require("../repositories/eventDetailRepository");
+const EventDetailDataService = require('../services/eventDetailService');
+const EventDetailDataController = require('../controllers/eventDetailController');
 
 const controller = new EventDetailDataController(
     new EventDetailDataService(

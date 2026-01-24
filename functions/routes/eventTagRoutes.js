@@ -2,19 +2,19 @@
 const express = require('express');
 const router = express.Router();
 
-const EventTagRepository = require('../../repositories/eventTagRepository');
-const EventTagService = require('../../services/eventTagService');
-const EventTagController = require('../../controllers/eventTagController');
-const EventTimeService = require('../../services/eventTimeRangeService');
-const EventTimeRepository = require('../../repositories/eventTimeRangeRepository');
-const TodoService = require('../../services/todoEventService');
-const TodoRepository = require('../../repositories/todoRepository');
-const ScheduleService = require('../../services/scheduleEventService');
-const ScheduleRepository = require('../../repositories/scheduleEventRepository');
-const DoneTodoEventRepository = require('../../repositories/doneTodoEventRepository');
-const SyncTimestampRepository = require('../../repositories/syncTimestampRepository');
-const ChangeLogRepository = require('../../repositories/dataChangeLogRepository');
-const ChangeLogRecordService = require('../../services/dataChangeLogRecordService');
+const EventTagRepository = require('../repositories/eventTagRepository');
+const EventTagService = require('../services/eventTagService');
+const EventTagController = require('../controllers/eventTagController');
+const EventTimeService = require('../services/eventTimeRangeService');
+const EventTimeRepository = require('../repositories/eventTimeRangeRepository');
+const TodoService = require('../services/todoEventService');
+const TodoRepository = require('../repositories/todoRepository');
+const ScheduleService = require('../services/scheduleEventService');
+const ScheduleRepository = require('../repositories/scheduleEventRepository');
+const DoneTodoEventRepository = require('../repositories/doneTodoEventRepository');
+const SyncTimestampRepository = require('../repositories/syncTimestampRepository');
+const ChangeLogRepository = require('../repositories/dataChangeLogRepository');
+const ChangeLogRecordService = require('../services/dataChangeLogRecordService');
 
 const todoRepository = new TodoRepository();
 const eventTimeRepository = new EventTimeRepository();

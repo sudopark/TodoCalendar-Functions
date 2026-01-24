@@ -1,14 +1,14 @@
 
 const express = require('express');
 const router = express.Router();
-const ScheduleEventController = require('../../controllers/scheduleEventController');
-const ScheduleEventService = require('../../services/scheduleEventService');
-const EventTimeRangeService = require('../../services/eventTimeRangeService');
-const ScheduleRepository = require('../../repositories/scheduleEventRepository');
-const EventTimeRepository = require('../../repositories/eventTimeRangeRepository');
-const SyncTimeRepository = require('../../repositories/syncTimestampRepository');
-const ChangeLogRepository = require('../../repositories/dataChangeLogRepository');
-const ChangeLogRecordService = require('../../services/dataChangeLogRecordService');
+const ScheduleEventController = require('../controllers/scheduleEventController');
+const ScheduleEventService = require('../services/scheduleEventService');
+const EventTimeRangeService = require('../services/eventTimeRangeService');
+const ScheduleRepository = require('../repositories/scheduleEventRepository');
+const EventTimeRepository = require('../repositories/eventTimeRangeRepository');
+const SyncTimeRepository = require('../repositories/syncTimestampRepository');
+const ChangeLogRepository = require('../repositories/dataChangeLogRepository');
+const ChangeLogRecordService = require('../services/dataChangeLogRecordService');
 
 const scheduleRepository = new ScheduleRepository();
 const eventTimeRangeService = new EventTimeRangeService(new EventTimeRepository());

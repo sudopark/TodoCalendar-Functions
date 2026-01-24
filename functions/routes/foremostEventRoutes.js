@@ -2,11 +2,11 @@
 const express = require('express');
 const router = express.Router();
 
-const ForemostEventController = require('../../controllers/foremostEventController');
-const ForemostEventService = require('../../services/foremostEventService');
-const ForemostEventIdRepository = require('../../repositories/foremostEventIdRepository');
-const TodoRepository = require('../../repositories/todoRepository');
-const ScheduleRepository = require('../../repositories/scheduleEventRepository');
+const ForemostEventController = require('../controllers/foremostEventController');
+const ForemostEventService = require('../services/foremostEventService');
+const ForemostEventIdRepository = require('../repositories/foremostEventIdRepository');
+const TodoRepository = require('../repositories/todoRepository');
+const ScheduleRepository = require('../repositories/scheduleEventRepository');
 
 const foremostEventController = new ForemostEventController(
     new ForemostEventService(

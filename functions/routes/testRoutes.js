@@ -6,17 +6,17 @@ const { getFirestore, Filter } = require('firebase-admin/firestore');
 const db = getFirestore();
 const collectionRef = db.collection('event_times')
 
-const TodoRepository = require('../../repositories/todoRepository');
+const TodoRepository = require('../repositories/todoRepository');
 const todoReposiotry = new TodoRepository()
 
-const SettingRepository = require('../../repositories/appSettingRepository');
+const SettingRepository = require('../repositories/appSettingRepository');
 const settingRepository = new SettingRepository();
 
-const DoneRepository = require('../../repositories/doneTodoEventRepository');
+const DoneRepository = require('../repositories/doneTodoEventRepository');
 const doneRepo = new DoneRepository();
 
-const { chunk } = require('../../Utils/functions')
-const Errors = require('../../models/Errors');
+const { chunk } = require('../Utils/functions')
+const Errors = require('../models/Errors');
 
 router.get('/', (req, res) => {
     res.status(200)
