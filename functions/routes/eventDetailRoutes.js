@@ -7,7 +7,8 @@ const EventDetailDataController = require('../controllers/eventDetailController'
 
 const controller = new EventDetailDataController(
     new EventDetailDataService(
-        new EventDetailDataRepository()
+        new EventDetailDataRepository(false), 
+        new EventDetailDataRepository(true)
     )
 )
 

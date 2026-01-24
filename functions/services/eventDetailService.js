@@ -2,8 +2,9 @@
 
 class EventDetailDataService {
 
-    constructor(eventDetailDataRepository) {
+    constructor(eventDetailDataRepository, doneTodoDetailRepository) {
         this.eventDetailDataRepository = eventDetailDataRepository
+        this.doneTodoDetailRepository = doneTodoDetailRepository
     }
 
     async putData(eventId, payload) {
@@ -24,6 +25,25 @@ class EventDetailDataService {
 
     async removeData(eventId) {
         return this.eventDetailDataRepository.removeData(eventId)
+    }
+
+    async removeDoneTodoDetail(eventId) {
+
+    }
+
+    async copyTodoDetailToDoneTodoDetail(todoId, doneEventId) {
+        try {
+            // get todo detail
+            const detail = await this.eventDetailDataRepository.findData(todoId);
+            if(!detail) { return }
+            
+            // save done detail
+            const { eventId, ...payload } = detail
+            
+            const doneDetail = await this.doneTodoDetailRepository.putData(doneEventId, payload)
+            return doneDetail
+
+        } catch (error) { }
     }
 }
 

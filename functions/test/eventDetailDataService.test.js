@@ -6,11 +6,13 @@ const StubRepos = require('./doubles/stubRepositories');
 describe('EventDetailDataService', () => {
 
     let stubRepository;
+    let stubDoneDetailRepository;
     let service;
 
     beforeEach(() => {
         stubRepository = new StubRepos.EventDetailData();
-        service = new EventDetailDataService(stubRepository)
+        stubDoneDetailRepository = new StubRepos.EventDetailData();
+        service = new EventDetailDataService(stubRepository, stubDoneDetailRepository)
     })
 
     describe('put data', () => {
@@ -90,4 +92,45 @@ describe('EventDetailDataService', () => {
             }
         })
     });
+
+    describe('copy todo detail to done todo detail', () => {
+
+        beforeEach(() => {
+            stubRepository.shouldFail = false
+        })
+
+        // detail 있을때 done detail로 이동
+        describe('when detail exists ', () => {
+
+            beforeEach(async () => {
+                const payload = { memeo: 'some' }
+                await service.putData('origin', payload)
+            })
+
+            it('success', async () => {
+                const doneDetail = await service.copyTodoDetailToDoneTodoDetail('origin', 'done')
+                assert.deepEqual(doneDetail.eventId, 'done')
+            })
+
+            it('and fail, ignore', async () => {
+
+                stubRepository.shouldFail = true
+                
+                const doneDetail = await service.copyTodoDetailToDoneTodoDetail('origin', 'done')
+                assert.deepEqual(doneDetail, null)
+            })
+        })
+
+        describe('when detail not exists', () => {
+
+            beforeEach(async () => {
+                await service.removeData('origin')
+            })
+
+            it('success', async () => {
+                const doneDetail = await service.copyTodoDetailToDoneTodoDetail('origin', 'done')
+                assert.deepEqual(doneDetail, null)
+            })
+        })
+    })
 })
