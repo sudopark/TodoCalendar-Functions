@@ -133,4 +133,51 @@ describe('EventDetailDataService', () => {
             })
         })
     })
+
+    describe('revert done todo detail', () => {
+
+        beforeEach(async () => {
+            await stubDoneDetailRepository.removeData('done')
+            await stubRepository.removeData('origin')
+            stubRepository.shouldFail = false
+        })
+
+        describe('when done detail not exists', () => {
+
+            beforeEach(async () => {
+                await stubDoneDetailRepository.putData('done', { memo: 'some' })
+            })
+
+            it('success', async () => {
+                const revertDetail = await service.revertDoneTodoDetail('done', 'origin')
+
+                assert.deepEqual(revertDetail.eventId, 'origin')
+
+                const doneDetail = await stubDoneDetailRepository.findData('done').catch(() => null);
+                assert.deepEqual(doneDetail, null)
+            })
+
+            it('and fail -> ignore', async () => {
+
+                stubRepository.shouldFail = true
+
+                const revertDetail = await service.revertDoneTodoDetail('done', 'origin')
+                assert.deepEqual(revertDetail, null)
+            })
+        })
+
+
+        describe('when done detail not exists', () => {
+
+            beforeEach(async () => {
+                await stubDoneDetailRepository.removeData('done')
+            })
+
+            it('success', async () => {
+
+                const revertDetail = await service.revertDoneTodoDetail('done', 'origin')
+                assert.deepEqual(revertDetail, null)
+            })
+        })
+    })
 })
