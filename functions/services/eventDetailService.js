@@ -75,6 +75,10 @@ class EventDetailDataService {
 
         } catch (error) { }
     }
+
+    async removeDoneTodoDetails(eventIds) {
+        return this.doneTodoDetailRepository.removeDatas(eventIds)
+    }
 }
 
 module.exports = EventDetailDataService;

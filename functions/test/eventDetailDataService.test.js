@@ -258,4 +258,40 @@ describe('EventDetailDataService', () => {
             })
         })
     })
+
+    describe('remove done todo details', () => {
+
+        beforeEach(async () => {
+            for(let i = 0; i < 5; i++) {
+                await stubDoneDetailRepository.putData(`id:${i}`, { memo: 'some' })
+                await stubRepository.putData(`id:${i}`, { memo: 'some' })
+            }
+        })
+
+        it('only requested ids', async () => {
+            const ids = [ 'id:1', 'id:4' ]
+            await service.removeDoneTodoDetails(ids)
+
+            const detailIds = [...stubRepository.detailMap.keys()].sort();
+            assert.deepEqual(detailIds, [
+                'id:0', 'id:1', 'id:2', 'id:3', 'id:4'
+            ])
+
+            const doneTodoDetailIds = [...stubDoneDetailRepository.detailMap.keys()].sort();
+            assert.deepEqual(doneTodoDetailIds, [
+                'id:0', 'id:2', 'id:3'
+            ])
+        })
+
+        it('fail', async () => {
+            stubDoneDetailRepository.shouldFail = true
+            try {
+                const ids = [ 'id:1', 'id:4' ]
+                await service.removeDoneTodoDetails(ids)
+                assert(false)
+            } catch(error) {
+                assert.deepEqual(error.message, 'failed')
+            }
+        })
+    })
 })

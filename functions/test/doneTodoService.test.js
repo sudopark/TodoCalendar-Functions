@@ -97,6 +97,12 @@ describe("DoneTodoService", () => {
                 all.map(d => d.uuid), 
                 ['id:9', 'id:8', 'id:7', 'id:6', 'id:5', 'id:4']
             )
+            assert.deepEqual(
+                stubDoneTodoDetailRepository.didRemoveDoneTodoDetailIds, 
+                [
+                    'id:0', 'id:1', 'id:2', 'id:3' 
+                ]
+            )
         })
 
         // remove all done todos
@@ -104,6 +110,30 @@ describe("DoneTodoService", () => {
             await service.removeDoneTodos('owner');
             const all = await service.loadDoneTodos('owber', 10)
             assert.deepEqual(all.map(d => d.uuid), [])
+          
+            assert.deepEqual(
+                stubDoneTodoDetailRepository.didRemoveDoneTodoDetailIds, 
+                [
+                    'id:0', 'id:1', 'id:2', 'id:3', 'id:4', 
+                    'id:5', 'id:6', 'id:7', 'id:8', 'id:9', 
+                ]
+            )
+        })
+
+        it('past than -1 not exists', async () => {
+            await service.removeDoneTodos('owner', -1)
+            const all = await service.loadDoneTodos('owner', 10)
+            assert.deepEqual(
+                all.map(d => d.uuid), 
+                [
+                    'id:9', 'id:8', 'id:7', 'id:6', 'id:5', 'id:4', 
+                    'id:3', 'id:2', 'id:1', 'id:0'
+                ]
+            )
+            assert.deepEqual(
+                stubDoneTodoDetailRepository.didRemoveDoneTodoDetailIds, 
+                null
+            )
         })
 
         // rmeove done todos fail
