@@ -400,6 +400,8 @@ describe('TodoService', () => {
             const logs = changeLogRecordService.logMap.get(DataTypes.Todo) ?? []
             assert.deepEqual(logs.map(l => l.uuid), ['some'])
             assert.deepEqual(logs.map(l => l.changeCase), [DataChangeCase.DELETED])
+
+            assert.deepEqual(stubEventDetailRepository.didRemoveDataId, 'some')
         })
     })
 
