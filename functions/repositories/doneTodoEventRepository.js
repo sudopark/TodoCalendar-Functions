@@ -56,6 +56,8 @@ class DoneTodoEventRepository {
             batch.delete(ref)
         })
         await batch.commit()
+
+        return ids
     }
 
     async loadDoneTodo(eventid) {

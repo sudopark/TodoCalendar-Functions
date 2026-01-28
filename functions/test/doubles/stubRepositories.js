@@ -385,9 +385,13 @@ class StubDoneTodoEventRepository {
             throw { message: 'failed' }
         }
         if(pastThan) {
+            const targets = this.totalDones.filter(d => d.done_at < pastThan).map(d => d.uuid)
             this.totalDones = this.totalDones.filter((d) => d.done_at >= pastThan)
+            return targets
         } else {
+            const targets = [...this.totalDones].map(d => d.uuid)
             this.totalDones = []
+            return targets
         }
     }
 
@@ -511,6 +515,7 @@ class StubEventDetailDataRepository {
         this.shouldFail = shouldFail
         this.detailMap = new Map()
         this.didRemoveDataId = null
+        this.didRemoveDoneTodoDetailIds = null
     }
 
     async putData(eventId, payload) {
@@ -540,6 +545,16 @@ class StubEventDetailDataRepository {
             throw { message: 'failed' }
         }
         this.detailMap.delete(eventId)
+    }
+
+    async removeDatas(eventIds) {
+        this.didRemoveDoneTodoDetailIds = eventIds
+        if(this.shouldFail) {
+            throw { message: 'failed' }
+        }
+        eventIds.forEach(id => {
+            this.detailMap.delete(id)
+        })
     }
 }
 

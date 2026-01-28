@@ -49,6 +49,20 @@ class EventDetailDataRepository {
             throw { status: 500, message: error?.message || error};
         }
     }
+
+    async removeDatas(eventIds) {
+        try {
+            const collection = this.#collectionRef()
+            const batch = db.batch()
+            eventIds.forEach(id => {
+                const ref = collection.doc(id)
+                batch.delete(ref)
+            })
+            await batch.commit();
+        } catch (error) {
+            throw { status: 500, message: error?.message || error};
+        }
+    }
 }
 
 module.exports = EventDetailDataRepository;

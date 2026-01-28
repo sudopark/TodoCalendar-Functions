@@ -13,7 +13,10 @@ class DoneTodoService {
     }
 
     async removeDoneTodos(userId, pastThan) {
-        return this.doneTodoRepository.removeDoneTodos(userId, pastThan)
+        const removeIds = await this.doneTodoRepository.removeDoneTodos(userId, pastThan)
+        if(removeIds.length !== 0) {
+            await this.eventDetailService.removeDoneTodoDetails(removeIds)
+        }
     }
 
     async putDoneTodo(userId, doneId, payload) {
