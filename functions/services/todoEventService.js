@@ -99,6 +99,7 @@ class TodoEventService {
     async removeTodo(userId, todoId) {
         await this.todoRepository.removeTodo(todoId);
         await this.eventTimeRangeService.removeEventTime(todoId);
+        try { await this.eventDetailDataService.removeData(todoId, false) } catch { }
         await this.#updateLog(todoId, userId, DataChangeLog.DataChangeCase.DELETED)
         return { status: 'ok' }
     }
