@@ -3,10 +3,11 @@ const Errors = require('../models/Errors');
 
 class EventTagController {
 
-    constructor(eventTagService, todoEventService, scheduleEventService) {
+    constructor(eventTagService, todoEventService, scheduleEventService, eventDetailService) {
         this.eventTagService = eventTagService
         this.todoEventService = todoEventService
         this.scheduleEventService = scheduleEventService
+        this.eventDetailService = eventDetailService
     }
 
     async postEventTag(req, res) {
@@ -75,6 +76,7 @@ class EventTagController {
 
     async deleteTagAndEvents(req, res) {
         const tagId = req.params.id, userId = req.auth.uid;
+        const apiVersion = req.params.apiVersion;
         if(!tagId || !userId) {
             throw new Errors.BadRequest('tag id or userId is missing.')
         }
@@ -82,6 +84,9 @@ class EventTagController {
             await this.eventTagService.removeTag(userId, tagId)
             const todoIds = await this.todoEventService.removeAllTodoWithTagId(userId, tagId)
             const scheduleIds = await this.scheduleEventService.removeAllEventsWithTagId(userId, tagId)
+            if(apiVersion === 'v2') {
+                try { await this.eventDetailService.removeEventDetails([...todoIds, ...scheduleIds]) } catch { }
+            }
             res.status(200)
                 .send({ todos: todoIds, schedules: scheduleIds })
 

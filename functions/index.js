@@ -55,6 +55,7 @@ app.use('/v2/todos/dones', authValidator, setVersion('v2'), doneTodoRouter);
 app.use("/v1/schedules", authValidator, setVersion('v1'), scheduleRouter);
 app.use("/v1/foremost", authValidator, setVersion('v1'), foremostEventRouter);
 app.use('/v1/tags', authValidator, setVersion('v1'), eventTagRouter);
+app.use('/v2/tags', authValidator, setVersion('v2'), eventTagRouter);
 app.use('/v1/event_details', authValidator, setVersion('v1'), eventDetailRouter);
 app.use('/v1/migration', authValidator, setVersion('v1'), migrationRouter);
 app.use('/v1/setting', authValidator, setVersion('v1'), settingRouter);
