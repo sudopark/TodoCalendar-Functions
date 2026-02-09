@@ -259,6 +259,42 @@ describe('EventDetailDataService', () => {
         })
     })
 
+    describe('remove event details', () => {
+
+        beforeEach(async () => {
+            for(let i = 0; i < 5; i++) {
+                await stubDoneDetailRepository.putData(`id:${i}`, { memo: 'some' })
+                await stubRepository.putData(`id:${i}`, { memo: 'some' })
+            }
+        })
+
+        it('only requested ids', async () => {
+            const ids = [ 'id:1', 'id:4' ]
+            await service.removeEventDetails(ids)
+
+            const detailIds = [...stubRepository.detailMap.keys()].sort();
+            assert.deepEqual(detailIds, [
+                'id:0', 'id:2', 'id:3'
+            ])
+
+            const doneTodoDetailIds = [...stubDoneDetailRepository.detailMap.keys()].sort();
+            assert.deepEqual(doneTodoDetailIds, [
+                'id:0', 'id:1', 'id:2', 'id:3', 'id:4'
+            ])
+        })
+
+        it('fail', async () => {
+            stubRepository.shouldFail = true
+            try {
+                const ids = [ 'id:1', 'id:4' ]
+                await service.removeEventDetails(ids)
+                assert(false)
+            } catch(error) {
+                assert.deepEqual(error.message, 'failed')
+            }
+        })
+    })
+
     describe('remove done todo details', () => {
 
         beforeEach(async () => {

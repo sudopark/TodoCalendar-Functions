@@ -76,6 +76,10 @@ class EventDetailDataService {
         } catch (error) { }
     }
 
+    async removeEventDetails(eventIds) {
+        return this.eventDetailDataRepository.removeDatas(eventIds)
+    }
+
     async removeDoneTodoDetails(eventIds) {
         return this.doneTodoDetailRepository.removeDatas(eventIds)
     }
