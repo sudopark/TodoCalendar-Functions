@@ -76,7 +76,6 @@ class EventTagController {
 
     async deleteTagAndEvents(req, res) {
         const tagId = req.params.id, userId = req.auth.uid;
-        const apiVersion = req.params.apiVersion;
         if(!tagId || !userId) {
             throw new Errors.BadRequest('tag id or userId is missing.')
         }
@@ -84,9 +83,37 @@ class EventTagController {
             await this.eventTagService.removeTag(userId, tagId)
             const todoIds = await this.todoEventService.removeAllTodoWithTagId(userId, tagId)
             const scheduleIds = await this.scheduleEventService.removeAllEventsWithTagId(userId, tagId)
-            if(apiVersion === 'v2') {
-                try { await this.eventDetailService.removeEventDetails([...todoIds, ...scheduleIds]) } catch { }
+            
+            res.status(200)
+                .send({ todos: todoIds, schedules: scheduleIds })
+
+        } catch (error) {
+            throw new Errors.Application(error)
+        }
+    }
+
+    async deleteTagWithEvents(req, res) {
+        const tagId = req.params.id, userId = req.auth.uid;
+        const todoIds = [].concat(req.query.todos || [])
+        const scheduleIds = [].concat(req.query.schedules || [])
+
+        if(!tagId || !userId) {
+            throw new Errors.BadRequest('tag id or userId is missing.')
+        }
+
+        try {
+            await this.eventTagService.removeTag(userId, tagId)
+            if(todoIds.length > 0) {
+                await this.todoEventService.removeTodos(userId, todoIds)
             }
+            if(scheduleIds.length > 0) {
+                await this.scheduleEventService.removeSchedules(userId, scheduleIds)
+            }
+            const allIds = [...todoIds, ...scheduleIds]
+            if(allIds.length > 0) {
+                try { await this.eventDetailService.removeEventDetails(allIds) } catch { }
+            }
+
             res.status(200)
                 .send({ todos: todoIds, schedules: scheduleIds })
 

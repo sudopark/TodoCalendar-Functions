@@ -114,7 +114,23 @@ class TodoEventService {
             )
         })
         await this.changeLogRecordService.recordLogs(DataTypes.Todo, logs)
+
+        try { await this.eventDetailDataService.removeEventDetails(ids) } catch { }
         return ids
+    }
+
+    async removeTodos(userId, todoIds) {
+        await this.todoRepository.removeTodos(todoIds)
+        await this.eventTimeRangeService.removeEventTimes(todoIds)
+
+        const logs = todoIds.map(id => {
+            return new DataChangeLog.DataChangeLog(
+                id, userId, DataChangeLog.DataChangeCase.DELETED, parseInt(Date.now(), 10)
+            )
+        })
+        await this.changeLogRecordService.recordLogs(DataTypes.Todo, logs)
+
+        try { await this.eventDetailDataService.removeEventDetails(todoIds) } catch { }
     }
 
     async restoreTodo(userId, todoId, originPayload) {

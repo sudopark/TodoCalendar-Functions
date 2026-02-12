@@ -15,6 +15,8 @@ const DoneTodoEventRepository = require('../repositories/doneTodoEventRepository
 const SyncTimestampRepository = require('../repositories/syncTimestampRepository');
 const ChangeLogRepository = require('../repositories/dataChangeLogRepository');
 const ChangeLogRecordService = require('../services/dataChangeLogRecordService');
+const EventDetailRepository = require('../repositories/eventDetailRepository');
+const EventDetailDataService = require('../services/eventDetailService');
 
 const todoRepository = new TodoRepository();
 const eventTimeRepository = new EventTimeRepository();
@@ -25,6 +27,10 @@ const changeLogRecordService = new ChangeLogRecordService(
     new SyncTimestampRepository(), 
     new ChangeLogRepository()
 )
+const eventDetailService = new EventDetailDataService(
+    new EventDetailRepository(false), 
+    new EventDetailRepository(true)
+)
 
 const controller = new EventTagController(
     new EventTagService(
@@ -32,7 +38,8 @@ const controller = new EventTagController(
         changeLogRecordService
     ), 
     new TodoService({todoRepository, eventTimeRangeService, doneTodoRepository, changeLogRecordService}), 
-    new ScheduleService(scheduleRepository, eventTimeRangeService, changeLogRecordService)
+    new ScheduleService(scheduleRepository, eventTimeRangeService, changeLogRecordService), 
+    eventDetailService
 )
 
 router.post('/tag', async (req, res) => {
@@ -49,6 +56,10 @@ router.delete('/tag/:id', async (req, res) => {
 
 router.delete('/tag_and_events/:id', async (req, res) => {
     await controller.deleteTagAndEvents(req, res);
+})
+
+router.delete('/tag_with_events/:id', async (req, res) => {
+    await controller.deleteTagWithEvents(req, res);
 })
 
 router.get('/all', async (req, res) => {

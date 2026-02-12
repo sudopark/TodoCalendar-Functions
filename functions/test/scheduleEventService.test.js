@@ -7,6 +7,7 @@ const constants = require('../Utils/constants');
 const SpyChangeLogRecordService = require('./doubles/spyChangeLogRecordService');
 const DataTypes = require('../models/DataTypes');
 const { DataChangeCase } = require('../models/DataChangeLog');
+const EventDetailDataService = require('../services/eventDetailService');
 
 
 describe('ScheduleEventService', () => {
@@ -14,6 +15,7 @@ describe('ScheduleEventService', () => {
     let stubEventTimeRepository;
     let stubScheduleReopository;
     let spyChangeLogRecordService;
+    let stubEventDetailRepository;
     let scheduleService;
 
     beforeEach(() => {
@@ -21,8 +23,13 @@ describe('ScheduleEventService', () => {
         const eventTimeRangeService = new EventTimeRangeService(stubEventTimeRepository);
         stubScheduleReopository = new StubRepos.ScheduleEvent();
         spyChangeLogRecordService = new SpyChangeLogRecordService()
+        stubEventDetailRepository = new StubRepos.EventDetailData()
 
-        scheduleService = new ScheduleEventService(stubScheduleReopository, eventTimeRangeService, spyChangeLogRecordService);
+        const detailService = new EventDetailDataService(
+            stubEventDetailRepository, new StubRepos.EventDetailData()
+        )
+
+        scheduleService = new ScheduleEventService(stubScheduleReopository, eventTimeRangeService, spyChangeLogRecordService, detailService);
     })
 
     describe('make event', () => {
@@ -385,6 +392,36 @@ describe('ScheduleEventService', () => {
         })
     })
 
+    describe('remove events', () => {
+
+        beforeEach(async () => {
+            const payload = {
+                name: 'dummy', 
+                event_time: { time_type: 'at', timestamp: 100 }, 
+            }
+            await scheduleService.putEvent('owner', 'ev1', payload)
+            await scheduleService.putEvent('owner', 'ev2', payload)
+            await scheduleService.putEvent('owner', 'ev3', payload)
+            spyChangeLogRecordService.logMap = new Map();
+            stubEventDetailRepository.didRemoveDoneTodoDetailIds = null
+        })
+
+        it('success', async () => {
+            await scheduleService.removeSchedules('owner', ['ev1', 'ev3'])
+            const eventIds = [...stubScheduleReopository.eventMap.keys()]
+            const timeIds = [...stubEventTimeRepository.eventTimeMap.keys()]
+
+            assert.deepEqual(eventIds, ['ev2'])
+            assert.deepEqual(timeIds, ['ev2'])
+
+            const logs = spyChangeLogRecordService.logMap.get(DataTypes.Schedule) ?? []
+            assert.deepEqual(logs.map(l => l.uuid), ['ev1', 'ev3'])
+            assert.deepEqual(logs.map(l => l.changeCase), [DataChangeCase.DELETED, DataChangeCase.DELETED])
+
+            assert.deepEqual(stubEventDetailRepository.didRemoveDoneTodoDetailIds, ['ev1', 'ev3'])
+        })
+    })
+
     describe('remove event with tagId', () => {
 
         beforeEach(() => {
@@ -402,6 +439,7 @@ describe('ScheduleEventService', () => {
             stubScheduleReopository.spyEventMap.set(
                 'event_with_tag1_1', {uuid: 'event_with_tag1_1', event_tag_id: 'tag1'}
             )
+            stubEventDetailRepository.didRemoveDoneTodoDetailIds = null
         })
 
         it('tagId에 해당하는 schedule 삭제', async () => {
@@ -415,6 +453,8 @@ describe('ScheduleEventService', () => {
             const logs = spyChangeLogRecordService.logMap.get(DataTypes.Schedule) ?? []
             assert.deepEqual(logs.map(l => l.uuid), ids)
             assert.deepEqual(logs.map(l => l.changeCase), ids.map(i => DataChangeCase.DELETED))
+
+            assert.deepEqual(stubEventDetailRepository.didRemoveDoneTodoDetailIds, ['event_with_tag1', 'event_with_tag1_1'])
         })
     })
 

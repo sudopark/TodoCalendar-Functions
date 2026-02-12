@@ -49,6 +49,7 @@ class StubTodoRepository {
         this.shouldFailPutTodo = false
         this.shouldfailUpdateTodo = false
         this.removedTodoId = null;
+        this.removeTodoIds = null;
         this.shouldFailRestore = false;
         this.spyEventMap = new Map();
     }
@@ -122,6 +123,13 @@ class StubTodoRepository {
             this.spyEventMap.delete(k)
         })
         return todos.map(([k, v]) => k)
+    }
+
+    async removeTodos(ids) {
+        ids.forEach(id => {
+            this.spyEventMap.delete(id)
+        })
+        this.removeTodoIds = ids
     }
 
     async restoreTodo(id, originPayload) {
@@ -216,6 +224,12 @@ class StubScheduleEventRepository {
         return events.map(([k, v]) => k)
     }
 
+    async removeEvents(ids) {
+        ids.forEach(id => {
+            this.eventMap.delete(id)
+        })
+    }    
+
     async getAllEvents(userId) {
         const range = Array.from({ length: 10}, (_, i) => i);
         const events = range.map(i => {
@@ -256,9 +270,9 @@ class StubEventTimeRangeRepository {
     }
 
     async removeTimes(ids) {
-        for(const id in ids) {
+        ids.forEach(id => {
             this.eventTimeMap.delete(id)
-        }
+        })
         this.removeIds = ids
     }
 

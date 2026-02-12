@@ -405,6 +405,26 @@ describe('TodoService', () => {
         })
     })
 
+    describe('remove todos', () => {
+        before(() => {
+            todoRepository.removeTodoIds = null
+            stubEventTimeRepository.removeIds = null
+        })
+
+        it('복수의 todo 삭제', async () => {
+
+            await todoService.removeTodos('uid', ['t1', 't2'])
+            assert.deepEqual(todoRepository.removeTodoIds, ['t1', 't2'])
+            assert.deepEqual(stubEventTimeRepository.removeIds, ['t1', 't2'])
+
+            const logs = changeLogRecordService.logMap.get(DataTypes.Todo) ?? []
+            assert.deepEqual(logs.map(l => l.uuid), ['t1', 't2'])
+            assert.deepEqual(logs.map(l => l.changeCase), [DataChangeCase.DELETED, DataChangeCase.DELETED])
+
+            assert.deepEqual(stubEventDetailRepository.didRemoveDoneTodoDetailIds, ['t1', 't2'])
+        })
+    })
+
     describe('remove todo with tagId', () => {
 
         beforeEach(() => {
@@ -437,6 +457,8 @@ describe('TodoService', () => {
                 .filter(log => { return log.changeCase == DataChangeCase.DELETED})
                 .map(log => { return log.uuid })
             assert.deepEqual(deletedLogIds, ids)
+
+            assert.deepEqual(stubEventDetailRepository.didRemoveDoneTodoDetailIds, ['todo_with_tag1', 'todo_with_tag1_1'])
         })
     })
 

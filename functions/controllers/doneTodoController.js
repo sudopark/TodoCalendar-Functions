@@ -83,7 +83,7 @@ class DoneTodoController {
     async revertDoneTodo(req, res) {
         const userId = req.auth.uid;
         const doneEventId = req.params.id;
-        const apiVersion = req.params.apiVersion;
+        const apiVersion = req.apiVersion;
 
         if(!userId || !doneEventId) {
             throw new Errors.BadRequest('user id or event id is missing.');
