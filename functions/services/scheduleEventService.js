@@ -5,7 +5,10 @@ const { chunk } = require("../Utils/functions")
 
 class ScheduleEventService {
 
-    constructor(scheduleEventRepository, eventTimeRangeService, changeLogRecordService, eventDetailDataService) {
+    constructor(
+        scheduleEventRepository, eventTimeRangeService, 
+        changeLogRecordService, eventDetailDataService
+    ) {
         this.scheduleEventRepository = scheduleEventRepository
         this.eventTimeRangeService = eventTimeRangeService
         this.changeLogRecordService = changeLogRecordService
@@ -101,6 +104,7 @@ class ScheduleEventService {
         await this.scheduleEventRepository.removeEvent(eventId);
         await this.eventTimeRangeService.removeEventTime(eventId);
         await this.#updateLog(userId, eventId, DataChangeCase.DELETED)
+        try { await this.eventDetailDataService.removeData(eventId) } catch { }
     }
 
     async removeAllEventsWithTagId(userId, tagId) {

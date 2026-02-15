@@ -389,6 +389,8 @@ describe('ScheduleEventService', () => {
             const logs = spyChangeLogRecordService.logMap.get(DataTypes.Schedule) ?? []
             assert.deepEqual(logs.map(l => l.uuid), ['old_event'])
             assert.deepEqual(logs.map(l => l.changeCase), [DataChangeCase.DELETED])
+
+            assert.deepEqual(stubEventDetailRepository.didRemoveDataId, 'old_event')
         })
     })
 
