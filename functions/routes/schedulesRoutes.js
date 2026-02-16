@@ -1,14 +1,16 @@
 
 const express = require('express');
 const router = express.Router();
-const ScheduleEventController = require('../../controllers/scheduleEventController');
-const ScheduleEventService = require('../../services/scheduleEventService');
-const EventTimeRangeService = require('../../services/eventTimeRangeService');
-const ScheduleRepository = require('../../repositories/scheduleEventRepository');
-const EventTimeRepository = require('../../repositories/eventTimeRangeRepository');
-const SyncTimeRepository = require('../../repositories/syncTimestampRepository');
-const ChangeLogRepository = require('../../repositories/dataChangeLogRepository');
-const ChangeLogRecordService = require('../../services/dataChangeLogRecordService');
+const ScheduleEventController = require('../controllers/scheduleEventController');
+const ScheduleEventService = require('../services/scheduleEventService');
+const EventTimeRangeService = require('../services/eventTimeRangeService');
+const ScheduleRepository = require('../repositories/scheduleEventRepository');
+const EventTimeRepository = require('../repositories/eventTimeRangeRepository');
+const SyncTimeRepository = require('../repositories/syncTimestampRepository');
+const ChangeLogRepository = require('../repositories/dataChangeLogRepository');
+const ChangeLogRecordService = require('../services/dataChangeLogRecordService');
+const EventDetailRepository = require('../repositories/eventDetailRepository');
+const EventDetailService = require('../services/eventDetailService');
 
 const scheduleRepository = new ScheduleRepository();
 const eventTimeRangeService = new EventTimeRangeService(new EventTimeRepository());
@@ -16,7 +18,11 @@ const changeLogRecordService = new ChangeLogRecordService(
     new SyncTimeRepository(),  
     new ChangeLogRepository()
 )
-const scheduleEventService = new ScheduleEventService(scheduleRepository, eventTimeRangeService, changeLogRecordService);
+const eventDetailService = new EventDetailService(
+    new EventDetailRepository(false),
+    new EventDetailRepository(true)
+)
+const scheduleEventService = new ScheduleEventService(scheduleRepository, eventTimeRangeService, changeLogRecordService, eventDetailService);
 const scheduleEventController = new ScheduleEventController(scheduleEventService);
 
 

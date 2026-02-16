@@ -90,6 +90,18 @@ class MigrationController {
             throw new Errors.Application(error);
         }
     }
+
+    async postDoneTodoDetails(req, res) {
+        const details = req.body
+        
+        try {
+            await this.migrationService.migrationDoneTodoDetail(details);
+            res.status(201)
+                .send({ status: 'ok' })
+        } catch (error) {
+            throw new Errors.Application(error);
+        }
+    }
 }
 
 module.exports = MigrationController;

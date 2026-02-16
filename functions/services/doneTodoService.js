@@ -2,9 +2,10 @@
 
 class DoneTodoService {
 
-    constructor(doneTodoRepository, todoService) {
+    constructor(doneTodoRepository, todoService, eventDetailService) {
         this.doneTodoRepository = doneTodoRepository
         this.todoService = todoService
+        this.eventDetailService = eventDetailService
     }
 
     async loadDoneTodos(userId, size, cursor) {
@@ -12,7 +13,10 @@ class DoneTodoService {
     }
 
     async removeDoneTodos(userId, pastThan) {
-        return this.doneTodoRepository.removeDoneTodos(userId, pastThan)
+        const removeIds = await this.doneTodoRepository.removeDoneTodos(userId, pastThan)
+        if(removeIds.length !== 0) {
+            await this.eventDetailService.removeDoneTodoDetails(removeIds)
+        }
     }
 
     async putDoneTodo(userId, doneId, payload) {
@@ -24,6 +28,20 @@ class DoneTodoService {
     }
 
     async revertDoneTodo(userId, doneEventId) {
+        const revertTodo = await this.#runRevertDoneTodo(userId, doneEventId);
+        return revertTodo
+    }
+
+    async revertDoneTodoV2(userId, doneEventId) {
+        const revertTodo = await this.#runRevertDoneTodo(userId, doneEventId);
+        const revertDetail = await this.eventDetailService.revertDoneTodoDetail(doneEventId, revertTodo.uuid)
+        return {
+            todo: revertTodo, 
+            detail: revertDetail
+        }
+    }
+
+    async #runRevertDoneTodo(userId, doneEventId) {
         const doneTodo = await this.doneTodoRepository.loadDoneTodo(doneEventId)
         const payload = this.#revertTodoPayload(doneTodo, userId)
         const revertTodo = this.todoService.makeTodo(userId, payload)

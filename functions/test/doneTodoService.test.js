@@ -5,11 +5,14 @@ const TodoServie = require('../services/todoEventService');
 const assert = require('assert');
 const StubRepos = require('./doubles/stubRepositories');
 const SpyChangeLogRecordService = require('./doubles/spyChangeLogRecordService');
+const EventDetailService = require('../services/eventDetailService');
 
 describe("DoneTodoService", () => {
 
     let spyDoneRepository;
     let spyTodoRepository;
+    let stubEventDetailRepository;
+    let stubDoneTodoDetailRepository;
     let service;
 
     beforeEach(() => {
@@ -22,9 +25,16 @@ describe("DoneTodoService", () => {
         const todoService = new TodoServie( {todoRepository, eventTimeRangeService, doneTodoRepository, changeLogRecordService});
         spyDoneRepository = doneTodoRepository
         spyTodoRepository = todoRepository
+        stubEventDetailRepository = new StubRepos.EventDetailData()
+        stubDoneTodoDetailRepository = new StubRepos.EventDetailData()
+        const detailService = new EventDetailService(
+            stubEventDetailRepository,
+            stubDoneTodoDetailRepository
+        )
         service = new DoneTodoService(
             doneTodoRepository, 
-            todoService
+            todoService, 
+            detailService
         )
     })
 
@@ -37,10 +47,10 @@ describe("DoneTodoService", () => {
             const page3 = await service.loadDoneTodos('owner', 3, 4)
             const page4 = await service.loadDoneTodos('owner', 3, 1)
 
-            assert(page1.map(d => d.uuid), ['id:9', 'id:8', 'id:7'])
-            assert(page2.map(d => d.uuid), ['id:6', 'id:6', 'id:4'])
-            assert(page3.map(d => d.uuid), ['id:3', 'id:2', 'id:1'])
-            assert(page4.map(d => d.uuid), ['id:0'])
+            assert.deepEqual(page1.map(d => d.uuid), ['id:9', 'id:8', 'id:7'])
+            assert.deepEqual(page2.map(d => d.uuid), ['id:6', 'id:5', 'id:4'])
+            assert.deepEqual(page3.map(d => d.uuid), ['id:3', 'id:2', 'id:1'])
+            assert.deepEqual(page4.map(d => d.uuid), ['id:0'])
         })
 
         // load done todos fail
@@ -50,7 +60,7 @@ describe("DoneTodoService", () => {
             try {
                 const p = await service.loadDoneTodos('owner', 3)
             } catch(error) {
-                assert(error?.message, 'failed')
+                assert.deepEqual(error?.message, 'failed')
             }
         })
     })
@@ -61,8 +71,8 @@ describe("DoneTodoService", () => {
         it('success', async () => {
             const done = await service.putDoneTodo('owner', 'some', { some: 'value' })
 
-            assert(done.uuid, 'some')
-            assert(done.userId, 'owner')
+            assert.deepEqual(done.uuid, 'some')
+            assert.deepEqual(done.userId, 'owner')
         })
 
         // fail
@@ -72,7 +82,7 @@ describe("DoneTodoService", () => {
             try {
                 const done = await service.putDoneTodo('owner', 'some', { some: 'value' })
             } catch (error) {
-                assert(error?.message, 'failed')
+                assert.deepEqual(error?.message, 'failed')
             }
         })
     })
@@ -83,9 +93,15 @@ describe("DoneTodoService", () => {
         it('past than 4', async () => {
             await service.removeDoneTodos('owner', 4);
             const all = await service.loadDoneTodos('owner', 10)
-            assert(
+            assert.deepEqual(
                 all.map(d => d.uuid), 
                 ['id:9', 'id:8', 'id:7', 'id:6', 'id:5', 'id:4']
+            )
+            assert.deepEqual(
+                stubDoneTodoDetailRepository.didRemoveDoneTodoDetailIds, 
+                [
+                    'id:0', 'id:1', 'id:2', 'id:3' 
+                ]
             )
         })
 
@@ -93,7 +109,31 @@ describe("DoneTodoService", () => {
         it('all', async () => {
             await service.removeDoneTodos('owner');
             const all = await service.loadDoneTodos('owber', 10)
-            assert(all.map(d => d.uuid), [])
+            assert.deepEqual(all.map(d => d.uuid), [])
+          
+            assert.deepEqual(
+                stubDoneTodoDetailRepository.didRemoveDoneTodoDetailIds, 
+                [
+                    'id:0', 'id:1', 'id:2', 'id:3', 'id:4', 
+                    'id:5', 'id:6', 'id:7', 'id:8', 'id:9', 
+                ]
+            )
+        })
+
+        it('past than -1 not exists', async () => {
+            await service.removeDoneTodos('owner', -1)
+            const all = await service.loadDoneTodos('owner', 10)
+            assert.deepEqual(
+                all.map(d => d.uuid), 
+                [
+                    'id:9', 'id:8', 'id:7', 'id:6', 'id:5', 'id:4', 
+                    'id:3', 'id:2', 'id:1', 'id:0'
+                ]
+            )
+            assert.deepEqual(
+                stubDoneTodoDetailRepository.didRemoveDoneTodoDetailIds, 
+                null
+            )
         })
 
         // rmeove done todos fail
@@ -103,7 +143,7 @@ describe("DoneTodoService", () => {
             try {
                 await service.removeDoneTodos('owner');
             } catch(error) {
-                assert(error?.message, 'failed')
+                assert.deepEqual(error?.message, 'failed')
             }
         })
     })
@@ -113,7 +153,7 @@ describe("DoneTodoService", () => {
         it('success', async () => {
             await service.removeDoneTodo('id:3')
             const all = await service.loadDoneTodos('owner', 10)
-            assert(
+            assert.deepEqual(
                 all.map(d => d.uuid), 
                 ['id:9', 'id:8', 'id:7', 'id:6', 'id:5', 'id:4', 'id:2', 'id:1', 'id:0']
             )
@@ -125,7 +165,7 @@ describe("DoneTodoService", () => {
             try {
                 await service.removeDoneTodo('id:3')
             } catch (error) {
-                assert(error?.message, 'failed')
+                assert.deepEqual(error?.message, 'failed')
             }
         })
     })
@@ -135,8 +175,8 @@ describe("DoneTodoService", () => {
         // revert done todo
         it('success', async () => {
             const revert = await service.revertDoneTodo('owner', 'some')
-            assert(revert.uuid, 'new')
-            assert(spyDoneRepository.didRemovedDoneEventId, 'some')
+            assert.deepEqual(revert.uuid, 'new')
+            assert.deepEqual(spyDoneRepository.didRemovedDoneEventId, 'some')
         })
 
         // revert done todo fail
@@ -147,8 +187,31 @@ describe("DoneTodoService", () => {
             try {
                 const revert = await service.revertDoneTodo('owner', 'some')
             } catch(error) {
-                assert(error?.message, 'failed')
+                assert.deepEqual(error?.message, 'failed')
             }
+        })
+    })
+
+    describe('revert done todo v2', () => {
+
+        beforeEach(async () => {
+            await stubDoneTodoDetailRepository.putData('some', { memo: 'some' })
+        })
+
+        // revert done todo
+        it('success', async () => {
+            const result = await service.revertDoneTodoV2('owner', 'some')
+            assert.deepEqual(result.todo.uuid, 'new')
+            assert.deepEqual(result.detail.eventId, 'new')
+            assert.deepEqual(spyDoneRepository.didRemovedDoneEventId, 'some')
+        })
+
+        // revert done todo fail
+        it('failed', async () => {
+            spyTodoRepository.shouldFailMakeTodo = true
+
+            const result = await service.revertDoneTodoV2('owner', 'some').catch(() => null)
+            assert.deepEqual(result, null)
         })
     })
 
@@ -165,8 +228,8 @@ describe("DoneTodoService", () => {
         it('cancel current todo', async () => {
             const origin = {name: 'current todo'}
             const canceled = await service.cancelDone("owner", 'current_todo', origin)
-            assert(canceled.reverted != null, true)
-            assert(canceled.done_id == null, true)
+            assert.deepEqual(canceled.reverted != null, true)
+            assert.deepEqual(canceled.done_id == null, true)
         })
 
         // cancel current todo fail
@@ -175,11 +238,8 @@ describe("DoneTodoService", () => {
 
             const origin = {name: 'current todo'}
 
-            try  {
-                const canceled = await service.cancelDone("owner", 'current_todo', origin)
-            } catch (error) {
-                assert(error?.message, 'failed')
-            }
+            const canceled = await service.cancelDone("owner", 'current_todo', origin).catch(() => null)
+            assert.deepEqual(canceled, null)
         })
 
         // cancel todo with time
@@ -195,8 +255,8 @@ describe("DoneTodoService", () => {
                 spyDoneRepository.hasMatchingDoneTodoId = false
 
                 const canceled = await service.cancelDone("owner", 'todo', origin)
-                assert(canceled.reverted != null, true)
-                assert(canceled.done_id == null, true)
+                assert.deepEqual(canceled.reverted != null, true)
+                assert.deepEqual(canceled.done_id == null, true)
             })
 
             it('already completed + done exists', async () => {
@@ -204,8 +264,8 @@ describe("DoneTodoService", () => {
                 spyDoneRepository.hasMatchingDoneTodoId = true
 
                 const canceled = await service.cancelDone("owner", 'todo', origin)
-                assert(canceled.reverted != null, true)
-                assert(canceled.done_id != null, true)
+                assert.deepEqual(canceled.reverted != null, true)
+                assert.deepEqual(canceled.done_id != null, true)
             })
 
             it('already completed + done exists + fail to remove done, ignore', async () => {
@@ -214,15 +274,15 @@ describe("DoneTodoService", () => {
                 spyDoneRepository.hasMatchingDoneTodoId = true
 
                 const canceled = await service.cancelDone("owner", 'todo', origin)
-                assert(canceled.reverted != null, true)
-                assert(canceled.done_id == null, true)
+                assert.deepEqual(canceled.reverted != null, true)
+                assert.deepEqual(canceled.done_id == null, true)
             })
 
             // cancel todo with done id
             it('cancel todo with done id', async () => {
                 const canceled = await service.cancelDone("owner", 'todo', origin, 'done_id')
-                assert(canceled.reverted != null, true)
-                assert(canceled.done_id != null, true)
+                assert.deepEqual(canceled.reverted != null, true)
+                assert.deepEqual(canceled.done_id != null, true)
             })
         })
     })

@@ -5,10 +5,14 @@ const { chunk } = require("../Utils/functions")
 
 class ScheduleEventService {
 
-    constructor(scheduleEventRepository, eventTimeRangeService, changeLogRecordService) {
+    constructor(
+        scheduleEventRepository, eventTimeRangeService, 
+        changeLogRecordService, eventDetailDataService
+    ) {
         this.scheduleEventRepository = scheduleEventRepository
         this.eventTimeRangeService = eventTimeRangeService
         this.changeLogRecordService = changeLogRecordService
+        this.eventDetailDataService = eventDetailDataService
     }
 
     async getEvent(eventId) {
@@ -100,6 +104,7 @@ class ScheduleEventService {
         await this.scheduleEventRepository.removeEvent(eventId);
         await this.eventTimeRangeService.removeEventTime(eventId);
         await this.#updateLog(userId, eventId, DataChangeCase.DELETED)
+        try { await this.eventDetailDataService.removeData(eventId) } catch { }
     }
 
     async removeAllEventsWithTagId(userId, tagId) {
@@ -110,7 +115,18 @@ class ScheduleEventService {
             return new DataChangeLog(id, userId, DataChangeCase.DELETED, parseInt(Date.now(), 10))
         })
         await this.changeLogRecordService.recordLogs(DataTypes.Schedule, logs)
+        try {  await this.eventDetailDataService.removeEventDetails(ids) } catch { }
         return ids
+    }
+
+    async removeSchedules(userId, ids) {
+        await this.scheduleEventRepository.removeEvents(ids)
+        await this.eventTimeRangeService.removeEventTimes(ids)
+        const logs = ids.map(id => {
+            return new DataChangeLog(id, userId, DataChangeCase.DELETED, parseInt(Date.now(), 10))
+        })
+        await this.changeLogRecordService.recordLogs(DataTypes.Schedule, logs)
+        try { await this.eventDetailDataService.removeEventDetails(ids) } catch { }
     }
 
     async #updateEventtime(userId, event) {

@@ -65,6 +65,10 @@ class MigrationService {
     async migrationDoneTodoEvents(dones) {
         return this.migrationRepository.migrationDoneTodoEvents(dones)
     }
+
+    async migrationDoneTodoDetail(details) {
+        return this.migrationRepository.migrateDoneTodoDetails(details);
+    }
 }
 
 module.exports=  MigrationService;

@@ -8,6 +8,7 @@ class EventDetailDataController {
     }
 
     async putData(req, res) {
+        const isDoneDetail = req.isDoneDetail
         const { body } = req, eventid = req.params.id;
         if(!eventid) {
             throw new Errors.BadRequest('event id is missing.')
@@ -20,7 +21,7 @@ class EventDetailDataController {
         }
 
         try {
-            const newData = await this.eventdetailDataService.putData(eventid, payload)
+            const newData = await this.eventdetailDataService.putData(eventid, payload, isDoneDetail)
             res.status(201)
                 .send(newData)
         } catch(error) {
@@ -30,12 +31,13 @@ class EventDetailDataController {
 
     async getData(req, res) {
         const eventid = req.params.id;
+        const isDoneDetail = req.isDoneDetail
         if(!eventid) {
             throw new Errors.BadRequest('event id is missing.')
         }
 
         try {
-            const data = await this.eventdetailDataService.findData(eventid)
+            const data = await this.eventdetailDataService.findData(eventid, isDoneDetail)
             res.status(200)
                 .send(data)
 
@@ -46,13 +48,14 @@ class EventDetailDataController {
 
     async deleteData(req, res) {
         const eventid = req.params.id;
+        const isDoneDetail = req.isDoneDetail
         if(!eventid) {
             if(!eventid) {
                 throw new Errors.BadRequest('event id is missing.')
             }
         }
         try {
-            await this.eventdetailDataService.removeData(eventid)
+            await this.eventdetailDataService.removeData(eventid, isDoneDetail)
             res.status(200)
                 .send({ status: 'ok' })
 

@@ -3,16 +3,18 @@ const express = require('express');
 const router = express.Router();
 
 
-const DoneTodoRepository = require('../../repositories/doneTodoEventRepository');
-const DoneTodoService = require('../../services/doneTodoService');
-const DoneTodoController = require('../../controllers/doneTodoController');
-const TodoService = require("../../services/todoEventService");
-const EventTimeRangeService = require("../../services/eventTimeRangeService");
-const TodoRepository = require("../../repositories/todoRepository");
-const EventTimeRepository = require("../../repositories/eventTimeRangeRepository");
-const SyncTimeRepository = require('../../repositories/syncTimestampRepository');
-const ChangeLogRepository = require('../../repositories/dataChangeLogRepository');
-const ChangeLogRecordService = require('../../services/dataChangeLogRecordService');
+const DoneTodoRepository = require('../repositories/doneTodoEventRepository');
+const DoneTodoService = require('../services/doneTodoService');
+const DoneTodoController = require('../controllers/doneTodoController');
+const TodoService = require("../services/todoEventService");
+const EventTimeRangeService = require("../services/eventTimeRangeService");
+const TodoRepository = require("../repositories/todoRepository");
+const EventTimeRepository = require("../repositories/eventTimeRangeRepository");
+const SyncTimeRepository = require('../repositories/syncTimestampRepository');
+const ChangeLogRepository = require('../repositories/dataChangeLogRepository');
+const ChangeLogRecordService = require('../services/dataChangeLogRecordService');
+const EventDetailService = require('../services/eventDetailService');
+const EventDetailRepository = require('../repositories/eventDetailRepository');
 
 const doneTodoRepository = new DoneTodoRepository();
 const todoRepository = new TodoRepository();
@@ -24,10 +26,16 @@ const changeLogRecordService = new ChangeLogRecordService(
 )
 const todoService = new TodoService({todoRepository, eventTimeRangeService, doneTodoRepository, changeLogRecordService});
 
+const eventDetailService = new EventDetailService(
+    new EventDetailRepository(false), 
+    new EventDetailRepository(true)
+)
+
 const controller = new DoneTodoController(
     new DoneTodoService(
         doneTodoRepository, 
-        todoService
+        todoService, 
+        eventDetailService
     )
 )
 

@@ -49,6 +49,7 @@ class StubTodoRepository {
         this.shouldFailPutTodo = false
         this.shouldfailUpdateTodo = false
         this.removedTodoId = null;
+        this.removeTodoIds = null;
         this.shouldFailRestore = false;
         this.spyEventMap = new Map();
     }
@@ -122,6 +123,13 @@ class StubTodoRepository {
             this.spyEventMap.delete(k)
         })
         return todos.map(([k, v]) => k)
+    }
+
+    async removeTodos(ids) {
+        ids.forEach(id => {
+            this.spyEventMap.delete(id)
+        })
+        this.removeTodoIds = ids
     }
 
     async restoreTodo(id, originPayload) {
@@ -216,6 +224,12 @@ class StubScheduleEventRepository {
         return events.map(([k, v]) => k)
     }
 
+    async removeEvents(ids) {
+        ids.forEach(id => {
+            this.eventMap.delete(id)
+        })
+    }    
+
     async getAllEvents(userId) {
         const range = Array.from({ length: 10}, (_, i) => i);
         const events = range.map(i => {
@@ -256,9 +270,9 @@ class StubEventTimeRangeRepository {
     }
 
     async removeTimes(ids) {
-        for(const id in ids) {
+        ids.forEach(id => {
             this.eventTimeMap.delete(id)
-        }
+        })
         this.removeIds = ids
     }
 
@@ -385,9 +399,13 @@ class StubDoneTodoEventRepository {
             throw { message: 'failed' }
         }
         if(pastThan) {
+            const targets = this.totalDones.filter(d => d.done_at < pastThan).map(d => d.uuid)
             this.totalDones = this.totalDones.filter((d) => d.done_at >= pastThan)
+            return targets
         } else {
+            const targets = [...this.totalDones].map(d => d.uuid)
             this.totalDones = []
+            return targets
         }
     }
 
@@ -510,6 +528,8 @@ class StubEventDetailDataRepository {
     constructor(shouldFail) {
         this.shouldFail = shouldFail
         this.detailMap = new Map()
+        this.didRemoveDataId = null
+        this.didRemoveDoneTodoDetailIds = null
     }
 
     async putData(eventId, payload) {
@@ -534,10 +554,21 @@ class StubEventDetailDataRepository {
     }
 
     async removeData(eventId) {
+        this.didRemoveDataId = eventId
         if(this.shouldFail) {
             throw { message: 'failed' }
         }
         this.detailMap.delete(eventId)
+    }
+
+    async removeDatas(eventIds) {
+        this.didRemoveDoneTodoDetailIds = eventIds
+        if(this.shouldFail) {
+            throw { message: 'failed' }
+        }
+        eventIds.forEach(id => {
+            this.detailMap.delete(id)
+        })
     }
 }
 
@@ -582,6 +613,13 @@ class StubMigrationReposiotry {
             throw { message: 'failed' }
         }
         this.didMigratedDoneTodoEvents = dones;
+    }
+
+    async migrateDoneTodoDetails(details) {
+        if(this.shouldFail) {
+            throw { message: 'failed' }
+        }
+        this.didMigratedDoneTodoDetails = details;
     }
 }
 
