@@ -43,6 +43,10 @@ router.get('/', async (req, res) => {
     await controller.getDoneTodos(req, res);
 });
 
+router.get('/:id', async (req, res) => {
+    await controller.getDoneTodo(req, res)
+})
+
 router.delete('/', async (req, res) => {
     await controller.deleteDoneTodos(req, res);
 });

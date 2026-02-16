@@ -12,6 +12,10 @@ class DoneTodoService {
         return this.doneTodoRepository.loadDoneTodos(userId, size, cursor)
     }
 
+    async loadDoneTodo(doneId) {
+        return this.doneTodoRepository.loadDoneTodo(doneId)
+    }
+
     async removeDoneTodos(userId, pastThan) {
         const removeIds = await this.doneTodoRepository.removeDoneTodos(userId, pastThan)
         if(removeIds.length !== 0) {
