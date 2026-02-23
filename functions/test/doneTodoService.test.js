@@ -65,6 +65,22 @@ describe("DoneTodoService", () => {
         })
     })
 
+    describe('load done todo', () => {
+
+        it('success', async () => {
+            const done = await service.loadDoneTodo('id:9')
+            assert.deepEqual(done.uuid, 'id:9')
+        })
+
+        it('failed', async () => {
+
+            spyDoneRepository.shouldFailLoad = true
+
+            const done = await service.loadDoneTodo('not_exists').catch(() => null)
+            assert.equal(done, null)
+        })
+    })
+
     describe('put done todo' ,() => {
 
         // success

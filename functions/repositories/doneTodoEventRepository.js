@@ -42,6 +42,16 @@ class DoneTodoEventRepository {
         return dones
     }
 
+    async loadDoneTodo(doneId) {
+        const snapShot = await collectionRef.doc(doneId).get();
+        if(snapShot.exists) {
+            return { uuid: snapShot.id, ...snapShot.data() }
+        } else {
+            throw { status: 404, code: 'EventDetailNotExists', message: 'event detail not exists'};    
+        }
+        
+    }
+
     async removeDoneTodos(userId, pastThan) {
         let query = collectionRef.where('userId', '==', userId)
         if(pastThan) {

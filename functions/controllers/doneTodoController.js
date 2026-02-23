@@ -25,6 +25,21 @@ class DoneTodoController {
         }
     }
 
+    async getDoneTodo(req, res) {
+        const doneEvetId = req.params.id;
+        if(!doneEvetId) {
+            throw new Errors.BadRequest('done todo id is missing.')
+        }
+
+        try {
+            const doneTodo = await this.doneTodoService.loadDoneTodo(doneEvetId)
+            res.status(200)
+                .send(doneTodo)
+        } catch (error) {
+            throw new Errors.Application(error)
+        }
+    }
+
     async deleteDoneTodos(req, res) {
         const userId = req.auth.uid;
         const pastThan = parseFloat(req.query.past_than)
