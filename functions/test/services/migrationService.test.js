@@ -1,10 +1,10 @@
 
-const MigrationService = require('../services/migrationService');
-const EventTimeRangeService = require('../services/eventTimeRangeService');
+const MigrationService = require('../../services/migrationService');
+const EventTimeRangeService = require('../../services/eventTimeRangeService');
 const assert = require('assert');
-const StubRepos = require('./doubles/stubRepositories');
-const SpyChangeLogRecordService = require('./doubles/spyChangeLogRecordService');
-const DataTypes = require('../models/DataTypes');
+const StubRepos = require('../doubles/stubRepositories');
+const SpyChangeLogRecordService = require('../doubles/spyChangeLogRecordService');
+const DataTypes = require('../../models/DataTypes');
 
 describe('MigrationService', () => {
 

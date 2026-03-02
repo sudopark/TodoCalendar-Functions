@@ -1,8 +1,8 @@
 
 const assert = require('assert');
-const AppSettingController = require('../controllers/appSettingController');
-const Errors = require('../models/Errors');
-const StubServices = require('./doubles/stubServices');
+const AppSettingController = require('../../controllers/appSettingController');
+const Errors = require('../../models/Errors');
+const StubServices = require('../doubles/stubServices');
 const makeRes = StubServices.makeRes;
 
 

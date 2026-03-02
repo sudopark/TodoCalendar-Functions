@@ -1,8 +1,8 @@
 
 const assert = require('assert');
-const DataSyncController = require('../controllers/dataSyncController');
-const Errors = require('../models/Errors');
-const StubServices = require('./doubles/stubServices');
+const DataSyncController = require('../../controllers/dataSyncController');
+const Errors = require('../../models/Errors');
+const StubServices = require('../doubles/stubServices');
 const makeRes = StubServices.makeRes;
 
 

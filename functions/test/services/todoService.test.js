@@ -1,13 +1,13 @@
 
 
-const TodoService = require('../services/todoEventService');
+const TodoService = require('../../services/todoEventService');
 const assert = require('assert');
-const EventTimeRangeService = require('../services/eventTimeRangeService');
-const EventDetailDataService = require('../services/eventDetailService');
-const StubRepos = require("./doubles/stubRepositories");
-const SpyChangeLogRecordService = require('./doubles/spyChangeLogRecordService');
-const DataTypes = require('../models/DataTypes');
-const { DataChangeCase } = require('../models/DataChangeLog');
+const EventTimeRangeService = require('../../services/eventTimeRangeService');
+const EventDetailDataService = require('../../services/eventDetailService');
+const StubRepos = require("../doubles/stubRepositories");
+const SpyChangeLogRecordService = require('../doubles/spyChangeLogRecordService');
+const DataTypes = require('../../models/DataTypes');
+const { DataChangeCase } = require('../../models/DataChangeLog');
 
 
 describe('TodoService', () => {

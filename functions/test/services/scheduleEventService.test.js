@@ -1,13 +1,13 @@
 
-const ScheduleEventService = require('../services/scheduleEventService');
+const ScheduleEventService = require('../../services/scheduleEventService');
 const assert = require('assert');
-const EventTimeRangeService = require('../services/eventTimeRangeService');
-const StubRepos = require("./doubles/stubRepositories");
-const constants = require('../Utils/constants');
-const SpyChangeLogRecordService = require('./doubles/spyChangeLogRecordService');
-const DataTypes = require('../models/DataTypes');
-const { DataChangeCase } = require('../models/DataChangeLog');
-const EventDetailDataService = require('../services/eventDetailService');
+const EventTimeRangeService = require('../../services/eventTimeRangeService');
+const StubRepos = require("../doubles/stubRepositories");
+const constants = require('../../Utils/constants');
+const SpyChangeLogRecordService = require('../doubles/spyChangeLogRecordService');
+const DataTypes = require('../../models/DataTypes');
+const { DataChangeCase } = require('../../models/DataChangeLog');
+const EventDetailDataService = require('../../services/eventDetailService');
 
 
 describe('ScheduleEventService', () => {

@@ -1,11 +1,11 @@
 
-const DoneTodoService = require('../services/doneTodoService');
-const EventTimeRangeService = require('../services/eventTimeRangeService');
-const TodoServie = require('../services/todoEventService');
+const DoneTodoService = require('../../services/doneTodoService');
+const EventTimeRangeService = require('../../services/eventTimeRangeService');
+const TodoServie = require('../../services/todoEventService');
 const assert = require('assert');
-const StubRepos = require('./doubles/stubRepositories');
-const SpyChangeLogRecordService = require('./doubles/spyChangeLogRecordService');
-const EventDetailService = require('../services/eventDetailService');
+const StubRepos = require('../doubles/stubRepositories');
+const SpyChangeLogRecordService = require('../doubles/spyChangeLogRecordService');
+const EventDetailService = require('../../services/eventDetailService');
 
 describe("DoneTodoService", () => {
 

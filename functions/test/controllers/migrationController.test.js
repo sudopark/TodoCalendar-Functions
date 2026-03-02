@@ -1,8 +1,8 @@
 
 const assert = require('assert');
-const MigrationController = require('../controllers/migrationController');
-const Errors = require('../models/Errors');
-const StubServices = require('./doubles/stubServices');
+const MigrationController = require('../../controllers/migrationController');
+const Errors = require('../../models/Errors');
+const StubServices = require('../doubles/stubServices');
 const makeRes = StubServices.makeRes;
 
 

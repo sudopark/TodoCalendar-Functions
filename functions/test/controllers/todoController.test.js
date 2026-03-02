@@ -1,8 +1,8 @@
 
 const assert = require('assert');
-const TodooController = require('../controllers/todoController');
-const Errors = require('../models/Errors');
-const StubServices = require('./doubles/stubServices');
+const TodooController = require('../../controllers/todoController');
+const Errors = require('../../models/Errors');
+const StubServices = require('../doubles/stubServices');
 const makeRes = StubServices.makeRes;
 
 

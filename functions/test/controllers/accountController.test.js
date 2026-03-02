@@ -1,9 +1,9 @@
 
 
 const assert = require('assert');
-const AccountController = require('../controllers/accountController');
-const Errors = require('../models/Errors');
-const StubServices = require('./doubles/stubServices');
+const AccountController = require('../../controllers/accountController');
+const Errors = require('../../models/Errors');
+const StubServices = require('../doubles/stubServices');
 const makeRes = StubServices.makeRes;
 
 

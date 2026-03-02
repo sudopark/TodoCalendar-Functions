@@ -1,10 +1,10 @@
 
-const EventTagService = require('../services/eventTagService');
+const EventTagService = require('../../services/eventTagService');
 const assert = require('assert');
-const StubRepos = require('./doubles/stubRepositories');
-const SpyChangeLogRecordService = require('./doubles/spyChangeLogRecordService');
-const DataType = require('../models/DataTypes');
-const { DataChangeCase } = require('../models/DataChangeLog');
+const StubRepos = require('../doubles/stubRepositories');
+const SpyChangeLogRecordService = require('../doubles/spyChangeLogRecordService');
+const DataType = require('../../models/DataTypes');
+const { DataChangeCase } = require('../../models/DataChangeLog');
 
 describe('eventTagService', () => {
 

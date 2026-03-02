@@ -1,8 +1,8 @@
 
 const assert = require('assert');
-const ScheduleEventController = require('../controllers/scheduleEventController');
-const Errors = require('../models/Errors');
-const StubServices = require('./doubles/stubServices');
+const ScheduleEventController = require('../../controllers/scheduleEventController');
+const Errors = require('../../models/Errors');
+const StubServices = require('../doubles/stubServices');
 const makeRes = StubServices.makeRes;
 
 

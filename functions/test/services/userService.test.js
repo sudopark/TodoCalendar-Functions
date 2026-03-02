@@ -1,8 +1,8 @@
 
-const UserService = require('../services/userService');
+const UserService = require('../../services/userService');
 const assert = require('assert');
-const StubRepos = require('./doubles/stubRepositories');
-const UserDevice = require('../models/UserDevice');
+const StubRepos = require('../doubles/stubRepositories');
+const UserDevice = require('../../models/UserDevice');
 
 describe('UserService', () => {
 
