@@ -146,15 +146,16 @@ class TodooController {
         const originId = req.params.id;
         const origin = req.body.origin
         const nextEventTime = req.body.next_event_time
+        const nextRepeatingTurn = req.body.next_repeating_turn
         if(
             !userId || !originId  || !origin
         ) {
             throw new Errors.BadRequest('userId, originId or origin is missing.')
         }
-        
+
         try {
             const donePayload = {userId: userId, ...origin}
-            const result = await this.todoService.completeTodo(userId, originId, donePayload, nextEventTime);
+            const result = await this.todoService.completeTodo(userId, originId, donePayload, nextEventTime, nextRepeatingTurn);
             res.status(201)
                 .send(result);
         } catch(error) {
@@ -167,6 +168,7 @@ class TodooController {
         const originId = req.params.id;
         const newPayload = req.body.new
         const originNextEventTime = req.body.origin_next_event_time
+        const nextRepeatingTurn = req.body.next_repeating_turn
         if(
             !originId || !newPayload || !userId
         ) {
@@ -175,7 +177,7 @@ class TodooController {
 
         try {
             const payload = {userId: userId, ...newPayload}
-            const result = await this.todoService.replaceRepeatingTodo(userId, originId, payload, originNextEventTime);
+            const result = await this.todoService.replaceRepeatingTodo(userId, originId, payload, originNextEventTime, nextRepeatingTurn);
             res.status(201)
                 .send(result)
         } catch (error) {
