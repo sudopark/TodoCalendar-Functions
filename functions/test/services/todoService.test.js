@@ -1,13 +1,13 @@
 
 
-const TodoService = require('../services/todoEventService');
+const TodoService = require('../../services/todoEventService');
 const assert = require('assert');
-const EventTimeRangeService = require('../services/eventTimeRangeService');
-const EventDetailDataService = require('../services/eventDetailService');
-const StubRepos = require("./doubles/stubRepositories");
-const SpyChangeLogRecordService = require('./doubles/spyChangeLogRecordService');
-const DataTypes = require('../models/DataTypes');
-const { DataChangeCase } = require('../models/DataChangeLog');
+const EventTimeRangeService = require('../../services/eventTimeRangeService');
+const EventDetailDataService = require('../../services/eventDetailService');
+const StubRepos = require("../doubles/stubRepositories");
+const SpyChangeLogRecordService = require('../doubles/spyChangeLogRecordService');
+const DataTypes = require('../../models/DataTypes');
+const { DataChangeCase } = require('../../models/DataChangeLog');
 
 
 describe('TodoService', () => {
@@ -293,8 +293,8 @@ describe('TodoService', () => {
         const originPayload = { name: 'done' }
 
         it('origin 다음 반복 시간 있으면 기존 todo update', async () => {
-            
-            const nextTime = { time_type: 'at', timestamp: 100 }    
+
+            const nextTime = { time_type: 'at', timestamp: 100 }
             const result = await todoService.completeTodo('uid', 'origin', originPayload, nextTime)
             assert.equal(result.done.name, 'done')
             assert.equal(result.next_repeating.uuid, 'origin')
@@ -308,6 +308,24 @@ describe('TodoService', () => {
             const logs = changeLogRecordService.logMap.get(DataTypes.Todo) ?? []
             assert.deepEqual(logs.map(l => l.uuid), [result.next_repeating.uuid])
             assert.deepEqual(logs.map(l => l.changeCase), [DataChangeCase.UPDATED])
+        });
+
+        it('nextRepeatingTurn 있으면 next_repeating의 repeating_turn 업데이트', async () => {
+            const nextTime = { time_type: 'at', timestamp: 100 }
+            const result = await todoService.completeTodo('uid', 'origin', originPayload, nextTime, 3)
+            assert.equal(result.next_repeating.repeating_turn, 3)
+        });
+
+        it('nextRepeatingTurn 없으면(하위버전 호환) next_repeating에 repeating_turn 포함 안됨', async () => {
+            const nextTime = { time_type: 'at', timestamp: 100 }
+            const result = await todoService.completeTodo('uid', 'origin', originPayload, nextTime)
+            assert.equal(result.next_repeating.repeating_turn, undefined)
+        });
+
+        it('nextRepeatingTurn null이면 next_repeating에 repeating_turn 포함 안됨', async () => {
+            const nextTime = { time_type: 'at', timestamp: 100 }
+            const result = await todoService.completeTodo('uid', 'origin', originPayload, nextTime, null)
+            assert.equal(result.next_repeating.repeating_turn, undefined)
         });
         
         it('origin 다음 반본시간 없는경우 기존 todo 삭제', async () => {
@@ -347,7 +365,7 @@ describe('TodoService', () => {
         const newPayload = { name: 'replaced' }
 
         it('다음 반복이벤트 있는 경우에 기존 todo 업데이트', async () => {
-            const nextTime = { time_type: 'at', timestamp: 100 }    
+            const nextTime = { time_type: 'at', timestamp: 100 }
             const result = await todoService.replaceRepeatingTodo('uid', 'origin', newPayload, nextTime)
             assert.equal(result.new_todo.name, 'replaced')
             assert.equal(result.next_repeating.uuid, 'origin')
@@ -359,7 +377,25 @@ describe('TodoService', () => {
             const logs = changeLogRecordService.logMap.get(DataTypes.Todo) ?? []
             assert.deepEqual(logs.map(l => l.uuid), [result.next_repeating.uuid])
             assert.deepEqual(logs.map(l => l.changeCase), [DataChangeCase.UPDATED])
-        }); 
+        });
+
+        it('nextRepeatingTurn 있으면 next_repeating의 repeating_turn 업데이트', async () => {
+            const nextTime = { time_type: 'at', timestamp: 100 }
+            const result = await todoService.replaceRepeatingTodo('uid', 'origin', newPayload, nextTime, 5)
+            assert.equal(result.next_repeating.repeating_turn, 5)
+        });
+
+        it('nextRepeatingTurn 없으면(하위버전 호환) next_repeating에 repeating_turn 포함 안됨', async () => {
+            const nextTime = { time_type: 'at', timestamp: 100 }
+            const result = await todoService.replaceRepeatingTodo('uid', 'origin', newPayload, nextTime)
+            assert.equal(result.next_repeating.repeating_turn, undefined)
+        });
+
+        it('nextRepeatingTurn null이면 next_repeating에 repeating_turn 포함 안됨', async () => {
+            const nextTime = { time_type: 'at', timestamp: 100 }
+            const result = await todoService.replaceRepeatingTodo('uid', 'origin', newPayload, nextTime, null)
+            assert.equal(result.next_repeating.repeating_turn, undefined)
+        });
 
         it('다음 반복이벤트 없는 경우에 기존 todo 삭제', async () => {
             const result = await todoService.replaceRepeatingTodo('uid', 'origin', newPayload)

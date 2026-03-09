@@ -63,12 +63,13 @@ class TodoEventService {
         return updated
     }
 
-    async completeTodo(userId, originId, origin, nextEventTime) {
+    async completeTodo(userId, originId, origin, nextEventTime, nextRepeatingTurn) {
 
         const done = await this.doneTodoRepository.save(originId, origin, userId);
         const doneDetail = await this.eventDetailDataService.copyTodoDetailToDoneTodoDetail(originId, done.uuid);
         if(nextEventTime != null) {
             const payload = { event_time: nextEventTime }
+            if(nextRepeatingTurn != null) { payload.repeating_turn = nextRepeatingTurn }
             let updatedTodo = await this.todoRepository.updateTodo(originId, payload);
             await this.#updateEventtime(userId, updatedTodo)
             await this.#updateLog(updatedTodo.uuid, userId, DataChangeLog.DataChangeCase.UPDATED)
@@ -80,12 +81,13 @@ class TodoEventService {
         }
     }
 
-    async replaceRepeatingTodo(userId, originId, newPayload, originNextEventTime) {
+    async replaceRepeatingTodo(userId, originId, newPayload, originNextEventTime, nextRepeatingTurn) {
 
         const newTodo = await this.todoRepository.makeNewTodo(newPayload);
 
         if(originNextEventTime != null) {
             const payload = { event_time: originNextEventTime }
+            if(nextRepeatingTurn != null) { payload.repeating_turn = nextRepeatingTurn }
             let updatedTodo = await this.todoRepository.updateTodo(originId, payload)
             await this.#updateEventtime(userId, updatedTodo)
             await this.#updateLog(updatedTodo.uuid, userId, DataChangeLog.DataChangeCase.UPDATED)

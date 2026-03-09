@@ -1,10 +1,10 @@
 
 const assert = require('assert');
-const StubRepos = require('./doubles/stubRepositories');
-const DataChangeLogRecordService = require('../services/dataChangeLogRecordService');
-const ChangeLog = require('../models/DataChangeLog');
-const DataType = require('../models/DataTypes');
-const SyncTimeStamp = require('../models/SyncTimestamp');
+const StubRepos = require('../doubles/stubRepositories');
+const DataChangeLogRecordService = require('../../services/dataChangeLogRecordService');
+const ChangeLog = require('../../models/DataChangeLog');
+const DataType = require('../../models/DataTypes');
+const SyncTimeStamp = require('../../models/SyncTimestamp');
 
 describe('DataChangeLogRecordService', () => {
 

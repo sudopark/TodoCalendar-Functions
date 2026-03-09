@@ -1,7 +1,7 @@
 
-const EventDetailDataService = require('../services/eventDetailService');
+const EventDetailDataService = require('../../services/eventDetailService');
 const assert = require('assert');
-const StubRepos = require('./doubles/stubRepositories');
+const StubRepos = require('../doubles/stubRepositories');
 
 describe('EventDetailDataService', () => {
 

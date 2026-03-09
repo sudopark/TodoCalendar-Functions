@@ -1,7 +1,7 @@
 
 const assert = require('assert');
-const StubRepos = require('./doubles/stubRepositories');
-const AppSettingService = require('../services/appSettingService');
+const StubRepos = require('../doubles/stubRepositories');
+const AppSettingService = require('../../services/appSettingService');
 
 describe('AppSettingService', () => {
 
