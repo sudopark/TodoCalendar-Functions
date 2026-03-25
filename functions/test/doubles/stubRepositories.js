@@ -42,6 +42,7 @@ class StubAccountRepository {
 // MARK: - Todo
 
 const TodoModel = require('../../models/Todo');
+const ScheduleModel = require('../../models/Schedule');
 
 class StubTodoRepository {
 
@@ -174,7 +175,7 @@ class StubScheduleEventRepository {
 
     async findEvents(eventIds) {
         const events = eventIds.map((id) => {
-            return { uuid: id, userId: 'some' }
+            return ScheduleModel.fromData(id, { userId: 'some' })
         })
         return events
     }
@@ -184,8 +185,8 @@ class StubScheduleEventRepository {
             throw { message: 'failed' }
         }
 
-        let newEvent = JSON.parse(JSON.stringify(payload))
-        newEvent['uuid'] = 'some'
+        let data = JSON.parse(JSON.stringify(payload))
+        const newEvent = ScheduleModel.fromData('some', data);
         this.eventMap.set(newEvent.uuid, newEvent);
         return newEvent
     }
@@ -194,8 +195,8 @@ class StubScheduleEventRepository {
         if(this.shouldFailPut) {
             throw { message: 'failed' }
         }
-        let updated = JSON.parse(JSON.stringify(payload))
-        updated.uuid = eventId
+        let data = JSON.parse(JSON.stringify(payload))
+        const updated = ScheduleModel.fromData(eventId, data)
         this.eventMap.set(eventId, updated)
         return updated
     }
@@ -208,8 +209,10 @@ class StubScheduleEventRepository {
         if(!oldValue) {
             throw { message: 'not exists' }
         }
-        const newValue = JSON.parse(JSON.stringify(payload));
-        const updated = { ...oldValue, ...newValue }
+        const oldData = JSON.parse(JSON.stringify(oldValue));
+        const newData = JSON.parse(JSON.stringify(payload));
+        const merged = { ...oldData, ...newData }
+        const updated = ScheduleModel.fromData(eventId, merged)
         this.eventMap.set(eventId, updated)
         return updated
     }
@@ -235,7 +238,7 @@ class StubScheduleEventRepository {
     async getAllEvents(userId) {
         const range = Array.from({ length: 10}, (_, i) => i);
         const events = range.map(i => {
-            return { uuid: `sc:${i}`, userId: userId }
+            return ScheduleModel.fromData(`sc:${i}`, { userId: userId })
         })
         return events
     }
