@@ -41,6 +41,8 @@ class StubAccountRepository {
 
 // MARK: - Todo
 
+const TodoModel = require('../../models/Todo');
+
 class StubTodoRepository {
 
     constructor() {
@@ -62,7 +64,7 @@ class StubTodoRepository {
             if(!params.event_time) {
                 params.is_current = true
             }
-            return {uuid: "new", ...params};
+            return TodoModel.fromData("new", params);
         }
     }
 
@@ -74,7 +76,7 @@ class StubTodoRepository {
             if(!params.event_time) {
                 params.is_current = true
             }
-            return {uuid: id, ...params}
+            return TodoModel.fromData(id, params)
         }
     }
 
@@ -86,13 +88,13 @@ class StubTodoRepository {
             if(params.event_time) {
                 params.is_current = false
             }
-            return {uuid: id, ...params}
+            return TodoModel.fromData(id, params)
         }
     }
 
     async findTodo(id) {
         if(id == 'origin') {
-            return { uuid: id, name: 'old_name', event_tag_id: 'old tag' }
+            return TodoModel.fromData(id, { name: 'old_name', event_tag_id: 'old tag' })
         } else {
             throw { message: 'not exists' }
         }
@@ -100,15 +102,15 @@ class StubTodoRepository {
 
     async findCurrentTodos(userId) {
         const todos = [
-            { uuid: 'current1', userId: userId, is_current: true },
-            { uuid: 'current2', userId: userId, is_current: true }
+            TodoModel.fromData('current1', { userId: userId, is_current: true }),
+            TodoModel.fromData('current2', { userId: userId, is_current: true })
         ]
         return todos
-    } 
+    }
 
     async findTodos(eventIds) {
         const todos = eventIds.map((id) => {
-            return { uuid: id, userId: 'some' }
+            return TodoModel.fromData(id, { userId: 'some' })
         })
         return todos
     }
@@ -136,14 +138,14 @@ class StubTodoRepository {
         if(this.shouldFailRestore) {
             throw { message: 'not exists' }
         } else {
-            return { uuid: id, ...originPayload }
+            return TodoModel.fromData(id, originPayload)
         }
     }
 
     async getAllTodos(userId) {
         const range = Array.from({ length: 10}, (_, i) => i);
         const todos = range.map(i => {
-            return { uuid: `todo:${i}`, userId: userId }
+            return TodoModel.fromData(`todo:${i}`, { userId: userId })
         })
         return todos
     }
