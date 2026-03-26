@@ -44,6 +44,7 @@ class StubAccountRepository {
 const TodoModel = require('../../models/Todo');
 const ScheduleModel = require('../../models/Schedule');
 const EventTagModel = require('../../models/EventTag');
+const DoneTodoModel = require('../../models/DoneTodo');
 
 class StubTodoRepository {
 
@@ -340,13 +341,12 @@ class StubDoneTodoEventRepository {
     constructor()  {
         this.shouldFailSave = false
         this.totalDones = [...Array(10).keys()].map(i => {
-            return {
-                uuid: `id:${i}`, 
-                done_at: i, 
-                name: 'done', 
-                event_time: { time_type: 'at', timestamp: i }, 
+            return DoneTodoModel.fromData(`id:${i}`, {
+                done_at: i,
+                name: 'done',
+                event_time: { time_type: 'at', timestamp: i },
                 userId: 'owner'
-            }
+            })
         })
         this.shouldFailLoad = false
         this.shouldFailRemove = false
@@ -358,7 +358,7 @@ class StubDoneTodoEventRepository {
         if(this.shouldFailSave) {
             throw { message: 'failed' }
         } else {
-            return {uuid: 'new-done', origin_event_id: originId, ...origin, userId: userId }
+            return DoneTodoModel.fromData('new-done', { origin_event_id: originId, ...origin, userId: userId })
         }
     }
 
@@ -366,9 +366,7 @@ class StubDoneTodoEventRepository {
         if(this.shouldFailSave) {
             throw { message: 'failed' }
         } else {
-            return {
-                uuid: doneId, origin_event_id: "origin", userId: userId, ...payload
-            }
+            return DoneTodoModel.fromData(doneId, { origin_event_id: "origin", userId: userId, ...payload })
         }
     }
 
@@ -392,12 +390,11 @@ class StubDoneTodoEventRepository {
         if(this.shouldFailLoad) {
             throw { message: 'failed' }
         }
-        return {
-            uuid: eventid, 
-            done_at: 4, 
-            name: 'done', 
+        return DoneTodoModel.fromData(eventid, {
+            done_at: 4,
+            name: 'done',
             event_time: { time_type: 'at', timestamp: 4 }
-        }
+        })
     }
 
     async removeDoneTodos(userId, pastThan) {
