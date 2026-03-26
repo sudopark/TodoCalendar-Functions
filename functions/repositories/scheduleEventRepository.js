@@ -1,6 +1,7 @@
 
 const { getFirestore, FieldPath } = require('firebase-admin/firestore');
 const Schedule = require('../models/Schedule');
+const Errors = require('../models/Errors');
 const db = getFirestore();
 const collectionRef = db.collection('schedules');
 
@@ -11,11 +12,11 @@ class ScheduleEventRepository {
         try {
             const snapshot = await collectionRef.doc(eventId).get();
             if (!snapshot.exists) {
-                throw { status: 404, code: 'NotFound', message: 'Schedule not found' };
+                throw new Errors.NotFound('Schedule not found');
             }
             return Schedule.fromData(snapshot.id, snapshot.data())
         } catch (error) {
-            if (error?.status) throw error;
+            if (error instanceof Errors.Base) throw error;
             throw { status: 500, message: error?.message || error};
         }
     }

@@ -10,6 +10,9 @@ describe('Holiday API', function () {
             // Holiday API calls external Google Calendar API.
             // Returns 200 if HOLIDAY_API_KEY is set, 500 if not.
             assert.ok([200, 500].includes(res.status));
+            if (res.status === 500) {
+                console.log('  ℹ HOLIDAY_API_KEY not set — skipping response validation');
+            }
         });
 
         it('should fail without required params', async function () {
@@ -22,6 +25,9 @@ describe('Holiday API', function () {
                 params: { year: 2026, locale: 'en_US', code: 'US' }
             });
             assert.ok([200, 500].includes(res.status));
+            if (res.status === 500) {
+                console.log('  ℹ HOLIDAY_API_KEY not set — skipping response validation');
+            }
         });
     });
 });

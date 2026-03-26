@@ -1,4 +1,5 @@
 const admin = require('firebase-admin');
+const axios = require('axios');
 
 const TEST_USER_UID = 'e2e-test-user-001';
 const TEST_USER_EMAIL = 'e2e-test@example.com';
@@ -27,7 +28,6 @@ async function seedCommonData() {
 }
 
 async function clearFirestoreData() {
-    const axios = require('axios');
     const projectId = 'todocalendar-1707723626269';
     try {
         await axios.delete(
