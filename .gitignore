@@ -129,5 +129,8 @@ dist
 .yarn/install-state.gz
 .pnp.*
 
-#firebase 
+#firebase
 .firebaserc
+
+# AI-generated docs
+docs/superpowers/
