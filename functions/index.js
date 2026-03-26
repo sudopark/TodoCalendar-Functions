@@ -40,6 +40,10 @@ const app = express();
 // app use middleware
 app.use(bodyParser.json());
 
+// swagger
+const swagger = require('./swagger');
+app.use('/api-docs', swagger.serve, swagger.setup);
+
 // setup router
 
 const setVersion = (version) => {
