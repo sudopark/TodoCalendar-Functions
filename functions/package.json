@@ -8,6 +8,9 @@
     "deploy": "firebase deploy --only functions",
     "logs": "firebase functions:log",
     "test": "mocha",
+    "test:e2e": "mocha --config .mocharc.e2e.yml",
+    "test:e2e:run": "cd .. && firebase emulators:exec \"cd functions && npm run test:e2e\"",
+    "emulator": "cd .. && firebase emulators:start",
     "migrate-changelog": "node scripts/migrate_changelog.js"
   },
   "engines": {
