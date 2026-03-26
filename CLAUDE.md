@@ -95,6 +95,34 @@ Tests use **Mocha + assert** (Node.js built-in). Test doubles live in `test/doub
 
 Tests are organized in `test/services/`, `test/controllers/`, and `test/models/`. Service tests pass stubs via constructor injection. Controller tests use `stubServices.js` (plain objects, independent of repository model changes).
 
+### Emulator E2E Testing
+
+Firebase Emulator Suite(Auth, Functions, Firestore)를 사용한 E2E 테스트 인프라.
+
+**구조:**
+```
+test/e2e/
+├── setup.js              # global before: 유저 생성, 토큰 발급, Firestore 초기화
+├── seeds/commonData.js   # 공통 시드 데이터
+├── helpers/request.js    # axios 래퍼 (baseURL, auth 헤더 자동 세팅)
+└── *.e2e.js              # 라우트별 E2E 테스트 (12개)
+```
+
+**동작 방식:**
+- `setup.js`에서 Auth 에뮬레이터에 테스트 유저 생성 → 커스텀 토큰 → ID 토큰 교환 → 모든 테스트에서 사용
+- `.mocharc.e2e.yml`로 단위 테스트(`.test.js`)와 E2E 테스트(`.e2e.js`) 설정 분리
+- `index.js`는 `FUNCTIONS_EMULATOR` 환경변수로 에뮬레이터/프로덕션 초기화를 분기
+
+**환경 분기 (`index.js`):**
+- 에뮬레이터 모드(`FUNCTIONS_EMULATOR=true`): `initializeApp()` — secrets 파일 불필요
+- 프로덕션 모드: 기존 서비스 계정 키 기반 초기화
+
+**포트:** Auth(9099), Functions(5001), Firestore(8080)
+
+**참고:**
+- Holiday API는 외부 Google Calendar API를 호출하므로 `HOLIDAY_API_KEY` 없으면 500 반환 (E2E 테스트에서 허용 처리)
+- `npm run emulator`/`test:e2e:run` 스크립트는 내부에서 `cd ..`으로 프로젝트 루트 이동 후 firebase CLI 실행 (firebase.json이 루트에 있으므로)
+
 ### Secrets
 
-`functions/secrets/` contains `todocalendar-serviceAccountKey.json` and `.env`. These files are not committed and must be present locally to run the app.
+`functions/secrets/` contains `todocalendar-serviceAccountKey.json` and `.env`. These files are not committed and must be present locally to run the app (not needed for emulator mode).
