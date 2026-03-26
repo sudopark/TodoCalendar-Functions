@@ -1,4 +1,5 @@
 
+const ForemostEvent = require('../models/ForemostEvent');
 
 class ForemostEventService {
 
@@ -32,17 +33,17 @@ class ForemostEventService {
         if(!eventId) {
             return { }
         }
-        
+
         let event;
         if(foremostId.is_todo) {
             event = await this.toodRepository.findTodo(eventId)
         } else {
             event = await this.scheduleRepository.findEvent(eventId)
         }
-        return {
-            ...foremostId, 
-            event: {...event}
-        }
+        return new ForemostEvent({
+            ...foremostId,
+            event: event
+        })
     }
 }
 
