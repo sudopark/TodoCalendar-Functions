@@ -77,8 +77,9 @@ describe('Todo API', function () {
 
         describe('POST /v1/todos/todo/:id/complete', function () {
             it('should complete a todo', async function () {
+                const todoRes = await authedClient().get(`/v1/todos/todo/${createdTodoId}`);
                 const res = await authedClient().post(`/v1/todos/todo/${createdTodoId}/complete`, {
-                    origin: { name: 'Patched E2E Todo' }
+                    origin: todoRes.data
                 });
                 assert.strictEqual(res.status, 201);
                 assert.ok(res.data.done);

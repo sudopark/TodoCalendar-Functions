@@ -2,6 +2,7 @@
 
 const { getFirestore, FieldPath } = require('firebase-admin/firestore');
 const Todo = require('../models/Todo');
+const Errors = require('../models/Errors');
 
 const db = getFirestore();
 const collectionRef = db.collection('todos')
@@ -56,12 +57,12 @@ class TodoRepository {
         try {
             const snapshot = await collectionRef.doc(id).get();
             if (!snapshot.exists) {
-                throw { status: 404, code: 'NotFound', message: 'Todo not found' };
+                throw new Errors.NotFound('Todo not found');
             }
             return Todo.fromData(snapshot.id, snapshot.data());
 
         } catch (error) {
-            if (error?.status) throw error;
+            if (error instanceof Errors.Base) throw error;
             throw { status: 500, message: error?.message || error};
         }
     }
