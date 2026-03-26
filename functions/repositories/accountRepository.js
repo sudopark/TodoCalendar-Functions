@@ -1,5 +1,6 @@
 
 const adimn = require("firebase-admin");
+const Account = require('../models/Account');
 
 class AccountRepository {
 
@@ -11,9 +12,7 @@ class AccountRepository {
                 .get();
         
             if(snapshot.exists) {
-                return {
-                    uid: uid, ...snapshot.data(), last_sign_in: auth_time
-                }
+                return Account.fromData(uid, { ...snapshot.data(), last_sign_in: auth_time })
             } else {
                 return null
             }
@@ -33,7 +32,7 @@ class AccountRepository {
             await ref.set(payload)
             const newInfo = await ref.get();
 
-            return { uid: uid, ...newInfo.data() };
+            return Account.fromData(uid, newInfo.data());
 
         } catch (error) {
             throw { status: 500, message: error?.message || error };
