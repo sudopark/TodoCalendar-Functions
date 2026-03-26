@@ -1,5 +1,6 @@
 
 const { getFirestore } = require('firebase-admin/firestore');
+const DoneTodo = require('../models/DoneTodo');
 const db = getFirestore();
 const collectionRef = db.collection('done_todos');
 
@@ -15,7 +16,7 @@ class DoneTodoEventRepository {
     
         const ref = await collectionRef.add(payload)
         const snapshot = await ref.get();
-        return {uuid: snapshot.id, ...snapshot.data() };
+        return DoneTodo.fromData(snapshot.id, snapshot.data());
     }
 
     async put(userId, doneId, payload) {
@@ -25,7 +26,7 @@ class DoneTodoEventRepository {
         const ref = collectionRef.doc(doneId)
         await ref.set(data, {merge: false})
         const snapshot = await ref.get()
-        return { uuid: snapshot.id, ...snapshot.data() };
+        return DoneTodo.fromData(snapshot.id, snapshot.data());
     }
 
     async loadDoneTodos(userId, size, cursor) {
@@ -37,7 +38,7 @@ class DoneTodoEventRepository {
         }
         const snapshot = await query.limit(size).get();
         const dones = snapshot.docs.map(doc => {
-            return {uuid: doc.id, ...doc.data()}
+            return DoneTodo.fromData(doc.id, doc.data())
         })
         return dones
     }
@@ -45,7 +46,7 @@ class DoneTodoEventRepository {
     async loadDoneTodo(doneId) {
         const snapShot = await collectionRef.doc(doneId).get();
         if(snapShot.exists) {
-            return { uuid: snapShot.id, ...snapShot.data() }
+            return DoneTodo.fromData(snapShot.id, snapShot.data())
         } else {
             throw { status: 404, code: 'EventDetailNotExists', message: 'event detail not exists'};    
         }
@@ -72,7 +73,7 @@ class DoneTodoEventRepository {
 
     async loadDoneTodo(eventid) {
         let snapshot = await collectionRef.doc(eventid).get();
-        return { uuid: snapshot.id, ...snapshot.data() }
+        return DoneTodo.fromData(snapshot.id, snapshot.data())
     }
 
     async removeDoneTodo(eventId) {
