@@ -1,0 +1,2317 @@
+openapi: 3.0.0
+info:
+  title: TodoCalendar API
+  description: Firebase Cloud Functions backend for TodoCalendar app. Provides todo/schedule management, event tagging, data sync, and more.
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:5001/{projectId}/us-central1/api
+    description: Local Emulator
+    variables:
+      projectId:
+        default: todocalendar-1707723626269
+  - url: https://us-central1-{projectId}.cloudfunctions.net/api
+    description: Firebase Production
+    variables:
+      projectId:
+        default: todocalendar-1707723626269
+
+tags:
+  - name: Accounts
+    description: Account registration and deletion (no auth required)
+  - name: User
+    description: User device and push notification management
+  - name: Todos
+    description: Todo CRUD and completion operations
+  - name: DoneTodos
+    description: Completed todo management
+  - name: Schedules
+    description: Schedule event CRUD and repeating operations
+  - name: EventTags
+    description: Event tag management
+  - name: EventDetails
+    description: Event detail (place, url, memo) management
+  - name: ForemostEvent
+    description: Foremost (pinned) event management
+  - name: Migration
+    description: Bulk data migration endpoints
+  - name: AppSettings
+    description: User app settings
+  - name: Holiday
+    description: Public holiday lookup (no auth required)
+  - name: DataSync
+    description: Incremental data synchronization
+
+security:
+  - BearerAuth: []
+
+paths:
+  # ──────────────── Accounts ────────────────
+  /v1/accounts/info:
+    put:
+      tags: [Accounts]
+      summary: Register or update account info
+      description: Creates or updates user account information using the Firebase auth token.
+      security: []
+      responses:
+        '201':
+          description: Account info saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+
+  /v1/accounts/account:
+    delete:
+      tags: [Accounts]
+      summary: Delete account
+      description: Permanently deletes the user account and associated data.
+      security: []
+      responses:
+        '200':
+          description: Account deleted
+          content:
+            application/json:
+              schema:
+                type: object
+
+  # ──────────────── User ────────────────
+  /v1/user/notification:
+    put:
+      tags: [User]
+      summary: Register or update push notification token
+      description: Registers FCM token for push notifications on a specific device.
+      parameters:
+        - name: device_id
+          in: header
+          required: true
+          schema:
+            type: string
+          description: Unique device identifier
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fcm_token]
+              properties:
+                fcm_token:
+                  type: string
+                  description: Firebase Cloud Messaging token
+                device_model:
+                  type: string
+                  description: Device model name
+      responses:
+        '201':
+          description: Token registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusOk'
+    delete:
+      tags: [User]
+      summary: Remove push notification token
+      description: Removes the FCM token for a specific device.
+      parameters:
+        - name: device_id
+          in: header
+          required: true
+          schema:
+            type: string
+          description: Unique device identifier
+      responses:
+        '200':
+          description: Token removed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusOk'
+
+  # ──────────────── Todos ────────────────
+  /v1/todos/todo/{id}:
+    get:
+      tags: [Todos]
+      summary: Get a specific todo
+      parameters:
+        - $ref: '#/components/parameters/TodoId'
+      responses:
+        '200':
+          description: Todo found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Todo'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Todos]
+      summary: Replace a todo (full update)
+      parameters:
+        - $ref: '#/components/parameters/TodoId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TodoInput'
+      responses:
+        '201':
+          description: Todo updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Todo'
+    patch:
+      tags: [Todos]
+      summary: Partially update a todo
+      parameters:
+        - $ref: '#/components/parameters/TodoId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TodoPatchInput'
+      responses:
+        '201':
+          description: Todo updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Todo'
+    delete:
+      tags: [Todos]
+      summary: Delete a todo
+      parameters:
+        - $ref: '#/components/parameters/TodoId'
+      responses:
+        '200':
+          description: Todo deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusOk'
+
+  /v1/todos/:
+    get:
+      tags: [Todos]
+      summary: Get todos by time range or current todos
+      description: If both lower and upper are provided, returns todos in that time range. Otherwise returns current todos.
+      parameters:
+        - name: lower
+          in: query
+          schema:
+            type: number
+          description: Time range lower bound (timestamp)
+        - name: upper
+          in: query
+          schema:
+            type: number
+          description: Time range upper bound (timestamp)
+      responses:
+        '200':
+          description: List of todos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Todo'
+
+  /v1/todos/uncompleted:
+    get:
+      tags: [Todos]
+      summary: Get uncompleted todos
+      parameters:
+        - name: refTime
+          in: query
+          required: true
+          schema:
+            type: number
+          description: Reference timestamp for filtering
+      responses:
+        '200':
+          description: List of uncompleted todos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Todo'
+
+  /v1/todos/todo:
+    post:
+      tags: [Todos]
+      summary: Create a new todo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TodoInput'
+      responses:
+        '201':
+          description: Todo created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Todo'
+
+  /v1/todos/todo/{id}/complete:
+    post:
+      tags: [Todos]
+      summary: Mark a todo as complete
+      description: Completes a todo and optionally sets up the next repeating occurrence.
+      parameters:
+        - $ref: '#/components/parameters/TodoId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [origin]
+              properties:
+                origin:
+                  $ref: '#/components/schemas/TodoInput'
+                next_event_time:
+                  $ref: '#/components/schemas/EventTime'
+                next_repeating_turn:
+                  type: string
+      responses:
+        '201':
+          description: Todo completed
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /v1/todos/todo/{id}/replace:
+    post:
+      tags: [Todos]
+      summary: Replace a repeating todo
+      description: Replaces a repeating todo with a new one, optionally updating the original's next occurrence.
+      parameters:
+        - $ref: '#/components/parameters/TodoId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [new]
+              properties:
+                new:
+                  $ref: '#/components/schemas/TodoInput'
+                origin_next_event_time:
+                  $ref: '#/components/schemas/EventTime'
+                next_repeating_turn:
+                  type: string
+      responses:
+        '201':
+          description: Todo replaced
+          content:
+            application/json:
+              schema:
+                type: object
+
+  # v2 Todos (same behavior)
+  /v2/todos/todo/{id}:
+    get:
+      tags: [Todos]
+      summary: "[v2] Get a specific todo"
+      parameters:
+        - $ref: '#/components/parameters/TodoId'
+      responses:
+        '200':
+          description: Todo found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Todo'
+    put:
+      tags: [Todos]
+      summary: "[v2] Replace a todo"
+      parameters:
+        - $ref: '#/components/parameters/TodoId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TodoInput'
+      responses:
+        '201':
+          description: Todo updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Todo'
+    patch:
+      tags: [Todos]
+      summary: "[v2] Partially update a todo"
+      parameters:
+        - $ref: '#/components/parameters/TodoId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TodoPatchInput'
+      responses:
+        '201':
+          description: Todo updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Todo'
+    delete:
+      tags: [Todos]
+      summary: "[v2] Delete a todo"
+      parameters:
+        - $ref: '#/components/parameters/TodoId'
+      responses:
+        '200':
+          description: Todo deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusOk'
+
+  /v2/todos/:
+    get:
+      tags: [Todos]
+      summary: "[v2] Get todos by time range or current todos"
+      parameters:
+        - name: lower
+          in: query
+          schema:
+            type: number
+        - name: upper
+          in: query
+          schema:
+            type: number
+      responses:
+        '200':
+          description: List of todos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Todo'
+
+  /v2/todos/uncompleted:
+    get:
+      tags: [Todos]
+      summary: "[v2] Get uncompleted todos"
+      parameters:
+        - name: refTime
+          in: query
+          required: true
+          schema:
+            type: number
+      responses:
+        '200':
+          description: List of uncompleted todos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Todo'
+
+  /v2/todos/todo:
+    post:
+      tags: [Todos]
+      summary: "[v2] Create a new todo"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TodoInput'
+      responses:
+        '201':
+          description: Todo created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Todo'
+
+  /v2/todos/todo/{id}/complete:
+    post:
+      tags: [Todos]
+      summary: "[v2] Mark a todo as complete"
+      parameters:
+        - $ref: '#/components/parameters/TodoId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [origin]
+              properties:
+                origin:
+                  $ref: '#/components/schemas/TodoInput'
+                next_event_time:
+                  $ref: '#/components/schemas/EventTime'
+                next_repeating_turn:
+                  type: string
+      responses:
+        '201':
+          description: Todo completed
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /v2/todos/todo/{id}/replace:
+    post:
+      tags: [Todos]
+      summary: "[v2] Replace a repeating todo"
+      parameters:
+        - $ref: '#/components/parameters/TodoId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [new]
+              properties:
+                new:
+                  $ref: '#/components/schemas/TodoInput'
+                origin_next_event_time:
+                  $ref: '#/components/schemas/EventTime'
+                next_repeating_turn:
+                  type: string
+      responses:
+        '201':
+          description: Todo replaced
+          content:
+            application/json:
+              schema:
+                type: object
+
+  # ──────────────── Done Todos ────────────────
+  /v1/todos/dones/:
+    get:
+      tags: [DoneTodos]
+      summary: Get completed todos (paginated)
+      parameters:
+        - name: size
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: Page size
+        - name: cursor
+          in: query
+          schema:
+            type: number
+          description: Pagination cursor (done_at timestamp)
+      responses:
+        '200':
+          description: Paginated done todos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  dones:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DoneTodo'
+                  next_cursor:
+                    type: number
+                    nullable: true
+    delete:
+      tags: [DoneTodos]
+      summary: Delete completed todos in bulk
+      parameters:
+        - name: past_than
+          in: query
+          schema:
+            type: number
+          description: Delete done todos older than this timestamp
+      responses:
+        '200':
+          description: Done todos deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusOk'
+
+  /v1/todos/dones/{id}:
+    get:
+      tags: [DoneTodos]
+      summary: Get a specific completed todo
+      parameters:
+        - $ref: '#/components/parameters/DoneTodoId'
+      responses:
+        '200':
+          description: Done todo found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DoneTodo'
+    put:
+      tags: [DoneTodos]
+      summary: Update a completed todo
+      parameters:
+        - $ref: '#/components/parameters/DoneTodoId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DoneTodoPatchInput'
+      responses:
+        '200':
+          description: Done todo updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DoneTodo'
+    delete:
+      tags: [DoneTodos]
+      summary: Delete a specific completed todo
+      parameters:
+        - $ref: '#/components/parameters/DoneTodoId'
+      responses:
+        '200':
+          description: Done todo deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusOk'
+
+  /v1/todos/dones/{id}/revert:
+    post:
+      tags: [DoneTodos]
+      summary: Revert a completed todo back to active
+      parameters:
+        - $ref: '#/components/parameters/DoneTodoId'
+      responses:
+        '201':
+          description: Todo reverted
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /v1/todos/dones/cancel:
+    post:
+      tags: [DoneTodos]
+      summary: Cancel a todo completion
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [origin]
+              properties:
+                origin:
+                  $ref: '#/components/schemas/TodoInput'
+                done_id:
+                  type: string
+      responses:
+        '201':
+          description: Completion canceled
+          content:
+            application/json:
+              schema:
+                type: object
+
+  # v2 Done Todos
+  /v2/todos/dones/:
+    get:
+      tags: [DoneTodos]
+      summary: "[v2] Get completed todos (paginated)"
+      parameters:
+        - name: size
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: cursor
+          in: query
+          schema:
+            type: number
+      responses:
+        '200':
+          description: Paginated done todos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  dones:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DoneTodo'
+                  next_cursor:
+                    type: number
+                    nullable: true
+    delete:
+      tags: [DoneTodos]
+      summary: "[v2] Delete completed todos in bulk"
+      parameters:
+        - name: past_than
+          in: query
+          schema:
+            type: number
+      responses:
+        '200':
+          description: Done todos deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusOk'
+
+  /v2/todos/dones/{id}:
+    get:
+      tags: [DoneTodos]
+      summary: "[v2] Get a specific completed todo"
+      parameters:
+        - $ref: '#/components/parameters/DoneTodoId'
+      responses:
+        '200':
+          description: Done todo found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DoneTodo'
+    put:
+      tags: [DoneTodos]
+      summary: "[v2] Update a completed todo"
+      parameters:
+        - $ref: '#/components/parameters/DoneTodoId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DoneTodoPatchInput'
+      responses:
+        '200':
+          description: Done todo updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DoneTodo'
+    delete:
+      tags: [DoneTodos]
+      summary: "[v2] Delete a specific completed todo"
+      parameters:
+        - $ref: '#/components/parameters/DoneTodoId'
+      responses:
+        '200':
+          description: Done todo deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusOk'
+
+  /v2/todos/dones/{id}/revert:
+    post:
+      tags: [DoneTodos]
+      summary: "[v2] Revert a completed todo back to active"
+      description: V2 uses a different revert logic than v1.
+      parameters:
+        - $ref: '#/components/parameters/DoneTodoId'
+      responses:
+        '201':
+          description: Todo reverted
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /v2/todos/dones/cancel:
+    post:
+      tags: [DoneTodos]
+      summary: "[v2] Cancel a todo completion"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [origin]
+              properties:
+                origin:
+                  $ref: '#/components/schemas/TodoInput'
+                done_id:
+                  type: string
+      responses:
+        '201':
+          description: Completion canceled
+          content:
+            application/json:
+              schema:
+                type: object
+
+  # ──────────────── Schedules ────────────────
+  /v1/schedules/:
+    get:
+      tags: [Schedules]
+      summary: Get schedules by time range
+      parameters:
+        - name: lower
+          in: query
+          required: true
+          schema:
+            type: number
+          description: Time range lower bound (timestamp)
+        - name: upper
+          in: query
+          required: true
+          schema:
+            type: number
+          description: Time range upper bound (timestamp)
+      responses:
+        '200':
+          description: List of schedules
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Schedule'
+
+  /v1/schedules/schedule/{id}:
+    get:
+      tags: [Schedules]
+      summary: Get a specific schedule
+      parameters:
+        - $ref: '#/components/parameters/ScheduleId'
+      responses:
+        '200':
+          description: Schedule found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Schedule'
+    put:
+      tags: [Schedules]
+      summary: Replace a schedule (full update)
+      parameters:
+        - $ref: '#/components/parameters/ScheduleId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScheduleInput'
+      responses:
+        '201':
+          description: Schedule updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Schedule'
+    patch:
+      tags: [Schedules]
+      summary: Partially update a schedule
+      parameters:
+        - $ref: '#/components/parameters/ScheduleId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SchedulePatchInput'
+      responses:
+        '201':
+          description: Schedule updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Schedule'
+    delete:
+      tags: [Schedules]
+      summary: Delete a schedule
+      parameters:
+        - $ref: '#/components/parameters/ScheduleId'
+      responses:
+        '201':
+          description: Schedule deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusOk'
+
+  /v1/schedules/schedule:
+    post:
+      tags: [Schedules]
+      summary: Create a new schedule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScheduleInput'
+      responses:
+        '201':
+          description: Schedule created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Schedule'
+
+  /v1/schedules/schedule/{id}/exclude:
+    post:
+      tags: [Schedules]
+      summary: Create new schedule excluding from repeating
+      description: Creates a new schedule event and excludes specified times from the original repeating schedule.
+      parameters:
+        - $ref: '#/components/parameters/ScheduleId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [new, exclude_repeatings]
+              properties:
+                new:
+                  $ref: '#/components/schemas/ScheduleInput'
+                exclude_repeatings:
+                  type: array
+                  items:
+                    type: number
+      responses:
+        '201':
+          description: New schedule created with exclusion
+          content:
+            application/json:
+              schema:
+                type: object
+    patch:
+      tags: [Schedules]
+      summary: Exclude repeating times from schedule
+      parameters:
+        - $ref: '#/components/parameters/ScheduleId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [exclude_repeatings]
+              properties:
+                exclude_repeatings:
+                  type: array
+                  items:
+                    type: number
+      responses:
+        '200':
+          description: Repeating times excluded
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /v1/schedules/schedule/{id}/branch_repeating:
+    post:
+      tags: [Schedules]
+      summary: Branch a repeating schedule
+      description: Ends the current repeating schedule at the specified time and creates a new schedule from that point.
+      parameters:
+        - $ref: '#/components/parameters/ScheduleId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [end_time, new]
+              properties:
+                end_time:
+                  type: number
+                  description: End time for the original repeating schedule
+                new:
+                  $ref: '#/components/schemas/ScheduleInput'
+      responses:
+        '201':
+          description: Schedule branched
+          content:
+            application/json:
+              schema:
+                type: object
+
+  # v2 Schedules
+  /v2/schedules/:
+    get:
+      tags: [Schedules]
+      summary: "[v2] Get schedules by time range"
+      parameters:
+        - name: lower
+          in: query
+          required: true
+          schema:
+            type: number
+        - name: upper
+          in: query
+          required: true
+          schema:
+            type: number
+      responses:
+        '200':
+          description: List of schedules
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Schedule'
+
+  /v2/schedules/schedule/{id}:
+    get:
+      tags: [Schedules]
+      summary: "[v2] Get a specific schedule"
+      parameters:
+        - $ref: '#/components/parameters/ScheduleId'
+      responses:
+        '200':
+          description: Schedule found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Schedule'
+    put:
+      tags: [Schedules]
+      summary: "[v2] Replace a schedule"
+      parameters:
+        - $ref: '#/components/parameters/ScheduleId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScheduleInput'
+      responses:
+        '201':
+          description: Schedule updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Schedule'
+    patch:
+      tags: [Schedules]
+      summary: "[v2] Partially update a schedule"
+      parameters:
+        - $ref: '#/components/parameters/ScheduleId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SchedulePatchInput'
+      responses:
+        '201':
+          description: Schedule updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Schedule'
+    delete:
+      tags: [Schedules]
+      summary: "[v2] Delete a schedule"
+      parameters:
+        - $ref: '#/components/parameters/ScheduleId'
+      responses:
+        '201':
+          description: Schedule deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusOk'
+
+  /v2/schedules/schedule:
+    post:
+      tags: [Schedules]
+      summary: "[v2] Create a new schedule"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScheduleInput'
+      responses:
+        '201':
+          description: Schedule created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Schedule'
+
+  /v2/schedules/schedule/{id}/exclude:
+    post:
+      tags: [Schedules]
+      summary: "[v2] Create new schedule excluding from repeating"
+      parameters:
+        - $ref: '#/components/parameters/ScheduleId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [new, exclude_repeatings]
+              properties:
+                new:
+                  $ref: '#/components/schemas/ScheduleInput'
+                exclude_repeatings:
+                  type: array
+                  items:
+                    type: number
+      responses:
+        '201':
+          description: New schedule created with exclusion
+          content:
+            application/json:
+              schema:
+                type: object
+    patch:
+      tags: [Schedules]
+      summary: "[v2] Exclude repeating times from schedule"
+      parameters:
+        - $ref: '#/components/parameters/ScheduleId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [exclude_repeatings]
+              properties:
+                exclude_repeatings:
+                  type: array
+                  items:
+                    type: number
+      responses:
+        '200':
+          description: Repeating times excluded
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /v2/schedules/schedule/{id}/branch_repeating:
+    post:
+      tags: [Schedules]
+      summary: "[v2] Branch a repeating schedule"
+      parameters:
+        - $ref: '#/components/parameters/ScheduleId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [end_time, new]
+              properties:
+                end_time:
+                  type: number
+                new:
+                  $ref: '#/components/schemas/ScheduleInput'
+      responses:
+        '201':
+          description: Schedule branched
+          content:
+            application/json:
+              schema:
+                type: object
+
+  # ──────────────── Event Tags ────────────────
+  /v1/tags/tag:
+    post:
+      tags: [EventTags]
+      summary: Create a new event tag
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                color_hex:
+                  type: string
+      responses:
+        '201':
+          description: Tag created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventTag'
+
+  /v1/tags/tag/{id}:
+    put:
+      tags: [EventTags]
+      summary: Update an event tag
+      parameters:
+        - $ref: '#/components/parameters/TagId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                color_hex:
+                  type: string
+                skipCheckDuplicationName:
+                  type: boolean
+      responses:
+        '201':
+          description: Tag updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventTag'
+    delete:
+      tags: [EventTags]
+      summary: Delete an event tag
+      parameters:
+        - $ref: '#/components/parameters/TagId'
+      responses:
+        '200':
+          description: Tag deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusOk'
+
+  /v1/tags/tag_and_events/{id}:
+    delete:
+      tags: [EventTags]
+      summary: Delete a tag and all associated events
+      description: Deletes the tag and removes all todos and schedules linked to it.
+      parameters:
+        - $ref: '#/components/parameters/TagId'
+      responses:
+        '200':
+          description: Tag and events deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  todos:
+                    type: array
+                    items:
+                      type: string
+                  schedules:
+                    type: array
+                    items:
+                      type: string
+
+  /v1/tags/tag_with_events/{id}:
+    delete:
+      tags: [EventTags]
+      summary: Delete a tag with specified events
+      description: Deletes the tag and only the specified todos/schedules.
+      parameters:
+        - $ref: '#/components/parameters/TagId'
+        - name: todos
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+          description: Todo IDs to delete with the tag
+        - name: schedules
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+          description: Schedule IDs to delete with the tag
+      responses:
+        '200':
+          description: Tag and specified events deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  todos:
+                    type: array
+                    items:
+                      type: string
+                  schedules:
+                    type: array
+                    items:
+                      type: string
+
+  /v1/tags/all:
+    get:
+      tags: [EventTags]
+      summary: Get all tags for the user
+      responses:
+        '200':
+          description: All tags
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EventTag'
+
+  /v1/tags/:
+    get:
+      tags: [EventTags]
+      summary: Get tags by IDs
+      parameters:
+        - name: ids
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Comma-separated tag IDs
+      responses:
+        '200':
+          description: Tags found
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EventTag'
+
+  # v2 Event Tags
+  /v2/tags/tag:
+    post:
+      tags: [EventTags]
+      summary: "[v2] Create a new event tag"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                color_hex:
+                  type: string
+      responses:
+        '201':
+          description: Tag created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventTag'
+
+  /v2/tags/tag/{id}:
+    put:
+      tags: [EventTags]
+      summary: "[v2] Update an event tag"
+      parameters:
+        - $ref: '#/components/parameters/TagId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                color_hex:
+                  type: string
+                skipCheckDuplicationName:
+                  type: boolean
+      responses:
+        '201':
+          description: Tag updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventTag'
+    delete:
+      tags: [EventTags]
+      summary: "[v2] Delete an event tag"
+      parameters:
+        - $ref: '#/components/parameters/TagId'
+      responses:
+        '200':
+          description: Tag deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusOk'
+
+  /v2/tags/tag_and_events/{id}:
+    delete:
+      tags: [EventTags]
+      summary: "[v2] Delete a tag and all associated events"
+      parameters:
+        - $ref: '#/components/parameters/TagId'
+      responses:
+        '200':
+          description: Tag and events deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  todos:
+                    type: array
+                    items:
+                      type: string
+                  schedules:
+                    type: array
+                    items:
+                      type: string
+
+  /v2/tags/tag_with_events/{id}:
+    delete:
+      tags: [EventTags]
+      summary: "[v2] Delete a tag with specified events"
+      parameters:
+        - $ref: '#/components/parameters/TagId'
+        - name: todos
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+        - name: schedules
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+      responses:
+        '200':
+          description: Tag and specified events deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  todos:
+                    type: array
+                    items:
+                      type: string
+                  schedules:
+                    type: array
+                    items:
+                      type: string
+
+  /v2/tags/all:
+    get:
+      tags: [EventTags]
+      summary: "[v2] Get all tags for the user"
+      responses:
+        '200':
+          description: All tags
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EventTag'
+
+  /v2/tags/:
+    get:
+      tags: [EventTags]
+      summary: "[v2] Get tags by IDs"
+      parameters:
+        - name: ids
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Tags found
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EventTag'
+
+  # ──────────────── Event Details ────────────────
+  /v1/event_details/{id}:
+    get:
+      tags: [EventDetails]
+      summary: Get event detail
+      parameters:
+        - $ref: '#/components/parameters/EventId'
+      responses:
+        '200':
+          description: Event detail found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventDetail'
+    put:
+      tags: [EventDetails]
+      summary: Update event detail
+      parameters:
+        - $ref: '#/components/parameters/EventId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventDetailInput'
+      responses:
+        '201':
+          description: Event detail updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventDetail'
+    delete:
+      tags: [EventDetails]
+      summary: Delete event detail
+      parameters:
+        - $ref: '#/components/parameters/EventId'
+      responses:
+        '200':
+          description: Event detail deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusOk'
+
+  /v1/event_details/done/{id}:
+    get:
+      tags: [EventDetails]
+      summary: Get done event detail
+      parameters:
+        - $ref: '#/components/parameters/EventId'
+      responses:
+        '200':
+          description: Done event detail found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventDetail'
+    put:
+      tags: [EventDetails]
+      summary: Update done event detail
+      parameters:
+        - $ref: '#/components/parameters/EventId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventDetailInput'
+      responses:
+        '201':
+          description: Done event detail updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventDetail'
+    delete:
+      tags: [EventDetails]
+      summary: Delete done event detail
+      parameters:
+        - $ref: '#/components/parameters/EventId'
+      responses:
+        '200':
+          description: Done event detail deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusOk'
+
+  # ──────────────── Foremost Event ────────────────
+  /v1/foremost/event:
+    get:
+      tags: [ForemostEvent]
+      summary: Get the foremost (pinned) event
+      responses:
+        '200':
+          description: Foremost event found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForemostEvent'
+    put:
+      tags: [ForemostEvent]
+      summary: Set the foremost event
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [event_id, is_todo]
+              properties:
+                event_id:
+                  type: string
+                is_todo:
+                  type: boolean
+      responses:
+        '201':
+          description: Foremost event set
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForemostEvent'
+    delete:
+      tags: [ForemostEvent]
+      summary: Remove the foremost event
+      responses:
+        '200':
+          description: Foremost event removed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusOk'
+
+  # ──────────────── Migration ────────────────
+  /v1/migration/event_tags:
+    post:
+      tags: [Migration]
+      summary: Migrate event tags in bulk
+      description: Bulk import event tags. Body is an object with tag IDs as keys and tag data as values.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  color_hex:
+                    type: string
+      responses:
+        '201':
+          description: Tags migrated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusOk'
+
+  /v1/migration/todos:
+    post:
+      tags: [Migration]
+      summary: Migrate todos in bulk
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties:
+                type: object
+      responses:
+        '201':
+          description: Todos migrated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusOk'
+
+  /v1/migration/schedules:
+    post:
+      tags: [Migration]
+      summary: Migrate schedules in bulk
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties:
+                type: object
+      responses:
+        '201':
+          description: Schedules migrated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusOk'
+
+  /v1/migration/event_details:
+    post:
+      tags: [Migration]
+      summary: Migrate event details in bulk
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties:
+                $ref: '#/components/schemas/EventDetailInput'
+      responses:
+        '201':
+          description: Event details migrated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusOk'
+
+  /v1/migration/todos/done:
+    post:
+      tags: [Migration]
+      summary: Migrate done todos in bulk
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties:
+                type: object
+      responses:
+        '201':
+          description: Done todos migrated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusOk'
+
+  /v1/migration/todos/done/details:
+    post:
+      tags: [Migration]
+      summary: Migrate done todo details in bulk
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties:
+                $ref: '#/components/schemas/EventDetailInput'
+      responses:
+        '201':
+          description: Done todo details migrated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusOk'
+
+  # ──────────────── App Settings ────────────────
+  /v1/setting/event/tag/default/color:
+    get:
+      tags: [AppSettings]
+      summary: Get default event tag colors
+      responses:
+        '200':
+          description: Default colors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DefaultTagColors'
+    patch:
+      tags: [AppSettings]
+      summary: Update default event tag colors
+      description: At least one of holiday or default must be provided.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DefaultTagColorsInput'
+      responses:
+        '201':
+          description: Colors updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DefaultTagColors'
+
+  # ──────────────── Holiday ────────────────
+  /v1/holiday/:
+    get:
+      tags: [Holiday]
+      summary: Get public holidays
+      description: Fetches public holidays from Google Calendar API. No authentication required.
+      security: []
+      parameters:
+        - name: year
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: Year (e.g. 2024)
+        - name: locale
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Locale code (e.g. ko)
+        - name: code
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Country code (e.g. KR)
+      responses:
+        '200':
+          description: Holiday data
+          content:
+            application/json:
+              schema:
+                type: object
+
+  # ──────────────── Data Sync ────────────────
+  /v1/sync/check:
+    get:
+      tags: [DataSync]
+      summary: Check if sync is needed
+      parameters:
+        - name: dataType
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [EventTag, Todo, Schedule]
+        - name: timestamp
+          in: query
+          schema:
+            type: number
+          description: Last known sync timestamp (milliseconds)
+      responses:
+        '200':
+          description: Sync check result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SyncCheckResponse'
+
+  /v1/sync/start:
+    get:
+      tags: [DataSync]
+      summary: Start sync and get first page
+      parameters:
+        - name: dataType
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [EventTag, Todo, Schedule]
+        - name: timestamp
+          in: query
+          schema:
+            type: number
+          description: Last known sync timestamp
+        - name: size
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: Page size
+      responses:
+        '200':
+          description: First page of sync data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SyncResponse'
+
+  /v1/sync/continue:
+    get:
+      tags: [DataSync]
+      summary: Continue sync with next page
+      parameters:
+        - name: dataType
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [EventTag, Todo, Schedule]
+        - name: cursor
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Pagination cursor from previous response
+        - name: size
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: Page size
+      responses:
+        '200':
+          description: Next page of sync data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SyncResponse'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Firebase ID Token
+      description: Firebase Authentication ID token
+
+  parameters:
+    TodoId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Todo ID
+    DoneTodoId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Done todo ID
+    ScheduleId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Schedule ID
+    TagId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Event tag ID
+    EventId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Event ID
+
+  schemas:
+    # ── Common ──
+    StatusOk:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+
+    Error:
+      type: object
+      properties:
+        status:
+          type: integer
+        code:
+          type: string
+        message:
+          type: string
+
+    # ── Value Objects ──
+    EventTime:
+      oneOf:
+        - $ref: '#/components/schemas/AtTime'
+        - $ref: '#/components/schemas/PeriodTime'
+        - $ref: '#/components/schemas/AllDayTime'
+      discriminator:
+        propertyName: time_type
+        mapping:
+          at: '#/components/schemas/AtTime'
+          period: '#/components/schemas/PeriodTime'
+          allday: '#/components/schemas/AllDayTime'
+
+    AtTime:
+      type: object
+      required: [time_type, timestamp]
+      properties:
+        time_type:
+          type: string
+          enum: [at]
+        timestamp:
+          type: number
+          description: Unix timestamp
+
+    PeriodTime:
+      type: object
+      required: [time_type, period_start, period_end]
+      properties:
+        time_type:
+          type: string
+          enum: [period]
+        period_start:
+          type: number
+          description: Period start timestamp
+        period_end:
+          type: number
+          description: Period end timestamp
+
+    AllDayTime:
+      type: object
+      required: [time_type, period_start, period_end, seconds_from_gmt]
+      properties:
+        time_type:
+          type: string
+          enum: [allday]
+        period_start:
+          type: number
+        period_end:
+          type: number
+        seconds_from_gmt:
+          type: number
+          description: Timezone offset in seconds from GMT
+
+    Repeating:
+      type: object
+      required: [start, option]
+      properties:
+        start:
+          type: number
+          description: Repeating start timestamp
+        option:
+          type: string
+          description: Recurrence pattern
+        end:
+          type: number
+          nullable: true
+          description: Repeating end timestamp
+        end_count:
+          type: number
+          nullable: true
+          description: Number of occurrences
+
+    # ── Domain Models ──
+    Todo:
+      type: object
+      required: [uuid, userId, name, is_current, create_timestamp]
+      properties:
+        uuid:
+          type: string
+        userId:
+          type: string
+        name:
+          type: string
+        is_current:
+          type: boolean
+        create_timestamp:
+          type: number
+        event_tag_id:
+          type: string
+          nullable: true
+        event_time:
+          $ref: '#/components/schemas/EventTime'
+        repeating:
+          $ref: '#/components/schemas/Repeating'
+        notification_options:
+          type: array
+          items:
+            type: object
+          nullable: true
+        repeating_turn:
+          type: string
+          nullable: true
+
+    TodoInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        event_tag_id:
+          type: string
+        event_time:
+          $ref: '#/components/schemas/EventTime'
+        repeating:
+          $ref: '#/components/schemas/Repeating'
+        notification_options:
+          type: array
+          items:
+            type: object
+
+    TodoPatchInput:
+      type: object
+      properties:
+        name:
+          type: string
+        event_tag_id:
+          type: string
+        event_time:
+          $ref: '#/components/schemas/EventTime'
+        repeating:
+          $ref: '#/components/schemas/Repeating'
+        notification_options:
+          type: array
+          items:
+            type: object
+
+    Schedule:
+      type: object
+      required: [uuid, userId, name]
+      properties:
+        uuid:
+          type: string
+        userId:
+          type: string
+        name:
+          type: string
+        event_tag_id:
+          type: string
+          nullable: true
+        event_time:
+          $ref: '#/components/schemas/EventTime'
+        repeating:
+          $ref: '#/components/schemas/Repeating'
+        notification_options:
+          type: array
+          items:
+            type: object
+          nullable: true
+        show_turns:
+          type: object
+          nullable: true
+        exclude_repeatings:
+          type: array
+          items:
+            type: number
+          nullable: true
+
+    ScheduleInput:
+      type: object
+      required: [name, event_time]
+      properties:
+        name:
+          type: string
+        event_time:
+          $ref: '#/components/schemas/EventTime'
+        event_tag_id:
+          type: string
+        repeating:
+          $ref: '#/components/schemas/Repeating'
+        notification_options:
+          type: array
+          items:
+            type: object
+        show_turns:
+          type: object
+
+    SchedulePatchInput:
+      type: object
+      properties:
+        name:
+          type: string
+        event_time:
+          $ref: '#/components/schemas/EventTime'
+        event_tag_id:
+          type: string
+        repeating:
+          $ref: '#/components/schemas/Repeating'
+        notification_options:
+          type: array
+          items:
+            type: object
+        show_turns:
+          type: object
+
+    DoneTodo:
+      type: object
+      required: [uuid, userId, name]
+      properties:
+        uuid:
+          type: string
+        userId:
+          type: string
+        name:
+          type: string
+        origin_event_id:
+          type: string
+          nullable: true
+        done_at:
+          type: number
+          nullable: true
+        event_time:
+          $ref: '#/components/schemas/EventTime'
+        event_tag_id:
+          type: string
+          nullable: true
+        notification_options:
+          type: array
+          items:
+            type: object
+          nullable: true
+
+    DoneTodoPatchInput:
+      type: object
+      properties:
+        name:
+          type: string
+        event_time:
+          $ref: '#/components/schemas/EventTime'
+        event_tag_id:
+          type: string
+
+    EventTag:
+      type: object
+      required: [uuid, userId, name]
+      properties:
+        uuid:
+          type: string
+        userId:
+          type: string
+        name:
+          type: string
+        color_hex:
+          type: string
+          nullable: true
+
+    ForemostEvent:
+      type: object
+      required: [event_id, is_todo]
+      properties:
+        event_id:
+          type: string
+        is_todo:
+          type: boolean
+        event:
+          oneOf:
+            - $ref: '#/components/schemas/Todo'
+            - $ref: '#/components/schemas/Schedule'
+
+    EventDetail:
+      type: object
+      properties:
+        place:
+          type: string
+          nullable: true
+        url:
+          type: string
+          nullable: true
+        memo:
+          type: string
+          nullable: true
+
+    EventDetailInput:
+      type: object
+      properties:
+        place:
+          type: string
+        url:
+          type: string
+        memo:
+          type: string
+
+    Account:
+      type: object
+      required: [uid]
+      properties:
+        uid:
+          type: string
+        email:
+          type: string
+          nullable: true
+        method:
+          type: string
+          nullable: true
+        first_signed_in:
+          type: string
+          nullable: true
+        last_sign_in:
+          type: string
+          nullable: true
+
+    # ── Settings ──
+    DefaultTagColors:
+      type: object
+      properties:
+        holiday:
+          type: string
+          description: Default color hex for holiday tags
+        default:
+          type: string
+          description: Default color hex for regular tags
+
+    DefaultTagColorsInput:
+      type: object
+      properties:
+        holiday:
+          type: string
+        default:
+          type: string
+
+    # ── Sync ──
+    SyncCheckResponse:
+      type: object
+      properties:
+        result:
+          type: string
+          enum: [noNeedToSync, needToSync, migrationNeeds]
+        start:
+          type: number
+          nullable: true
+
+    SyncResponse:
+      type: object
+      properties:
+        created:
+          type: array
+          items:
+            type: object
+          nullable: true
+        updated:
+          type: array
+          items:
+            type: object
+          nullable: true
+        deleted:
+          type: array
+          items:
+            type: object
+          nullable: true
+        newSyncTime:
+          type: number
+          nullable: true
+        nextPageCursor:
+          type: string
+          nullable: true
+
+  responses:
+    BadRequest:
+      description: Invalid parameter
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            status: 400
+            code: InvalidParameter
+            message: "required parameter is missing"
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            status: 404
+            code: NotFound
+            message: "resource not found"
+    Unauthorized:
+      description: Invalid or missing auth token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
