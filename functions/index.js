@@ -10,12 +10,15 @@ const authValidator = require("./middlewares/authMiddleware.js");
 // The firebase Admin SDK to access Firestore
 const { initializeApp, applicationDefault, cert} = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
-const serviceAccount = require('./secrets/todocalendar-serviceAccountKey.json');
-require('dotenv').config({ path: './secrets/.env' })
 
-initializeApp({
-    credential: cert(serviceAccount)
-});
+const isEmulator = process.env.FUNCTIONS_EMULATOR === 'true';
+if (isEmulator) {
+    initializeApp();
+} else {
+    const serviceAccount = require('./secrets/todocalendar-serviceAccountKey.json');
+    require('dotenv').config({ path: './secrets/.env' });
+    initializeApp({ credential: cert(serviceAccount) });
+}
 getFirestore().settings({ignoreUndefinedProperties: true});
 
 // router instance
