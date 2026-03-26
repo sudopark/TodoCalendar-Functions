@@ -17,7 +17,7 @@ class StubAccountRepository {
         } else if(this.noAccountInfoExists) {
             return null;
         } else {
-            return {uid: uid, last_sign_in: auth_time};
+            return AccountModel.fromData(uid, { last_sign_in: auth_time });
         }
     }
 
@@ -25,7 +25,7 @@ class StubAccountRepository {
         if(this.shouldFailSaveAccountInfo) {
             throw { message: 'failed' };
         } else {
-            return { uid: uid, ...payload };
+            return AccountModel.fromData(uid, payload);
         }
     }
 
@@ -45,6 +45,7 @@ const TodoModel = require('../../models/Todo');
 const ScheduleModel = require('../../models/Schedule');
 const EventTagModel = require('../../models/EventTag');
 const DoneTodoModel = require('../../models/DoneTodo');
+const AccountModel = require('../../models/Account');
 
 class StubTodoRepository {
 
