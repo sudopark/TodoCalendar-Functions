@@ -43,6 +43,7 @@ class StubAccountRepository {
 
 const TodoModel = require('../../models/Todo');
 const ScheduleModel = require('../../models/Schedule');
+const EventTagModel = require('../../models/EventTag');
 
 class StubTodoRepository {
 
@@ -450,9 +451,9 @@ class StubEventTagRepository {
             throw { message: 'failed' }
         }
 
-        const newTag = {
-            uuid: 'new', name: payload.name, color_hex: payload.color_hex, userId: payload.userId
-        }
+        const newTag = EventTagModel.fromData('new', {
+            name: payload.name, color_hex: payload.color_hex, userId: payload.userId
+        })
         this.eventTagMap.set(newTag.uuid, newTag)
         return newTag
     }
@@ -466,10 +467,11 @@ class StubEventTagRepository {
         if(!tag) {
             throw { message: 'not exists' }
         }
-        tag.name = payload.name
-        tag.color_hex = payload.color_hex
-        this.eventTagMap[tag.uuid] = tag
-        return tag
+        const updated = EventTagModel.fromData(tagId, {
+            name: payload.name, color_hex: payload.color_hex, userId: tag.userId
+        })
+        this.eventTagMap.set(tagId, updated)
+        return updated
     }
 
     async removeTag(tagId) {
@@ -511,7 +513,7 @@ class StubEventTagRepository {
 
         if(this.isFindTagsAlwaysReplayIdsMocking) {
             const tags = ids.map(id => {
-                return { uuid: id, name: `name:${id}`, color_hex: 'some', userId: 'some'}
+                return EventTagModel.fromData(id, { name: `name:${id}`, color_hex: 'some', userId: 'some' })
             })
             return tags
         }
