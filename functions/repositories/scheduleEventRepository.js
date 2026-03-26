@@ -10,8 +10,12 @@ class ScheduleEventRepository {
     async findEvent(eventId) {
         try {
             const snapshot = await collectionRef.doc(eventId).get();
+            if (!snapshot.exists) {
+                throw { status: 404, code: 'NotFound', message: 'Schedule not found' };
+            }
             return Schedule.fromData(snapshot.id, snapshot.data())
         } catch (error) {
+            if (error?.status) throw error;
             throw { status: 500, message: error?.message || error};
         }
     }

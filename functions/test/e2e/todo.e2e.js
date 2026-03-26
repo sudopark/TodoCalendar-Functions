@@ -81,7 +81,8 @@ describe('Todo API', function () {
                     origin: { name: 'Patched E2E Todo' }
                 });
                 assert.strictEqual(res.status, 201);
-                assert.ok(res.data.uuid);
+                assert.ok(res.data.done);
+                assert.ok(res.data.done.uuid);
             });
         });
 

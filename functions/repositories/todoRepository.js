@@ -55,10 +55,13 @@ class TodoRepository {
     async findTodo(id) {
         try {
             const snapshot = await collectionRef.doc(id).get();
-
+            if (!snapshot.exists) {
+                throw { status: 404, code: 'NotFound', message: 'Todo not found' };
+            }
             return Todo.fromData(snapshot.id, snapshot.data());
-            
+
         } catch (error) {
+            if (error?.status) throw error;
             throw { status: 500, message: error?.message || error};
         }
     }
