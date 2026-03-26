@@ -24,6 +24,11 @@ npm run deploy
 
 # Run changelog migration script
 npm run migrate-changelog
+
+# Emulator E2E Testing
+npm run emulator          # Start emulators for manual testing (Auth:9099, Functions:5001, Firestore:8080)
+npm run test:e2e          # Run E2E tests (requires emulator already running)
+npm run test:e2e:run      # One-command: start emulators → run E2E tests → stop emulators
 ```
 
 ## Architecture Overview
