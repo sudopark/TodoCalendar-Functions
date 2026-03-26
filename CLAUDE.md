@@ -11,7 +11,7 @@ All commands run from the `functions/` directory:
 npm test
 
 # Run a single test file
-npx mocha test/todoService.test.js
+npx mocha test/services/todoService.test.js
 
 # Run tests matching a pattern
 npx mocha --grep "some test description"
@@ -39,7 +39,7 @@ routes/ → controllers/ → services/ → repositories/
 - **Routes** (`routes/`): Express routers that also act as **composition roots** — they instantiate and wire together all dependencies (repositories, services, controllers) via constructor injection. There is no DI container.
 - **Controllers** (`controllers/`): Handle HTTP request/response, validate required params, and wrap errors in `Errors.Application`. Use `express-async-errors` so async throws are caught automatically.
 - **Services** (`services/`): Business logic. Services receive their dependencies injected; never instantiate repositories themselves.
-- **Repositories** (`repositories/`): Firestore read/write. Firebase Admin SDK is initialized once in `index.js`.
+- **Repositories** (`repositories/`): Firestore read/write. Return domain model instances (e.g., `Todo.fromData(snapshot.id, snapshot.data())`). Firebase Admin SDK is initialized once in `index.js`.
 
 ### API Versioning
 
@@ -58,6 +58,21 @@ Routes are registered under `/v1/` and `/v2/` prefixes. A `setVersion` middlewar
 
 ### Models
 
+Domain model classes live in `models/`. Each has `toJSON()` for serialization (Express auto-calls via `JSON.stringify`) and `fromData(id, data)` for construction from Firestore snapshots. Repositories return model instances, not plain objects.
+
+**Domain models:**
+- `models/Todo.js`: Todo with nested `EventTime`, `Repeating` (instanceof check in constructor)
+- `models/Schedule.js`: Schedule with nested `EventTime`, `Repeating`
+- `models/EventTag.js`: Event tag (uuid, name, color_hex, userId)
+- `models/DoneTodo.js`: Completed todo with nested `EventTime`
+- `models/ForemostEvent.js`: Composite response (event_id, is_todo, event). Created in service, not repository.
+- `models/Account.js`: User account info (uid, email, method, sign-in timestamps)
+
+**Shared value objects:**
+- `models/EventTime.js`: Time types — `at`, `period`, `allday`. Used by Todo, Schedule, DoneTodo.
+- `models/Repeating.js`: Repeating config — `start`, `option` (opaque), `end`, `end_count`. Used by Todo, Schedule.
+
+**Infrastructure models:**
 - `models/DataTypes.js`: String constants `Todo`, `Schedule`, `EventTag`
 - `models/DataChangeLog.js`: `DataChangeCase` enum (CREATED/UPDATED/DELETED) and `DataChangeLog` class
 - `models/Errors.js`: `BadRequest` (400), `NotFound` (404), `Application` (wraps unknown errors at 500)
@@ -69,11 +84,11 @@ Firestore `in` queries have a 30-item limit. Whenever loading events by IDs, ser
 
 ### Testing
 
-Tests use **Mocha + Chai assert**. Test doubles live in `test/doubles/`:
-- `stubRepositories.js`: Stub implementations for all repositories with `shouldFail*` flags to trigger failure paths
+Tests use **Mocha + assert** (Node.js built-in). Test doubles live in `test/doubles/`:
+- `stubRepositories.js`: Stub implementations for all repositories with `shouldFail*` flags to trigger failure paths. Stubs return model instances (e.g., `TodoModel.fromData()`).
 - `spyChangeLogRecordService.js`: Spy that records logged data types and change logs for assertion
 
-Tests are service-layer unit tests only — no HTTP/controller tests. Each test file tests one service, passing in stubs directly via constructor injection.
+Tests are organized in `test/services/`, `test/controllers/`, and `test/models/`. Service tests pass stubs via constructor injection. Controller tests use `stubServices.js` (plain objects, independent of repository model changes).
 
 ### Secrets
 
