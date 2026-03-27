@@ -1,5 +1,6 @@
 
 const { getFirestore, FieldPath } = require('firebase-admin/firestore');
+const EventTag = require('../models/EventTag');
 const db = getFirestore();
 const collectionRef = db.collection('event_tags');
 
@@ -9,7 +10,7 @@ class EventTagRepository {
         try {
             const ref = await collectionRef.add(payload);
             const snapShot = await ref.get();
-            return { uuid: snapShot.id, ...snapShot.data() }
+            return EventTag.fromData(snapShot.id, snapShot.data())
         } catch (error) {
             throw { status: 500, message: error?.message || error};
         }
@@ -20,7 +21,7 @@ class EventTagRepository {
             const ref = collectionRef.doc(tagId)
             await ref.set(payload, { merge: false })
             const snapshot = await ref.get();
-            return { uuid: snapshot.id, ...snapshot.data() };
+            return EventTag.fromData(snapshot.id, snapshot.data());
         } catch (error) {
             throw { status: 500, message: error?.message || error};
         }
@@ -41,7 +42,7 @@ class EventTagRepository {
                 .where('userId', '==', userId)
             const snapshot = await query.get();
             const tags = snapshot.docs.map((doc => {
-                return {uuid: doc.id, ...doc.data()}
+                return EventTag.fromData(doc.id, doc.data())
             }))
             return tags
         } catch (error) {
@@ -54,7 +55,7 @@ class EventTagRepository {
             const query = collectionRef.where('userId', '==', userId)
             const snapshot = await query.get();
             const tags = snapshot.docs.map((doc => {
-                return {uuid: doc.id, ...doc.data()}
+                return EventTag.fromData(doc.id, doc.data())
             }))
             return tags
         } catch (error) {
@@ -67,7 +68,7 @@ class EventTagRepository {
             const query = collectionRef.where(FieldPath.documentId(), 'in', ids)
             const snapshot = await query.get();
             const tags = snapshot.docs.map((doc => {
-                return {uuid: doc.id, ...doc.data()}
+                return EventTag.fromData(doc.id, doc.data())
             }))
             return tags
         } catch (error) {

@@ -1,6 +1,8 @@
 
 
 const { getFirestore, FieldPath } = require('firebase-admin/firestore');
+const Todo = require('../models/Todo');
+const Errors = require('../models/Errors');
 
 const db = getFirestore();
 const collectionRef = db.collection('todos')
@@ -15,7 +17,7 @@ class TodoRepository {
         try {
             const ref = await collectionRef.add(payload);
             const snapshot = await ref.get()
-            return {uuid: snapshot.id, ...snapshot.data()};
+            return Todo.fromData(snapshot.id, snapshot.data());
 
         } catch (error) {
             throw { status: 500, message: error?.message || error};
@@ -30,7 +32,7 @@ class TodoRepository {
             const ref = collectionRef.doc(id)
             await ref.set(payload, {merge: false})
             const snapshot = await ref.get();
-            return {uuid: snapshot.id, ...snapshot.data() }
+            return Todo.fromData(snapshot.id, snapshot.data())
         } catch (error) {
             throw { status: 500, message: error?.message || error};
         }
@@ -44,7 +46,7 @@ class TodoRepository {
             const ref = collectionRef.doc(id)
             await ref.set(payload, { merge: true })
             const snapshot = await ref.get()
-            return { uuid: snapshot.id, ...snapshot.data() }
+            return Todo.fromData(snapshot.id, snapshot.data())
 
         } catch (error) {
             throw { status: 500, message: error?.message || error};
@@ -54,10 +56,13 @@ class TodoRepository {
     async findTodo(id) {
         try {
             const snapshot = await collectionRef.doc(id).get();
-            
-            return { uuid: snapshot.id, ...snapshot.data() };
-            
+            if (!snapshot.exists) {
+                throw new Errors.NotFound('Todo not found');
+            }
+            return Todo.fromData(snapshot.id, snapshot.data());
+
         } catch (error) {
+            if (error instanceof Errors.Base) throw error;
             throw { status: 500, message: error?.message || error};
         }
     }
@@ -69,7 +74,7 @@ class TodoRepository {
                 .where('is_current', '==', true)
             const snapShot = await query.get();
             const todos = snapShot.docs.map(doc => {
-                return {uuid: doc.id, ...doc.data()}
+                return Todo.fromData(doc.id, doc.data())
             });
             return todos
         } catch (error) {
@@ -82,7 +87,7 @@ class TodoRepository {
             .where('userId', '==', userId)
         const snapShot = await query.get();
         const todos = snapShot.docs.map(doc => {
-            return { uuid: doc.id, ...doc.data() }
+            return Todo.fromData(doc.id, doc.data())
         });
         return todos
     }
@@ -96,7 +101,7 @@ class TodoRepository {
                 .where(FieldPath.documentId(), 'in', eventIds)
             const snapshot = await query.get();
             const todos = snapshot.docs.map((doc => {
-                return {uuid: doc.id, ...doc.data()}
+                return Todo.fromData(doc.id, doc.data())
             }));
             return todos
         } catch (error) {
@@ -134,7 +139,7 @@ class TodoRepository {
         const ref = collectionRef.doc(id)
         await ref.set(originPayload, {merge: false})
         const snapshot = await ref.get()
-        return { uuid: snapshot.id, ...snapshot.data() };
+        return Todo.fromData(snapshot.id, snapshot.data());
     }
 }
 

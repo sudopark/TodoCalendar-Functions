@@ -1,5 +1,7 @@
 
 const { getFirestore, FieldPath } = require('firebase-admin/firestore');
+const Schedule = require('../models/Schedule');
+const Errors = require('../models/Errors');
 const db = getFirestore();
 const collectionRef = db.collection('schedules');
 
@@ -9,8 +11,12 @@ class ScheduleEventRepository {
     async findEvent(eventId) {
         try {
             const snapshot = await collectionRef.doc(eventId).get();
-            return { uuid: snapshot.id, ...snapshot.data() }
+            if (!snapshot.exists) {
+                throw new Errors.NotFound('Schedule not found');
+            }
+            return Schedule.fromData(snapshot.id, snapshot.data())
         } catch (error) {
+            if (error instanceof Errors.Base) throw error;
             throw { status: 500, message: error?.message || error};
         }
     }
@@ -24,7 +30,7 @@ class ScheduleEventRepository {
                 .where(FieldPath.documentId(), 'in', eventIds)
             const snapshot = await query.get();
             const events = snapshot.docs.map((doc => {
-                return { uuid: doc.id, ...doc.data() }
+                return Schedule.fromData(doc.id, doc.data())
             }))
             return events
         } catch (error) {
@@ -37,7 +43,7 @@ class ScheduleEventRepository {
             .where('userId', '==', userId)
         const snapShot = await query.get();
         const events = snapShot.docs.map(doc => {
-            return { uuid: doc.id, ...doc.data() }
+            return Schedule.fromData(doc.id, doc.data())
         });
         return events
     }
@@ -47,7 +53,7 @@ class ScheduleEventRepository {
         try {
             const ref = await collectionRef.add(payload);
             const snapshot = await ref.get();
-            return { uuid: snapshot.id, ...snapshot.data() };
+            return Schedule.fromData(snapshot.id, snapshot.data());
         } catch (error) {
             throw { status: 500, message: error?.message || error};
         }
@@ -58,7 +64,7 @@ class ScheduleEventRepository {
             const ref = collectionRef.doc(eventId);
             await ref.set(payload, { merge: false })
             const snapshot = await ref.get();
-            return { uuid: snapshot.id, ...snapshot.data() };
+            return Schedule.fromData(snapshot.id, snapshot.data());
         } catch (error) {
             throw { status: 500, message: error?.message || error};
         }
@@ -69,7 +75,7 @@ class ScheduleEventRepository {
             const ref = collectionRef.doc(eventId);
             await ref.set(payload, { merge: true })
             const snapshot = await ref.get();
-            return { uuid: snapshot.id, ...snapshot.data() };
+            return Schedule.fromData(snapshot.id, snapshot.data());
         } catch (error) {
             throw { status: 500, message: error?.message || error};
         }

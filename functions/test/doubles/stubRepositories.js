@@ -17,7 +17,7 @@ class StubAccountRepository {
         } else if(this.noAccountInfoExists) {
             return null;
         } else {
-            return {uid: uid, last_sign_in: auth_time};
+            return AccountModel.fromData(uid, { last_sign_in: auth_time });
         }
     }
 
@@ -25,7 +25,7 @@ class StubAccountRepository {
         if(this.shouldFailSaveAccountInfo) {
             throw { message: 'failed' };
         } else {
-            return { uid: uid, ...payload };
+            return AccountModel.fromData(uid, payload);
         }
     }
 
@@ -40,6 +40,12 @@ class StubAccountRepository {
 
 
 // MARK: - Todo
+
+const TodoModel = require('../../models/Todo');
+const ScheduleModel = require('../../models/Schedule');
+const EventTagModel = require('../../models/EventTag');
+const DoneTodoModel = require('../../models/DoneTodo');
+const AccountModel = require('../../models/Account');
 
 class StubTodoRepository {
 
@@ -62,7 +68,7 @@ class StubTodoRepository {
             if(!params.event_time) {
                 params.is_current = true
             }
-            return {uuid: "new", ...params};
+            return TodoModel.fromData("new", params);
         }
     }
 
@@ -74,7 +80,7 @@ class StubTodoRepository {
             if(!params.event_time) {
                 params.is_current = true
             }
-            return {uuid: id, ...params}
+            return TodoModel.fromData(id, params)
         }
     }
 
@@ -86,13 +92,13 @@ class StubTodoRepository {
             if(params.event_time) {
                 params.is_current = false
             }
-            return {uuid: id, ...params}
+            return TodoModel.fromData(id, params)
         }
     }
 
     async findTodo(id) {
         if(id == 'origin') {
-            return { uuid: id, name: 'old_name', event_tag_id: 'old tag' }
+            return TodoModel.fromData(id, { name: 'old_name', event_tag_id: 'old tag' })
         } else {
             throw { message: 'not exists' }
         }
@@ -100,15 +106,15 @@ class StubTodoRepository {
 
     async findCurrentTodos(userId) {
         const todos = [
-            { uuid: 'current1', userId: userId, is_current: true },
-            { uuid: 'current2', userId: userId, is_current: true }
+            TodoModel.fromData('current1', { userId: userId, is_current: true }),
+            TodoModel.fromData('current2', { userId: userId, is_current: true })
         ]
         return todos
-    } 
+    }
 
     async findTodos(eventIds) {
         const todos = eventIds.map((id) => {
-            return { uuid: id, userId: 'some' }
+            return TodoModel.fromData(id, { userId: 'some' })
         })
         return todos
     }
@@ -136,14 +142,14 @@ class StubTodoRepository {
         if(this.shouldFailRestore) {
             throw { message: 'not exists' }
         } else {
-            return { uuid: id, ...originPayload }
+            return TodoModel.fromData(id, originPayload)
         }
     }
 
     async getAllTodos(userId) {
         const range = Array.from({ length: 10}, (_, i) => i);
         const todos = range.map(i => {
-            return { uuid: `todo:${i}`, userId: userId }
+            return TodoModel.fromData(`todo:${i}`, { userId: userId })
         })
         return todos
     }
@@ -172,7 +178,7 @@ class StubScheduleEventRepository {
 
     async findEvents(eventIds) {
         const events = eventIds.map((id) => {
-            return { uuid: id, userId: 'some' }
+            return ScheduleModel.fromData(id, { userId: 'some' })
         })
         return events
     }
@@ -182,8 +188,8 @@ class StubScheduleEventRepository {
             throw { message: 'failed' }
         }
 
-        let newEvent = JSON.parse(JSON.stringify(payload))
-        newEvent['uuid'] = 'some'
+        let data = JSON.parse(JSON.stringify(payload))
+        const newEvent = ScheduleModel.fromData('some', data);
         this.eventMap.set(newEvent.uuid, newEvent);
         return newEvent
     }
@@ -192,8 +198,8 @@ class StubScheduleEventRepository {
         if(this.shouldFailPut) {
             throw { message: 'failed' }
         }
-        let updated = JSON.parse(JSON.stringify(payload))
-        updated.uuid = eventId
+        let data = JSON.parse(JSON.stringify(payload))
+        const updated = ScheduleModel.fromData(eventId, data)
         this.eventMap.set(eventId, updated)
         return updated
     }
@@ -206,8 +212,10 @@ class StubScheduleEventRepository {
         if(!oldValue) {
             throw { message: 'not exists' }
         }
-        const newValue = JSON.parse(JSON.stringify(payload));
-        const updated = { ...oldValue, ...newValue }
+        const oldData = JSON.parse(JSON.stringify(oldValue));
+        const newData = JSON.parse(JSON.stringify(payload));
+        const merged = { ...oldData, ...newData }
+        const updated = ScheduleModel.fromData(eventId, merged)
         this.eventMap.set(eventId, updated)
         return updated
     }
@@ -233,7 +241,7 @@ class StubScheduleEventRepository {
     async getAllEvents(userId) {
         const range = Array.from({ length: 10}, (_, i) => i);
         const events = range.map(i => {
-            return { uuid: `sc:${i}`, userId: userId }
+            return ScheduleModel.fromData(`sc:${i}`, { userId: userId })
         })
         return events
     }
@@ -334,13 +342,12 @@ class StubDoneTodoEventRepository {
     constructor()  {
         this.shouldFailSave = false
         this.totalDones = [...Array(10).keys()].map(i => {
-            return {
-                uuid: `id:${i}`, 
-                done_at: i, 
-                name: 'done', 
-                event_time: { time_type: 'at', timestamp: i }, 
+            return DoneTodoModel.fromData(`id:${i}`, {
+                done_at: i,
+                name: 'done',
+                event_time: { time_type: 'at', timestamp: i },
                 userId: 'owner'
-            }
+            })
         })
         this.shouldFailLoad = false
         this.shouldFailRemove = false
@@ -352,7 +359,7 @@ class StubDoneTodoEventRepository {
         if(this.shouldFailSave) {
             throw { message: 'failed' }
         } else {
-            return {uuid: 'new-done', origin_event_id: originId, ...origin, userId: userId }
+            return DoneTodoModel.fromData('new-done', { origin_event_id: originId, ...origin, userId: userId })
         }
     }
 
@@ -360,9 +367,7 @@ class StubDoneTodoEventRepository {
         if(this.shouldFailSave) {
             throw { message: 'failed' }
         } else {
-            return {
-                uuid: doneId, origin_event_id: "origin", userId: userId, ...payload
-            }
+            return DoneTodoModel.fromData(doneId, { origin_event_id: "origin", userId: userId, ...payload })
         }
     }
 
@@ -386,12 +391,11 @@ class StubDoneTodoEventRepository {
         if(this.shouldFailLoad) {
             throw { message: 'failed' }
         }
-        return {
-            uuid: eventid, 
-            done_at: 4, 
-            name: 'done', 
+        return DoneTodoModel.fromData(eventid, {
+            done_at: 4,
+            name: 'done',
             event_time: { time_type: 'at', timestamp: 4 }
-        }
+        })
     }
 
     async removeDoneTodos(userId, pastThan) {
@@ -445,9 +449,9 @@ class StubEventTagRepository {
             throw { message: 'failed' }
         }
 
-        const newTag = {
-            uuid: 'new', name: payload.name, color_hex: payload.color_hex, userId: payload.userId
-        }
+        const newTag = EventTagModel.fromData('new', {
+            name: payload.name, color_hex: payload.color_hex, userId: payload.userId
+        })
         this.eventTagMap.set(newTag.uuid, newTag)
         return newTag
     }
@@ -461,10 +465,11 @@ class StubEventTagRepository {
         if(!tag) {
             throw { message: 'not exists' }
         }
-        tag.name = payload.name
-        tag.color_hex = payload.color_hex
-        this.eventTagMap[tag.uuid] = tag
-        return tag
+        const updated = EventTagModel.fromData(tagId, {
+            name: payload.name, color_hex: payload.color_hex, userId: tag.userId
+        })
+        this.eventTagMap.set(tagId, updated)
+        return updated
     }
 
     async removeTag(tagId) {
@@ -506,7 +511,7 @@ class StubEventTagRepository {
 
         if(this.isFindTagsAlwaysReplayIdsMocking) {
             const tags = ids.map(id => {
-                return { uuid: id, name: `name:${id}`, color_hex: 'some', userId: 'some'}
+                return EventTagModel.fromData(id, { name: `name:${id}`, color_hex: 'some', userId: 'some' })
             })
             return tags
         }
