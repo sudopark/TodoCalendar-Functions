@@ -1,5 +1,5 @@
 import { apiClient } from './apiClient'
-import type { Todo, DoneTodo } from '../models'
+import type { Todo, DoneTodo, EventTime, Repeating } from '../models'
 
 export const todoApi = {
   getTodos(lower: number, upper: number): Promise<Todo[]> {
@@ -10,7 +10,7 @@ export const todoApi = {
     return apiClient.get(`/v1/todos/todo/${id}`)
   },
 
-  createTodo(body: { name: string; event_tag_id?: string; event_time?: unknown; repeating?: unknown; notification_options?: unknown[] }): Promise<Todo> {
+  createTodo(body: { name: string; event_tag_id?: string; event_time?: EventTime; repeating?: Repeating; notification_options?: unknown[] }): Promise<Todo> {
     return apiClient.post('/v1/todos/todo', body)
   },
 
@@ -18,7 +18,7 @@ export const todoApi = {
     return apiClient.put(`/v1/todos/todo/${id}`, body)
   },
 
-  completeTodo(id: string, body: { origin: Todo; next_event_time?: unknown; next_repeating_turn?: number }): Promise<DoneTodo> {
+  completeTodo(id: string, body: { origin: Todo; next_event_time?: EventTime; next_repeating_turn?: number }): Promise<DoneTodo> {
     return apiClient.post(`/v1/todos/todo/${id}/complete`, body)
   },
 

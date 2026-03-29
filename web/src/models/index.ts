@@ -1,5 +1,19 @@
 export type { EventTime, EventTimeAt, EventTimePeriod, EventTimeAllDay } from './EventTime'
-export type { Repeating } from './Repeating'
+export type {
+  Repeating,
+  RepeatingOption,
+  WeekOrdinal,
+  EveryDayOption,
+  EveryWeekOption,
+  EveryMonthOption,
+  EveryMonthDaysSelection,
+  EveryMonthWeekSelection,
+  MonthDaySelection,
+  EveryYearOption,
+  EveryYearSomeDayOption,
+  LunarCalendarEveryYearOption,
+} from './Repeating'
+export type { DefaultTagColors } from './DefaultTagColors'
 export type { Todo } from './Todo'
 export type { Schedule } from './Schedule'
 export type { EventTag } from './EventTag'
