@@ -8,8 +8,8 @@ vi.mock('../../src/stores/authStore', () => ({
   useAuthStore: vi.fn(),
 }))
 
-vi.mock('../../src/stores/eventTagStore', () => ({
-  useEventTagStore: { getState: () => ({ fetchAll: vi.fn() }) },
+vi.mock('../../src/api/eventTagApi', () => ({
+  eventTagApi: { getAllTags: async () => [] },
 }))
 
 function renderWithRouter(ui: React.ReactNode) {

@@ -5,7 +5,7 @@ import type { EventTag } from '../models'
 interface EventTagState {
   tags: Map<string, EventTag>
   fetchAll: () => Promise<void>
-  getColorForTagId: (id: string) => string | undefined
+  getColorForTagId: (id: string) => string | null | undefined
 }
 
 export const useEventTagStore = create<EventTagState>((set, get) => ({
@@ -25,6 +25,6 @@ export const useEventTagStore = create<EventTagState>((set, get) => ({
   },
 
   getColorForTagId: (id: string) => {
-    return get().tags.get(id)?.color_hex ?? undefined
+    return get().tags.get(id)?.color_hex
   },
 }))
