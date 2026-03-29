@@ -52,6 +52,7 @@ describe('calendarEventsStore', () => {
 
     const promise = useCalendarEventsStore.getState().fetchEventsForRange(0, 100)
     expect(useCalendarEventsStore.getState().loading).toBe(true)
+    expect(useCalendarEventsStore.getState().eventsByDate.size).toBe(0)
 
     resolveTodos!([])
     await promise

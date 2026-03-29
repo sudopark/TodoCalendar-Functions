@@ -7,6 +7,7 @@ import { useUiStore } from '../../src/stores/uiStore'
 import { useCalendarEventsStore } from '../../src/stores/calendarEventsStore'
 import { useHolidayStore } from '../../src/stores/holidayStore'
 import { useEventTagStore } from '../../src/stores/eventTagStore'
+import type { CalendarEvent } from '../../src/utils/eventTimeUtils'
 
 vi.mock('../../src/api/eventTagApi', () => ({
   eventTagApi: { getAllTags: vi.fn() },
@@ -46,7 +47,7 @@ describe('CalendarGrid 통합', () => {
   })
 
   it('이벤트가 있는 날짜에 dot이 표시된다', () => {
-    const eventsMap = new Map<string, any[]>()
+    const eventsMap = new Map<string, CalendarEvent[]>()
     eventsMap.set('2026-03-10', [
       { type: 'todo', event: { uuid: 't1', name: 'Task', is_current: false, event_tag_id: 'tag-1', event_time: { time_type: 'at', timestamp: 0 } } },
     ])

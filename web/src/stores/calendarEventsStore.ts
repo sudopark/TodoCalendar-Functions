@@ -15,7 +15,7 @@ export const useCalendarEventsStore = create<CalendarEventsState>((set) => ({
   loading: false,
 
   fetchEventsForRange: async (lower: number, upper: number) => {
-    set({ loading: true })
+    set({ loading: true, eventsByDate: new Map() })
     try {
       const [todos, schedules] = await Promise.all([
         todoApi.getTodos(lower, upper),
