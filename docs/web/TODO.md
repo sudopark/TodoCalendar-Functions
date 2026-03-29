@@ -69,7 +69,7 @@
 
 - [x] `tsc -b` 타입 체크 통과
 - [x] 전체 테스트 통과 (66개)
-- [ ] PR 생성 및 리뷰
+- [x] PR 생성 및 리뷰
 
 ---
 
@@ -79,24 +79,24 @@
 
 ### 3-1. Zustand 스토어
 
-- [ ] `src/stores/eventTagStore.ts` — 로그인 시 GET /v1/tags/all, ID→태그 캐시
-- [ ] `src/stores/calendarEventsStore.ts` — fetchEventsForRange(lower, upper), 날짜별 인덱싱
-- [ ] `src/stores/holidayStore.ts` — GET /v1/holiday/, 연도별 캐시
-- [ ] `src/stores/uiStore.ts` — selectedDate 등 UI 상태
+- [x] `src/stores/eventTagStore.ts` — 로그인 시 GET /v1/tags/all, ID→태그 캐시
+- [x] `src/stores/calendarEventsStore.ts` — fetchEventsForRange(lower, upper), 날짜별 인덱싱
+- [x] `src/stores/holidayStore.ts` — GET /v1/holiday/, 연도별 캐시
+- [x] `src/stores/uiStore.ts` — selectedDate 등 UI 상태
 
 ### 3-2. 캘린더 UI 수정
 
-- [ ] `CalendarGrid.tsx` — 날짜 셀에 이벤트 컬러 dot (최대 3개)
-- [ ] `CalendarGrid.tsx` — 공휴일 빨간 텍스트 표시
-- [ ] `CalendarGrid.tsx` — 날짜 셀 클릭 → selectedDate 설정
-- [ ] `MonthCalendar.tsx` — 월 변경 시 fetchEventsForRange 트리거
+- [x] `CalendarGrid.tsx` — 날짜 셀에 이벤트 컬러 dot (최대 3개)
+- [x] `CalendarGrid.tsx` — 공휴일 빨간 텍스트 표시
+- [x] `CalendarGrid.tsx` — 날짜 셀 클릭 → selectedDate 설정
+- [x] `MonthCalendar.tsx` — 월 변경 시 fetchEventsForRange 트리거
 
 ### 3-3. 검증
 
-- [ ] 월 이동 시 API 호출 확인 (lower/upper 타임스탬프)
-- [ ] 이벤트 있는 날짜에 컬러 dot 표시
-- [ ] 공휴일 정상 표시
-- [ ] 기존 테스트 전체 통과
+- [x] 월 이동 시 API 호출 확인 (lower/upper 타임스탬프)
+- [x] 이벤트 있는 날짜에 컬러 dot 표시
+- [x] 공휴일 정상 표시
+- [x] 기존 테스트 전체 통과
 - [ ] PR 생성 및 리뷰
 
 ---
