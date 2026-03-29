@@ -3,6 +3,15 @@
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
   },
+  "hosting": {
+    "public": "web/dist",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "rewrites": [
+      { "source": "/v1/**", "function": "api" },
+      { "source": "/v2/**", "function": "api" },
+      { "source": "**", "destination": "/index.html" }
+    ]
+  },
   "emulators": {
     "auth": {
       "port": 9099
@@ -12,6 +21,9 @@
     },
     "firestore": {
       "port": 8080
+    },
+    "hosting": {
+      "port": 5000
     },
     "singleProjectMode": true
   },
