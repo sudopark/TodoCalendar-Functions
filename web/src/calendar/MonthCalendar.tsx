@@ -1,11 +1,10 @@
-// web/src/calendar/MonthCalendar.tsx
 import { useState, useMemo, useEffect } from 'react'
 import { buildCalendarGrid, navigateMonth } from './calendarUtils'
 import CalendarHeader from './CalendarHeader'
 import CalendarGrid from './CalendarGrid'
 import { useCalendarEventsStore } from '../stores/calendarEventsStore'
 import { useHolidayStore } from '../stores/holidayStore'
-import { monthRange } from '../utils/eventTimeUtils'
+import { dayRange } from '../utils/eventTimeUtils'
 
 interface MonthCalendarProps {
   today?: Date
@@ -21,10 +20,13 @@ export default function MonthCalendar({ today = new Date() }: MonthCalendarProps
   const days = useMemo(() => buildCalendarGrid(year, month, today), [year, month, today])
 
   useEffect(() => {
-    const range = monthRange(year, month)
-    fetchEventsForRange(range.lower, range.upper)
-    fetchHolidays(year)
-  }, [year, month, fetchEventsForRange, fetchHolidays])
+    if (days.length === 0) return
+    const lower = dayRange(days[0].date).lower
+    const upper = dayRange(days[days.length - 1].date).upper
+    fetchEventsForRange(lower, upper)
+    const years = new Set(days.map(d => d.date.getFullYear()))
+    years.forEach(y => fetchHolidays(y))
+  }, [days, fetchEventsForRange, fetchHolidays])
 
   const goToPrev = () => setCurrentMonth(prev => navigateMonth(prev, -1))
   const goToNext = () => setCurrentMonth(prev => navigateMonth(prev, 1))

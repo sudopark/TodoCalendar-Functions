@@ -1,10 +1,5 @@
 import { create } from 'zustand'
-
-function isSameDay(a: Date, b: Date): boolean {
-  return a.getFullYear() === b.getFullYear()
-    && a.getMonth() === b.getMonth()
-    && a.getDate() === b.getDate()
-}
+import { formatDateKey } from '../utils/eventTimeUtils'
 
 interface UiState {
   selectedDate: Date | null
@@ -15,7 +10,7 @@ export const useUiStore = create<UiState>((set, get) => ({
   selectedDate: null,
   setSelectedDate: (date: Date) => {
     const current = get().selectedDate
-    if (current && isSameDay(current, date)) {
+    if (current && formatDateKey(current) === formatDateKey(date)) {
       set({ selectedDate: null })
     } else {
       set({ selectedDate: date })
