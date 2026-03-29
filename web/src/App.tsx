@@ -1,7 +1,8 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthGuard } from './components/AuthGuard'
 import { LoginPage } from './pages/LoginPage'
-import MonthCalendar from './calendar/MonthCalendar'
+import { MainPage } from './pages/MainPage'
+import { EventDetailPage } from './pages/EventDetailPage'
 
 function App() {
   return (
@@ -12,9 +13,10 @@ function App() {
           path="/*"
           element={
             <AuthGuard>
-              <div className="min-h-screen bg-white">
-                <MonthCalendar />
-              </div>
+              <Routes>
+                <Route path="/" element={<MainPage />} />
+                <Route path="/events/:id" element={<EventDetailPage />} />
+              </Routes>
             </AuthGuard>
           }
         />
