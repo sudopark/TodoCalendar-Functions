@@ -6,6 +6,10 @@ export const todoApi = {
     return apiClient.get(`/v1/todos?lower=${lower}&upper=${upper}`)
   },
 
+  getCurrentTodos(): Promise<Todo[]> {
+    return apiClient.get('/v1/todos')
+  },
+
   getTodo(id: string): Promise<Todo> {
     return apiClient.get(`/v1/todos/todo/${id}`)
   },
