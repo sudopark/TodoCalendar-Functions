@@ -1,6 +1,9 @@
 # OS
 .DS_Store
 
+# Test results
+web/test-results/
+
 # Logs
 logs
 *.log
