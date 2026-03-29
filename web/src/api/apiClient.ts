@@ -1,15 +1,9 @@
-import { auth } from '../firebase'
+import { tokenProvider } from './tokenProvider'
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
 
-async function getAuthToken(): Promise<string> {
-  const user = auth.currentUser
-  if (!user) throw new Error('Not authenticated')
-  return user.getIdToken()
-}
-
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
-  const token = await getAuthToken()
+  const token = await tokenProvider.getToken()
   const response = await fetch(`${BASE_URL}${path}`, {
     method,
     headers: {
@@ -22,6 +16,8 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   if (!response.ok) {
     throw new Error(`API error: ${response.status}`)
   }
+
+  if (response.status === 204) return undefined as T
 
   return response.json() as Promise<T>
 }
