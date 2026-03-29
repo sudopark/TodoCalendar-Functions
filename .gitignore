@@ -134,3 +134,10 @@ dist
 
 # AI-generated docs
 docs/superpowers/
+
+# Web client
+web/dist/
+web/node_modules/
+
+# Superpowers
+.superpowers/
