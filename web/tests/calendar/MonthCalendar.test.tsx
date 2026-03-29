@@ -1,6 +1,32 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { vi } from 'vitest'
 import MonthCalendar from '../../src/calendar/MonthCalendar'
+
+vi.mock('../../src/stores/uiStore', () => ({
+  useUiStore: vi.fn((selector: any) => {
+    const state = { selectedDate: null, setSelectedDate: vi.fn() }
+    return selector(state)
+  }),
+}))
+vi.mock('../../src/stores/calendarEventsStore', () => ({
+  useCalendarEventsStore: vi.fn((selector: any) => {
+    const state = { eventsByDate: new Map(), fetchEventsForRange: vi.fn() }
+    return selector(state)
+  }),
+}))
+vi.mock('../../src/stores/holidayStore', () => ({
+  useHolidayStore: vi.fn((selector: any) => {
+    const state = { getHolidayNames: () => [], fetchHolidays: vi.fn() }
+    return selector(state)
+  }),
+}))
+vi.mock('../../src/stores/eventTagStore', () => ({
+  useEventTagStore: vi.fn((selector: any) => {
+    const state = { getColorForTagId: () => undefined }
+    return selector(state)
+  }),
+}))
 
 const today = new Date(2026, 2, 29) // March 29, 2026
 
