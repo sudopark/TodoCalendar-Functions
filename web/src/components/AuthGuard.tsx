@@ -1,5 +1,7 @@
+import { useEffect } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
+import { useEventTagStore } from '../stores/eventTagStore'
 
 interface AuthGuardProps {
   children: React.ReactNode
@@ -7,6 +9,12 @@ interface AuthGuardProps {
 
 export function AuthGuard({ children }: AuthGuardProps) {
   const { account, loading } = useAuthStore()
+
+  useEffect(() => {
+    if (account) {
+      useEventTagStore.getState().fetchAll()
+    }
+  }, [account])
 
   if (loading) {
     return (
