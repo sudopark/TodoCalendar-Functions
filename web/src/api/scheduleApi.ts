@@ -1,5 +1,5 @@
 import { apiClient } from './apiClient'
-import type { Schedule } from '../models'
+import type { Schedule, EventTime, Repeating } from '../models'
 
 export const scheduleApi = {
   getSchedules(lower: number, upper: number): Promise<Schedule[]> {
@@ -10,7 +10,7 @@ export const scheduleApi = {
     return apiClient.get(`/v1/schedules/schedule/${id}`)
   },
 
-  createSchedule(body: { name: string; event_tag_id?: string; event_time: unknown; repeating?: unknown; notification_options?: unknown[] }): Promise<Schedule> {
+  createSchedule(body: { name: string; event_tag_id?: string; event_time: EventTime; repeating?: Repeating; notification_options?: unknown[] }): Promise<Schedule> {
     return apiClient.post('/v1/schedules/schedule', body)
   },
 

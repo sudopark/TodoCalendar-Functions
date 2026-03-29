@@ -62,8 +62,11 @@ function eventTimeOverlapsRange(eventTime: EventTime, lower: number, upper: numb
       return eventTime.timestamp >= lower && eventTime.timestamp <= upper
     case 'period':
       return eventTime.period_start <= upper && eventTime.period_end >= lower
-    case 'allday':
-      return eventTime.period_start <= upper && eventTime.period_end >= lower
+    case 'allday': {
+      const adjStart = eventTime.period_start + eventTime.seconds_from_gmt
+      const adjEnd = eventTime.period_end + eventTime.seconds_from_gmt
+      return adjStart <= upper && adjEnd >= lower
+    }
   }
 }
 
