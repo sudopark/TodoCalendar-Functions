@@ -1,9 +1,5 @@
 import { apiClient } from './apiClient'
-
-export interface DefaultTagColors {
-  holiday: string
-  default: string
-}
+import type { DefaultTagColors } from '../models'
 
 export const settingApi = {
   getDefaultTagColors(): Promise<DefaultTagColors> {
