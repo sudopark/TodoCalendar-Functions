@@ -25,7 +25,7 @@ describe('AuthGuard', () => {
   })
 
   it('인증 확인 중에는 보호된 컨텐츠도 로그인 페이지도 보이지 않는다', () => {
-    vi.mocked(useAuthStore).mockReturnValue({ user: null, loading: true } as any)
+    vi.mocked(useAuthStore).mockReturnValue({ account: null, loading: true } as any)
     renderWithRouter(<AuthGuard><div>보호된 페이지</div></AuthGuard>)
 
     expect(screen.queryByText('보호된 페이지')).toBeNull()
@@ -33,7 +33,7 @@ describe('AuthGuard', () => {
   })
 
   it('로그인하지 않은 사용자는 로그인 페이지로 이동한다', () => {
-    vi.mocked(useAuthStore).mockReturnValue({ user: null, loading: false } as any)
+    vi.mocked(useAuthStore).mockReturnValue({ account: null, loading: false } as any)
     renderWithRouter(<AuthGuard><div>보호된 페이지</div></AuthGuard>)
 
     expect(screen.queryByText('보호된 페이지')).toBeNull()
@@ -42,7 +42,7 @@ describe('AuthGuard', () => {
 
   it('로그인한 사용자는 요청한 페이지를 볼 수 있다', () => {
     vi.mocked(useAuthStore).mockReturnValue({
-      user: { uid: 'user-123' },
+      account: { uid: 'user-123' },
       loading: false,
     } as any)
     renderWithRouter(<AuthGuard><div>보호된 페이지</div></AuthGuard>)
