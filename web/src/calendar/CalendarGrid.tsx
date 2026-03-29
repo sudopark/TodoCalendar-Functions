@@ -1,4 +1,5 @@
 import type { CalendarDay } from './calendarUtils'
+import { formatDateKey } from '../utils/eventTimeUtils'
 import { useUiStore } from '../stores/uiStore'
 import { useCalendarEventsStore } from '../stores/calendarEventsStore'
 import { useHolidayStore } from '../stores/holidayStore'
@@ -28,10 +29,7 @@ export default function CalendarGrid({ days }: CalendarGridProps) {
         </div>
       ))}
       {days.map((day, i) => {
-        const isSelected = selectedDate
-          && selectedDate.getFullYear() === day.date.getFullYear()
-          && selectedDate.getMonth() === day.date.getMonth()
-          && selectedDate.getDate() === day.date.getDate()
+        const isSelected = selectedDate && formatDateKey(selectedDate) === day.dateKey
         const holidayNames = getHolidayNames(day.dateKey)
         const isHoliday = holidayNames.length > 0
         const isSunday = day.date.getDay() === 0
