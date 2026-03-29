@@ -1,6 +1,7 @@
 export interface CalendarDay {
   date: Date
   dayOfMonth: number
+  dateKey: string
   isCurrentMonth: boolean
   isToday: boolean
 }
@@ -20,6 +21,8 @@ function isSameDay(a: Date, b: Date): boolean {
  *   (첫째 날이 일요일이면 위에 이전 달 마지막 주 1행 추가,
  *    마지막 날이 토요일이면 아래에 다음 달 첫 주 1행 추가)
  */
+import { formatDateKey } from '../utils/eventTimeUtils'
+
 export function buildCalendarGrid(year: number, month: number, today: Date): CalendarDay[] {
   const firstOfMonth = new Date(year, month, 1)
   const lastOfMonth = new Date(year, month + 1, 0)
@@ -45,6 +48,7 @@ export function buildCalendarGrid(year: number, month: number, today: Date): Cal
     days.push({
       date,
       dayOfMonth: date.getDate(),
+      dateKey: formatDateKey(date),
       isCurrentMonth: date.getMonth() === month && date.getFullYear() === year,
       isToday: isSameDay(date, today),
     })
