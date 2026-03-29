@@ -1,21 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-const mocks = vi.hoisted(() => {
-  const getIdToken = vi.fn().mockResolvedValue('test-token')
-  return {
-    getIdToken,
-    auth: { currentUser: { getIdToken } },
-  }
-})
-
-vi.mock('../../src/firebase', () => ({ auth: mocks.auth }))
+vi.mock('../../src/api/tokenProvider', () => ({
+  tokenProvider: { getToken: vi.fn().mockResolvedValue('test-token') },
+}))
 
 describe('apiClient', () => {
-  beforeEach(() => {
-    mocks.auth.currentUser = { getIdToken: mocks.getIdToken }
-    mocks.getIdToken.mockResolvedValue('test-token')
+  beforeEach(async () => {
     vi.clearAllMocks()
-    mocks.getIdToken.mockResolvedValue('test-token')
+    const { tokenProvider } = await import('../../src/api/tokenProvider')
+    vi.mocked(tokenProvider.getToken).mockResolvedValue('test-token')
   })
 
   it('인증된 사용자의 요청에는 Authorization 헤더가 포함된다', async () => {
@@ -44,6 +37,17 @@ describe('apiClient', () => {
     expect(result).toEqual(payload)
   })
 
+  it('서버가 204 No Content를 반환하면 undefined를 반환한다', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(null, { status: 204 })
+    )
+
+    const { apiClient } = await import('../../src/api/apiClient')
+    const result = await apiClient.delete('/v1/test/1')
+
+    expect(result).toBeUndefined()
+  })
+
   it('서버가 4xx/5xx를 반환하면 에러를 던진다', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(null, { status: 401 })
@@ -53,10 +57,11 @@ describe('apiClient', () => {
     await expect(apiClient.get('/v1/test')).rejects.toThrow()
   })
 
-  it('로그인하지 않은 상태에서는 요청이 거부된다', async () => {
-    mocks.auth.currentUser = null as any
+  it('토큰을 가져올 수 없으면 요청이 거부된다', async () => {
+    const { tokenProvider } = await import('../../src/api/tokenProvider')
+    vi.mocked(tokenProvider.getToken).mockRejectedValue(new Error('Not authenticated'))
 
     const { apiClient } = await import('../../src/api/apiClient')
-    await expect(apiClient.get('/v1/test')).rejects.toThrow()
+    await expect(apiClient.get('/v1/test')).rejects.toThrow('Not authenticated')
   })
 })
