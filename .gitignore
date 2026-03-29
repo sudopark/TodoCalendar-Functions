@@ -147,3 +147,6 @@ web/node_modules/
 
 # Superpowers
 .superpowers/
+
+# Git worktrees
+.worktrees/
