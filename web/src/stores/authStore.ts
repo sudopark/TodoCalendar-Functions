@@ -5,13 +5,20 @@ import {
   signOut as firebaseSignOut,
   GoogleAuthProvider,
   OAuthProvider,
-  type User,
 } from 'firebase/auth'
 import { auth } from '../firebase'
 import { apiClient } from '../api/apiClient'
 
+export interface Account {
+  uid: string
+  email?: string | null
+  method?: string | null
+  first_signed_in?: string | null
+  last_sign_in?: string | null
+}
+
 interface AuthState {
-  user: User | null
+  account: Account | null
   loading: boolean
   signInWithGoogle: () => Promise<void>
   signInWithApple: () => Promise<void>
@@ -19,19 +26,22 @@ interface AuthState {
 }
 
 export const useAuthStore = create<AuthState>((set) => {
-  onAuthStateChanged(auth, async (user) => {
-    if (user) {
+  onAuthStateChanged(auth, async (firebaseUser) => {
+    if (firebaseUser) {
       try {
-        await apiClient.put('/v1/accounts/info', {})
-      } catch {
-        // 계정 등록 실패는 무시 (이미 등록된 경우 등)
+        const account = await apiClient.put<Account>('/v1/accounts/info', {})
+        set({ account, loading: false })
+      } catch (e) {
+        console.warn('계정 등록 실패:', e)
+        set({ account: null, loading: false })
       }
+    } else {
+      set({ account: null, loading: false })
     }
-    set({ user, loading: false })
   })
 
   return {
-    user: null,
+    account: null,
     loading: true,
     signInWithGoogle: async () => {
       const provider = new GoogleAuthProvider()

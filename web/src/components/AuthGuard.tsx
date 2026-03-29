@@ -6,7 +6,7 @@ interface AuthGuardProps {
 }
 
 export function AuthGuard({ children }: AuthGuardProps) {
-  const { user, loading } = useAuthStore()
+  const { account, loading } = useAuthStore()
 
   if (loading) {
     return (
@@ -16,7 +16,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
     )
   }
 
-  if (!user) {
+  if (!account) {
     return <Navigate to="/login" replace />
   }
 

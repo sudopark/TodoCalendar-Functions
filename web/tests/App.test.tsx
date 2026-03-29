@@ -5,7 +5,7 @@ import App from '../src/App'
 // App은 BrowserRouter + AuthGuard를 포함하므로 authStore와 firebase를 모킹
 vi.mock('../src/stores/authStore', () => ({
   useAuthStore: () => ({
-    user: { uid: 'test-user' },
+    account: { uid: 'test-user' },
     loading: false,
     signInWithGoogle: vi.fn(),
     signInWithApple: vi.fn(),
