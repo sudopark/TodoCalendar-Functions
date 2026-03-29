@@ -8,6 +8,10 @@ vi.mock('../../src/stores/authStore', () => ({
   useAuthStore: vi.fn(),
 }))
 
+vi.mock('../../src/stores/eventTagStore', () => ({
+  useEventTagStore: { getState: () => ({ fetchAll: vi.fn() }) },
+}))
+
 function renderWithRouter(ui: React.ReactNode) {
   return render(
     <MemoryRouter initialEntries={['/']}>
