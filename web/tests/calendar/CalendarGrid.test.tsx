@@ -1,6 +1,32 @@
 import { render, screen } from '@testing-library/react'
+import { describe, test, expect, vi } from 'vitest'
 import CalendarGrid from '../../src/calendar/CalendarGrid'
 import { buildCalendarGrid } from '../../src/calendar/calendarUtils'
+
+vi.mock('../../src/stores/uiStore', () => ({
+  useUiStore: vi.fn((selector: any) => {
+    const state = { selectedDate: null, setSelectedDate: vi.fn() }
+    return selector(state)
+  }),
+}))
+vi.mock('../../src/stores/calendarEventsStore', () => ({
+  useCalendarEventsStore: vi.fn((selector: any) => {
+    const state = { eventsByDate: new Map() }
+    return selector(state)
+  }),
+}))
+vi.mock('../../src/stores/holidayStore', () => ({
+  useHolidayStore: vi.fn((selector: any) => {
+    const state = { getHolidayNames: () => [] }
+    return selector(state)
+  }),
+}))
+vi.mock('../../src/stores/eventTagStore', () => ({
+  useEventTagStore: vi.fn((selector: any) => {
+    const state = { getColorForTagId: () => undefined }
+    return selector(state)
+  }),
+}))
 
 const today = new Date(2026, 2, 29) // March 29, 2026 (Sunday)
 const marchDays = buildCalendarGrid(2026, 2, today)
@@ -23,23 +49,24 @@ describe('CalendarGrid', () => {
   test('오늘 날짜 셀에 하이라이트 클래스가 적용된다', () => {
     render(<CalendarGrid days={marchDays} />)
     const cells = screen.getAllByTestId('day-cell')
-    const todayCell = cells.find(cell => cell.classList.contains('bg-blue-500'))
+    const todayCell = cells.find(cell => cell.querySelector('div')?.classList.contains('bg-blue-500'))
     expect(todayCell).toBeDefined()
-    expect(todayCell!.textContent).toBe('29')
+    expect(todayCell!.querySelector('div')?.textContent).toBe('29')
   })
 
   test('이전/다음 달 날짜에 흐린 스타일이 적용된다', () => {
     render(<CalendarGrid days={marchDays} />)
     const cells = screen.getAllByTestId('day-cell')
     // 첫 셀은 2월(이전 달)이므로 text-gray-300
-    expect(cells[0].classList.contains('text-gray-300')).toBe(true)
+    expect(cells[0].querySelector('div')?.classList.contains('text-gray-300')).toBe(true)
   })
 
   test('이번 달 날짜에 기본 스타일이 적용된다', () => {
     render(<CalendarGrid days={marchDays} />)
     const cells = screen.getAllByTestId('day-cell')
-    // 8번째 셀은 3월 1일 (March 1 is Sunday, but first row is Feb last week)
-    const march1Index = marchDays.findIndex(d => d.isCurrentMonth)
-    expect(cells[march1Index].classList.contains('text-gray-900')).toBe(true)
+    // March 1 is a Sunday, so it will have text-red-500 (Sunday color)
+    // Find a non-Sunday current month cell instead (e.g., March 2 = Monday)
+    const march2Index = marchDays.findIndex(d => d.isCurrentMonth && d.date.getDay() === 1)
+    expect(cells[march2Index].querySelector('div')?.classList.contains('text-gray-900')).toBe(true)
   })
 })
