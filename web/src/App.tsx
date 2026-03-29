@@ -1,7 +1,9 @@
+import MonthCalendar from './calendar/MonthCalendar'
+
 function App() {
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <h1 className="text-3xl font-bold">TodoCalendar</h1>
+    <div className="min-h-screen bg-white">
+      <MonthCalendar />
     </div>
   )
 }
