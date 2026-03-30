@@ -65,6 +65,6 @@ describe('ForemostEventBanner', () => {
     renderComponent()
     await userEvent.click(screen.getByTestId('foremost-banner'))
 
-    expect(mockNavigate).toHaveBeenCalledWith('/events/fe-nav')
+    expect(mockNavigate.mock.calls[0][0]).toBe('/events/fe-nav')
   })
 })

@@ -1,13 +1,11 @@
-import { useNavigate } from 'react-router-dom'
-import { useUiStore } from '../stores/uiStore'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useCalendarEventsStore } from '../stores/calendarEventsStore'
 import { useEventTagStore } from '../stores/eventTagStore'
 import { formatDateKey } from '../utils/eventTimeUtils'
 import { EventTimeDisplay } from './EventTimeDisplay'
 import type { CalendarEvent } from '../utils/eventTimeUtils'
 
-function EventItem({ calEvent }: { calEvent: CalendarEvent }) {
-  const navigate = useNavigate()
+function EventItem({ calEvent, onNavigate }: { calEvent: CalendarEvent; onNavigate: () => void }) {
   const getColorForTagId = useEventTagStore(s => s.getColorForTagId)
 
   const { uuid, name, event_tag_id, event_time } = calEvent.type === 'todo'
@@ -19,7 +17,7 @@ function EventItem({ calEvent }: { calEvent: CalendarEvent }) {
   return (
     <button
       className="flex w-full items-start gap-3 rounded-lg px-3 py-2 text-left hover:bg-gray-50"
-      onClick={() => navigate(`/events/${uuid}`)}
+      onClick={onNavigate}
     >
       <span
         className="mt-1 h-3 w-3 shrink-0 rounded-full"
@@ -37,8 +35,13 @@ function EventItem({ calEvent }: { calEvent: CalendarEvent }) {
   )
 }
 
-export function DayEventList() {
-  const selectedDate = useUiStore(s => s.selectedDate)
+interface DayEventListProps {
+  selectedDate: Date | null
+}
+
+export function DayEventList({ selectedDate }: DayEventListProps) {
+  const navigate = useNavigate()
+  const location = useLocation()
   const eventsByDate = useCalendarEventsStore(s => s.eventsByDate)
 
   if (!selectedDate) return null
@@ -62,7 +65,12 @@ export function DayEventList() {
     <ul className="divide-y divide-gray-100">
       {sorted.map(calEvent => (
         <li key={calEvent.event.uuid}>
-          <EventItem calEvent={calEvent} />
+          <EventItem
+            calEvent={calEvent}
+            onNavigate={() => navigate(`/events/${calEvent.event.uuid}`, {
+              state: { background: location, eventType: calEvent.type },
+            })}
+          />
         </li>
       ))}
     </ul>

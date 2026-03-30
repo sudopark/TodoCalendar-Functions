@@ -8,14 +8,14 @@ function formatTime(date: Date): string {
   return date.toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit', hour12: true })
 }
 
-function formatDate(date: Date): string {
-  return date.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })
+function formatDateUTC(date: Date): string {
+  return `${date.getUTCMonth() + 1}월 ${date.getUTCDate()}일`
 }
 
-function isSameDay(a: Date, b: Date): boolean {
-  return a.getFullYear() === b.getFullYear()
-    && a.getMonth() === b.getMonth()
-    && a.getDate() === b.getDate()
+function isSameDayUTC(a: Date, b: Date): boolean {
+  return a.getUTCFullYear() === b.getUTCFullYear()
+    && a.getUTCMonth() === b.getUTCMonth()
+    && a.getUTCDate() === b.getUTCDate()
 }
 
 export function EventTimeDisplay({ eventTime }: EventTimeDisplayProps) {
@@ -30,13 +30,14 @@ export function EventTimeDisplay({ eventTime }: EventTimeDisplayProps) {
     return <span>{formatTime(start)} – {formatTime(end)}</span>
   }
 
-  // allday
+  // allday: offset을 더해 "원본 타임존의 자정"으로 맞춘 뒤 UTC 메서드로 날짜를 읽음
+  // (브라우저 타임존과 무관하게 이벤트 생성 타임존 기준 날짜를 표시)
   const offset = eventTime.seconds_from_gmt
   const start = new Date((eventTime.period_start + offset) * 1000)
   const end = new Date((eventTime.period_end + offset) * 1000)
 
-  if (isSameDay(start, end)) {
+  if (isSameDayUTC(start, end)) {
     return <span>종일</span>
   }
-  return <span>{formatDate(start)} – {formatDate(end)}</span>
+  return <span>{formatDateUTC(start)} – {formatDateUTC(end)}</span>
 }

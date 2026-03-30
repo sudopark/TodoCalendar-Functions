@@ -1,17 +1,12 @@
-import { useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useCurrentTodosStore } from '../stores/currentTodosStore'
 import { useEventTagStore } from '../stores/eventTagStore'
 
 export function CurrentTodoList() {
   const todos = useCurrentTodosStore(s => s.todos)
-  const fetch = useCurrentTodosStore(s => s.fetch)
   const getColorForTagId = useEventTagStore(s => s.getColorForTagId)
   const navigate = useNavigate()
-
-  useEffect(() => {
-    fetch()
-  }, [fetch])
+  const location = useLocation()
 
   if (todos.length === 0) return null
 
@@ -29,7 +24,9 @@ export function CurrentTodoList() {
             <li key={todo.uuid}>
               <button
                 className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left hover:bg-gray-50"
-                onClick={() => navigate(`/events/${todo.uuid}`)}
+                onClick={() => navigate(`/events/${todo.uuid}`, {
+                  state: { background: location, eventType: 'todo' },
+                })}
               >
                 <span
                   className="h-3 w-3 shrink-0 rounded-full"

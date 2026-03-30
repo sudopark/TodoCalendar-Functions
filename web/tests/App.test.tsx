@@ -15,6 +15,14 @@ vi.mock('../src/stores/authStore', () => ({
 
 vi.mock('../src/firebase', () => ({ auth: {} }))
 
+vi.mock('../src/api/todoApi', () => ({
+  todoApi: { getCurrentTodos: async () => [] },
+}))
+
+vi.mock('../src/api/foremostApi', () => ({
+  foremostApi: { getForemostEvent: async () => null },
+}))
+
 test('로그인된 사용자에게 달력이 표시된다', () => {
   render(<App />)
   expect(screen.getByText('Sun')).toBeInTheDocument()

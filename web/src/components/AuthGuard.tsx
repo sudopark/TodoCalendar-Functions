@@ -2,6 +2,8 @@ import { useEffect } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
 import { useEventTagStore } from '../stores/eventTagStore'
+import { useCurrentTodosStore } from '../stores/currentTodosStore'
+import { useForemostEventStore } from '../stores/foremostEventStore'
 
 interface AuthGuardProps {
   children: React.ReactNode
@@ -13,6 +15,8 @@ export function AuthGuard({ children }: AuthGuardProps) {
   useEffect(() => {
     if (account) {
       useEventTagStore.getState().fetchAll()
+      useCurrentTodosStore.getState().fetch()
+      useForemostEventStore.getState().fetch()
     }
   }, [account])
 
