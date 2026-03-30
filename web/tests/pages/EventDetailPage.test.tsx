@@ -25,9 +25,9 @@ vi.mock('react-router-dom', async () => {
   return { ...actual, useNavigate: () => mockNavigate }
 })
 
-function renderWithRoute(id: string) {
+function renderWithRoute(id: string, state?: { eventType?: 'todo' | 'schedule' }) {
   return render(
-    <MemoryRouter initialEntries={[`/events/${id}`]}>
+    <MemoryRouter initialEntries={[{ pathname: `/events/${id}`, state: state ?? null }]}>
       <Routes>
         <Route path="/events/:id" element={<EventDetailPage />} />
       </Routes>
@@ -53,11 +53,12 @@ describe('EventDetailPage', () => {
   })
 
   it('Todo 이벤트를 로드하여 이름과 시간을 표시한다', async () => {
+    // given: KST 오후 2:30 = UTC 05:30 = 1710480600
     const todo = {
       uuid: 'todo-1',
       name: '중요 할 일',
       is_current: false,
-      event_time: { time_type: 'at' as const, timestamp: Math.floor(new Date(2024, 2, 15, 14, 30).getTime() / 1000) },
+      event_time: { time_type: 'at' as const, timestamp: 1710480600 },
     }
     vi.mocked(todoApi.getTodo).mockResolvedValue(todo)
 
@@ -93,6 +94,35 @@ describe('EventDetailPage', () => {
     await waitFor(() => {
       expect(screen.getByText('이벤트를 찾을 수 없습니다')).toBeInTheDocument()
     })
+  })
+
+  it('Todo 조회 실패 시 Schedule을 fallback으로 로드한다', async () => {
+    // given: todo는 없고 schedule만 있음 (eventType 미지정)
+    vi.mocked(todoApi.getTodo).mockRejectedValue(new Error('not todo'))
+    const schedule = { uuid: 'sch-1', name: '일정', event_time: null }
+    vi.mocked(scheduleApi.getSchedule).mockResolvedValue(schedule)
+
+    renderWithRoute('sch-1')
+
+    await waitFor(() => {
+      expect(screen.getByText('일정')).toBeInTheDocument()
+    })
+  })
+
+  it('eventType=schedule이면 schedule API를 직접 호출하여 로드한다', async () => {
+    // given: 같은 uuid로 todo와 schedule이 모두 존재하지만 eventType=schedule로 명시됨
+    const todoWithSameId = { uuid: 'sch-1', name: '혼선 할 일', is_current: false, event_time: null }
+    const schedule = { uuid: 'sch-1', name: '올바른 스케줄', event_time: null }
+    vi.mocked(todoApi.getTodo).mockResolvedValue(todoWithSameId)
+    vi.mocked(scheduleApi.getSchedule).mockResolvedValue(schedule)
+
+    // when: eventType=schedule state로 렌더링
+    renderWithRoute('sch-1', { eventType: 'schedule' })
+
+    await waitFor(() => {
+      expect(screen.getByText('올바른 스케줄')).toBeInTheDocument()
+    })
+    expect(screen.queryByText('혼선 할 일')).not.toBeInTheDocument()
   })
 
   it('뒤로 버튼을 클릭하면 이전 페이지로 이동한다', async () => {

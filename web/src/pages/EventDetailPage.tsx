@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { todoApi } from '../api/todoApi'
 import { scheduleApi } from '../api/scheduleApi'
 import { eventDetailApi } from '../api/eventDetailApi'
@@ -27,6 +27,7 @@ function repeatingLabel(repeating: Repeating): string {
 export function EventDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
   const getColorForTagId = useEventTagStore(s => s.getColorForTagId)
 
   const [event, setEvent] = useState<EventItem | null>(null)
@@ -37,20 +38,27 @@ export function EventDetailPage() {
   useEffect(() => {
     if (!id) return
 
-    async function load() {
+    async function load(eventId: string) {
       setLoading(true)
       try {
-        // Try todo first, then schedule
-        let item: EventItem | null = null
-        try {
-          item = await todoApi.getTodo(id!)
-        } catch {
-          item = await scheduleApi.getSchedule(id!)
+        const eventType = (location.state as { eventType?: string } | null)?.eventType
+        let item: EventItem
+        if (eventType === 'schedule') {
+          item = await scheduleApi.getSchedule(eventId)
+        } else if (eventType === 'todo') {
+          item = await todoApi.getTodo(eventId)
+        } else {
+          // eventType 미지정: todo 먼저 시도, 실패 시 schedule fallback
+          try {
+            item = await todoApi.getTodo(eventId)
+          } catch {
+            item = await scheduleApi.getSchedule(eventId)
+          }
         }
         setEvent(item)
 
         try {
-          const d = await eventDetailApi.getEventDetail(id!)
+          const d = await eventDetailApi.getEventDetail(eventId)
           setDetail(d)
         } catch {
           // detail is optional
@@ -62,8 +70,8 @@ export function EventDetailPage() {
       }
     }
 
-    load()
-  }, [id])
+    load(id)
+  }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) {
     return (

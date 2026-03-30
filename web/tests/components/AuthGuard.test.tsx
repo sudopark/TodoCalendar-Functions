@@ -12,6 +12,14 @@ vi.mock('../../src/api/eventTagApi', () => ({
   eventTagApi: { getAllTags: async () => [] },
 }))
 
+vi.mock('../../src/api/todoApi', () => ({
+  todoApi: { getCurrentTodos: async () => [] },
+}))
+
+vi.mock('../../src/api/foremostApi', () => ({
+  foremostApi: { getForemostEvent: async () => null },
+}))
+
 function renderWithRouter(ui: React.ReactNode) {
   return render(
     <MemoryRouter initialEntries={['/']}>
