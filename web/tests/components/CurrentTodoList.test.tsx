@@ -66,6 +66,6 @@ describe('CurrentTodoList', () => {
     renderComponent()
     await userEvent.click(screen.getByRole('button', { name: /이동 테스트/ }))
 
-    expect(mockNavigate).toHaveBeenCalledWith('/events/ct-nav')
+    expect(mockNavigate.mock.calls[0][0]).toBe('/events/ct-nav')
   })
 })

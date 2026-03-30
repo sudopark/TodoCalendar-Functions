@@ -1,5 +1,4 @@
-import { useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useForemostEventStore } from '../stores/foremostEventStore'
 import { useEventTagStore } from '../stores/eventTagStore'
 import { EventTimeDisplay } from './EventTimeDisplay'
@@ -8,13 +7,9 @@ import type { Schedule } from '../models/Schedule'
 
 export function ForemostEventBanner() {
   const foremostEvent = useForemostEventStore(s => s.foremostEvent)
-  const fetch = useForemostEventStore(s => s.fetch)
   const getColorForTagId = useEventTagStore(s => s.getColorForTagId)
   const navigate = useNavigate()
-
-  useEffect(() => {
-    fetch()
-  }, [fetch])
+  const location = useLocation()
 
   if (!foremostEvent?.event) return null
 
@@ -24,12 +19,15 @@ export function ForemostEventBanner() {
     : '#3b82f6'
 
   const eventTime = 'event_time' in event ? event.event_time : undefined
+  const eventType = foremostEvent.is_todo ? 'todo' : 'schedule'
 
   return (
     <button
       data-testid="foremost-banner"
       className="flex w-full items-start gap-3 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-left hover:bg-blue-100"
-      onClick={() => navigate(`/events/${event.uuid}`)}
+      onClick={() => navigate(`/events/${event.uuid}`, {
+        state: { background: location, eventType },
+      })}
     >
       <span
         className="mt-0.5 h-3 w-3 shrink-0 rounded-full"

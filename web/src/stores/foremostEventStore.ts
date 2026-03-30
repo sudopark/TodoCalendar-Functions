@@ -14,7 +14,8 @@ export const useForemostEventStore = create<ForemostEventState>((set) => ({
     try {
       const event = await foremostApi.getForemostEvent()
       set({ foremostEvent: event })
-    } catch {
+    } catch (e) {
+      console.warn('Foremost event 로드 실패:', e)
       set({ foremostEvent: null })
     }
   },

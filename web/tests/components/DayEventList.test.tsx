@@ -3,11 +3,9 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { DayEventList } from '../../src/components/DayEventList'
-import { useUiStore } from '../../src/stores/uiStore'
 import { useCalendarEventsStore } from '../../src/stores/calendarEventsStore'
 import { useEventTagStore } from '../../src/stores/eventTagStore'
 
-vi.mock('../../src/stores/uiStore', () => ({ useUiStore: vi.fn() }))
 vi.mock('../../src/stores/calendarEventsStore', () => ({ useCalendarEventsStore: vi.fn() }))
 vi.mock('../../src/stores/eventTagStore', () => ({ useEventTagStore: vi.fn() }))
 
@@ -17,16 +15,12 @@ vi.mock('react-router-dom', async () => {
   return { ...actual, useNavigate: () => mockNavigate }
 })
 
-function renderComponent() {
+function renderComponent(selectedDate: Date | null = null) {
   return render(
     <MemoryRouter>
-      <DayEventList />
+      <DayEventList selectedDate={selectedDate} />
     </MemoryRouter>
   )
-}
-
-function mockUiStore(state: { selectedDate: Date | null }) {
-  vi.mocked(useUiStore).mockImplementation((selector: any) => selector(state))
 }
 
 function mockCalendarEventsStore(eventsByDate: Map<string, any[]>) {
@@ -46,19 +40,17 @@ describe('DayEventList', () => {
   })
 
   it('날짜가 선택되지 않으면 아무것도 표시하지 않는다', () => {
-    mockUiStore({ selectedDate: null })
     mockCalendarEventsStore(new Map())
 
-    const { container } = renderComponent()
+    const { container } = renderComponent(null)
 
     expect(container.firstChild).toBeNull()
   })
 
   it('선택된 날짜에 이벤트가 없으면 안내 메시지를 표시한다', () => {
-    mockUiStore({ selectedDate: new Date(2024, 2, 15) })
     mockCalendarEventsStore(new Map())
 
-    renderComponent()
+    renderComponent(new Date(2024, 2, 15))
 
     expect(screen.getByText('이벤트가 없습니다')).toBeInTheDocument()
   })
@@ -73,10 +65,9 @@ describe('DayEventList', () => {
       ]],
     ])
 
-    mockUiStore({ selectedDate: new Date(2024, 2, 15) })
     mockCalendarEventsStore(eventsByDate)
 
-    renderComponent()
+    renderComponent(new Date(2024, 2, 15))
 
     const items = screen.getAllByRole('button')
     expect(items[0]).toHaveTextContent('할 일')
@@ -89,12 +80,11 @@ describe('DayEventList', () => {
       ['2024-03-15', [{ type: 'todo' as const, event: todo }]],
     ])
 
-    mockUiStore({ selectedDate: new Date(2024, 2, 15) })
     mockCalendarEventsStore(eventsByDate)
 
-    renderComponent()
+    renderComponent(new Date(2024, 2, 15))
     await userEvent.click(screen.getByRole('button', { name: /상세 확인 할 일/ }))
 
-    expect(mockNavigate).toHaveBeenCalledWith('/events/todo-abc')
+    expect(mockNavigate.mock.calls[0][0]).toBe('/events/todo-abc')
   })
 })
