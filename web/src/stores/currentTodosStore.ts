@@ -5,9 +5,12 @@ import type { Todo } from '../models'
 interface CurrentTodosState {
   todos: Todo[]
   fetch: () => Promise<void>
+  addTodo: (todo: Todo) => void
+  removeTodo: (uuid: string) => void
+  replaceTodo: (todo: Todo) => void
 }
 
-export const useCurrentTodosStore = create<CurrentTodosState>((set) => ({
+export const useCurrentTodosStore = create<CurrentTodosState>((set, get) => ({
   todos: [],
 
   fetch: async () => {
@@ -18,4 +21,8 @@ export const useCurrentTodosStore = create<CurrentTodosState>((set) => ({
       console.warn('Current todo 로드 실패:', e)
     }
   },
+
+  addTodo: (todo: Todo) => set(s => ({ todos: [...s.todos, todo] })),
+  removeTodo: (uuid: string) => set(s => ({ todos: s.todos.filter(t => t.uuid !== uuid) })),
+  replaceTodo: (todo: Todo) => set(s => ({ todos: s.todos.map(t => t.uuid === todo.uuid ? todo : t) })),
 }))
