@@ -56,7 +56,7 @@ export function monthRange(year: number, month: number): { lower: number; upper:
 
 export type CalendarEvent = { type: 'todo'; event: Todo } | { type: 'schedule'; event: Schedule }
 
-function eventTimeOverlapsRange(eventTime: EventTime, lower: number, upper: number): boolean {
+export function eventTimeOverlapsRange(eventTime: EventTime, lower: number, upper: number): boolean {
   switch (eventTime.time_type) {
     case 'at':
       return eventTime.timestamp >= lower && eventTime.timestamp <= upper

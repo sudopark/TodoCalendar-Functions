@@ -7,6 +7,7 @@ import {
   monthRange,
   groupEventsByDate,
   formatDateKey,
+  eventTimeOverlapsRange,
 } from '../../src/utils/eventTimeUtils'
 import type { EventTime, Todo, Schedule } from '../../src/models'
 
@@ -142,5 +143,17 @@ describe('groupEventsByDate', () => {
 
     const result = groupEventsByDate(todos, [], lower, upper)
     expect(result.size).toBe(0)
+  })
+})
+
+describe('eventTimeOverlapsRange', () => {
+  it('at 이벤트가 범위 안에 있으면 true를 반환한다', () => {
+    const et: EventTime = { time_type: 'at', timestamp: 1000 }
+    expect(eventTimeOverlapsRange(et, 900, 1100)).toBe(true)
+  })
+
+  it('at 이벤트가 범위 밖에 있으면 false를 반환한다', () => {
+    const et: EventTime = { time_type: 'at', timestamp: 500 }
+    expect(eventTimeOverlapsRange(et, 900, 1100)).toBe(false)
   })
 })
