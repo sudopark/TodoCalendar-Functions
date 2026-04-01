@@ -15,7 +15,7 @@ export function TodoFormPage() {
   const navigate = useNavigate()
   const selectedDate = useUiStore(s => s.selectedDate)
 
-  const { addEvent, removeEvent, replaceEvent, refreshCurrentRange } = useCalendarEventsStore()
+  const { addEvent, removeEvent, refreshCurrentRange } = useCalendarEventsStore()
   const { addTodo, removeTodo, replaceTodo } = useCurrentTodosStore()
 
   const [loading, setLoading] = useState(!!id)
@@ -28,6 +28,7 @@ export function TodoFormPage() {
   const [repeating, setRepeating] = useState<Repeating | null>(null)
   const [showConfirm, setShowConfirm] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!id) return
@@ -56,8 +57,10 @@ export function TodoFormPage() {
           addEvent({ type: 'todo', event: updated })
         } else if (!updated.event_time && original?.event_time) {
           removeEvent(id)
-        } else {
-          replaceEvent(id, { type: 'todo', event: updated })
+        } else if (updated.event_time && original?.event_time) {
+          // event_time이 바뀌면 날짜 키가 달라질 수 있으므로 remove → add로 갱신
+          removeEvent(id)
+          addEvent({ type: 'todo', event: updated })
         }
         if (updated.is_current && original?.is_current) {
           replaceTodo(updated)
@@ -79,6 +82,7 @@ export function TodoFormPage() {
       navigate(-1)
     } catch (e) {
       console.warn('저장 실패:', e)
+      setError('저장에 실패했습니다. 다시 시도해주세요.')
     } finally {
       setSaving(false)
     }
@@ -97,6 +101,7 @@ export function TodoFormPage() {
       navigate(-1)
     } catch (e) {
       console.warn('삭제 실패:', e)
+      setError('삭제에 실패했습니다. 다시 시도해주세요.')
       setShowConfirm(false)
     }
   }
@@ -154,6 +159,9 @@ export function TodoFormPage() {
           </div>
         )}
 
+        {error && (
+          <p className="text-sm text-red-600">{error}</p>
+        )}
         <div className="flex gap-3 pt-2">
           <button
             className="flex-1 rounded-lg bg-blue-600 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"

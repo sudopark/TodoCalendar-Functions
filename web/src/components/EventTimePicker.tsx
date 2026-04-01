@@ -108,29 +108,34 @@ export function EventTimePicker({ value, onChange, required = false }: EventTime
       )}
 
       {type === 'period' && internal?.time_type === 'period' && (
-        <div className="flex gap-3">
-          <div>
-            <label className="block text-xs text-gray-500" htmlFor="period-start">시작</label>
-            <input
-              id="period-start"
-              aria-label="시작"
-              type="datetime-local"
-              className="mt-1 rounded border border-gray-300 px-2 py-1 text-sm"
-              value={tsToDatetimeLocal(internal.period_start)}
-              onChange={e => handleValueChange({ ...internal, period_start: datetimeLocalToTs(e.target.value) })}
-            />
+        <div className="space-y-1">
+          <div className="flex gap-3">
+            <div>
+              <label className="block text-xs text-gray-500" htmlFor="period-start">시작</label>
+              <input
+                id="period-start"
+                aria-label="시작"
+                type="datetime-local"
+                className="mt-1 rounded border border-gray-300 px-2 py-1 text-sm"
+                value={tsToDatetimeLocal(internal.period_start)}
+                onChange={e => handleValueChange({ ...internal, period_start: datetimeLocalToTs(e.target.value) })}
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500" htmlFor="period-end">종료</label>
+              <input
+                id="period-end"
+                aria-label="종료"
+                type="datetime-local"
+                className="mt-1 rounded border border-gray-300 px-2 py-1 text-sm"
+                value={tsToDatetimeLocal(internal.period_end)}
+                onChange={e => handleValueChange({ ...internal, period_end: datetimeLocalToTs(e.target.value) })}
+              />
+            </div>
           </div>
-          <div>
-            <label className="block text-xs text-gray-500" htmlFor="period-end">종료</label>
-            <input
-              id="period-end"
-              aria-label="종료"
-              type="datetime-local"
-              className="mt-1 rounded border border-gray-300 px-2 py-1 text-sm"
-              value={tsToDatetimeLocal(internal.period_end)}
-              onChange={e => handleValueChange({ ...internal, period_end: datetimeLocalToTs(e.target.value) })}
-            />
-          </div>
+          {internal.period_end < internal.period_start && (
+            <p className="text-xs text-red-500">종료 시각이 시작 시각보다 앞에 있습니다.</p>
+          )}
         </div>
       )}
 
