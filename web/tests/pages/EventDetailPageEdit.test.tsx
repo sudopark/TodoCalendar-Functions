@@ -162,4 +162,22 @@ describe('EventDetailPage — Foremost 토글', () => {
       expect(useForemostEventStore.getState().foremostEvent?.event_id).toBe('ev1')
     )
   })
+
+  it('고정 해제 클릭 시 foremostEventStore가 null로 갱신된다', async () => {
+    // given: 현재 이벤트가 foremost로 설정되어 있음
+    useForemostEventStore.setState({
+      foremostEvent: { event_id: 'ev1', is_todo: true, event: mockTodo as any },
+    })
+    vi.mocked(foremostApi.removeForemostEvent).mockResolvedValue({ status: 'ok' })
+    renderPage()
+    await waitFor(() => screen.getByRole('button', { name: '고정 해제' }))
+
+    // when
+    await userEvent.click(screen.getByRole('button', { name: '고정 해제' }))
+
+    // then
+    await waitFor(() =>
+      expect(useForemostEventStore.getState().foremostEvent).toBeNull()
+    )
+  })
 })

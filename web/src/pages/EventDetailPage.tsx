@@ -117,9 +117,13 @@ export function EventDetailPage() {
 
   async function handleEditSave() {
     if (!id) return
-    const updated = await eventDetailApi.updateEventDetail(id, editForm)
-    setDetail(updated)
-    setIsEditing(false)
+    try {
+      const updated = await eventDetailApi.updateEventDetail(id, editForm)
+      setDetail(updated)
+      setIsEditing(false)
+    } catch (e) {
+      console.warn('이벤트 상세 저장 실패:', e)
+    }
   }
 
   async function handleForemostToggle() {
