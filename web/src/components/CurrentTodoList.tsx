@@ -5,6 +5,8 @@ import { useCalendarEventsStore } from '../stores/calendarEventsStore'
 import { useEventTagStore } from '../stores/eventTagStore'
 import type { Todo } from '../models'
 
+// 이벤트 핸들러로 전달되므로 렌더 사이클 밖에서 실행됨.
+// React 훅 규칙 위반 없이 스토어 상태를 읽으려면 getState()를 직접 호출해야 한다.
 async function completeTodo(todo: Todo) {
   const { removeTodo } = useCurrentTodosStore.getState()
   const { removeEvent, refreshCurrentRange } = useCalendarEventsStore.getState()
