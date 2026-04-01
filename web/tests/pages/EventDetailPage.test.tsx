@@ -18,6 +18,13 @@ vi.mock('../../src/api/scheduleApi', () => ({
 vi.mock('../../src/api/eventDetailApi', () => ({
   eventDetailApi: { getEventDetail: vi.fn() },
 }))
+vi.mock('../../src/api/foremostApi', () => ({
+  foremostApi: {
+    getForemostEvent: vi.fn(),
+    setForemostEvent: vi.fn(),
+    removeForemostEvent: vi.fn(),
+  },
+}))
 
 const mockNavigate = vi.fn()
 vi.mock('react-router-dom', async () => {
