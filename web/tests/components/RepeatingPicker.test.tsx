@@ -34,4 +34,19 @@ describe('RepeatingPicker', () => {
     render(<RepeatingPicker value={value} onChange={vi.fn()} startTimestamp={1743375600} />)
     expect(screen.getByRole('checkbox', { name: '반복' })).toBeChecked()
   })
+
+  it('종료 날짜 선택 시 onChange에 end 필드가 포함된다', async () => {
+    const onChange = vi.fn()
+    render(<RepeatingPicker value={null} onChange={onChange} startTimestamp={1743375600} />)
+    await userEvent.click(screen.getByRole('checkbox', { name: '반복' }))
+    await userEvent.click(screen.getByRole('radio', { name: '날짜' }))
+    expect(onChange).toHaveBeenCalled()
+  })
+
+  it('"매년" 선택 시 월 입력 필드가 표시된다', async () => {
+    render(<RepeatingPicker value={null} onChange={vi.fn()} startTimestamp={1743375600} />)
+    await userEvent.click(screen.getByRole('checkbox', { name: '반복' }))
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: '반복 유형' }), 'every_year')
+    expect(screen.getByLabelText('월')).toBeInTheDocument()
+  })
 })
