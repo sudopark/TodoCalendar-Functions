@@ -42,7 +42,7 @@ export function ScheduleFormPage() {
       setEventTime(sch.event_time)
       setRepeating(sch.repeating ?? null)
       setLoading(false)
-    }).catch(() => setLoading(false))
+    }).catch((e) => { console.warn('일정 로드 실패:', e); setLoading(false) })
   }, [id])
 
   function occurrenceStart(sch: Schedule): number {
@@ -62,7 +62,8 @@ export function ScheduleFormPage() {
 
   async function applyUpdate(scope: RepeatScope) {
     if (!id || !original) return
-    if (!original.repeating || scope === 'all') {
+    if (!original.repeating) {
+      // Non-repeating: optimistic replaceEvent
       const updated = await scheduleApi.updateSchedule(id, {
         name: name.trim(),
         event_tag_id: tagId,
@@ -70,6 +71,15 @@ export function ScheduleFormPage() {
         repeating: repeating ?? undefined,
       })
       replaceEvent(id, { type: 'schedule', event: updated })
+    } else if (scope === 'all') {
+      // Full repeating series: refresh calendar
+      await scheduleApi.updateSchedule(id, {
+        name: name.trim(),
+        event_tag_id: tagId,
+        event_time: eventTime,
+        repeating: repeating ?? undefined,
+      })
+      await refreshCurrentRange()
     } else if (scope === 'this') {
       const turn = original.show_turns?.[0] ?? 0
       await scheduleApi.excludeRepeating(id, { exclude_repeatings: [...(original.exclude_repeatings ?? []), turn] })
@@ -97,9 +107,14 @@ export function ScheduleFormPage() {
   async function applyDelete(scope: RepeatScope) {
     if (!id || !original) return
     try {
-      if (!original.repeating || scope === 'all') {
+      if (!original.repeating) {
+        // Non-repeating: optimistic removeEvent
         await scheduleApi.deleteSchedule(id)
         removeEvent(id)
+      } else if (scope === 'all') {
+        // Full repeating series: refresh calendar
+        await scheduleApi.deleteSchedule(id)
+        await refreshCurrentRange()
       } else if (scope === 'this') {
         const turn = original.show_turns?.[0] ?? 0
         await scheduleApi.excludeRepeating(id, { exclude_repeatings: [...(original.exclude_repeatings ?? []), turn] })
