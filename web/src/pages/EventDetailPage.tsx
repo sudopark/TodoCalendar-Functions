@@ -4,6 +4,7 @@ import { todoApi } from '../api/todoApi'
 import { scheduleApi } from '../api/scheduleApi'
 import { eventDetailApi } from '../api/eventDetailApi'
 import { useEventTagStore } from '../stores/eventTagStore'
+import { useForemostEventStore } from '../stores/foremostEventStore'
 import { EventTimeDisplay } from '../components/EventTimeDisplay'
 import type { Todo } from '../models/Todo'
 import type { Schedule } from '../models/Schedule'
@@ -29,6 +30,9 @@ export function EventDetailPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const getColorForTagId = useEventTagStore(s => s.getColorForTagId)
+  const foremostEvent = useForemostEventStore(s => s.foremostEvent)
+  const setForemost = useForemostEventStore(s => s.setForemost)
+  const removeForemost = useForemostEventStore(s => s.removeForemost)
 
   const [event, setEvent] = useState<EventItem | null>(null)
   const [detail, setDetail] = useState<EventDetail | null>(null)
@@ -36,6 +40,9 @@ export function EventDetailPage() {
   const [error, setError] = useState(false)
 
   const eventType = (location.state as { eventType?: string } | null)?.eventType
+
+  const [isEditing, setIsEditing] = useState(false)
+  const [editForm, setEditForm] = useState<EventDetail>({ place: '', url: '', memo: '' })
 
   useEffect(() => {
     if (!id) return
@@ -94,6 +101,34 @@ export function EventDetailPage() {
   const tagColor = event.event_tag_id ? (getColorForTagId(event.event_tag_id) ?? '#9ca3af') : null
   const eventTime = 'event_time' in event ? event.event_time : undefined
   const repeating = event.repeating
+  const isTodo = 'is_current' in event
+
+  const isForemost = foremostEvent?.event_id === id
+
+  function handleEditStart() {
+    setEditForm(detail ?? { place: '', url: '', memo: '' })
+    setIsEditing(true)
+  }
+
+  function handleEditCancel() {
+    setIsEditing(false)
+    setEditForm(detail ?? { place: '', url: '', memo: '' })
+  }
+
+  async function handleEditSave() {
+    if (!id) return
+    const updated = await eventDetailApi.updateEventDetail(id, editForm)
+    setDetail(updated)
+    setIsEditing(false)
+  }
+
+  async function handleForemostToggle() {
+    if (isForemost) {
+      await removeForemost()
+    } else if (id) {
+      await setForemost(id, isTodo)
+    }
+  }
 
   return (
     <div className="mx-auto max-w-lg px-4 py-6">
@@ -149,35 +184,104 @@ export function EventDetailPage() {
         )}
 
         {/* EventDetail */}
-        {detail && (detail.place || detail.url || detail.memo) && (
+        {detail && (
           <div className="mt-4 space-y-3 border-t border-gray-100 pt-4">
-            {detail.place && (
-              <div>
-                <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">장소</p>
-                <p className="mt-1 text-sm text-gray-700">{detail.place}</p>
-              </div>
-            )}
-            {detail.url && (
-              <div>
-                <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">URL</p>
-                <a
-                  href={detail.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-1 block text-sm text-blue-500 underline break-all"
+            {/* Edit / Save / Cancel buttons */}
+            <div className="flex justify-end gap-2">
+              {isEditing ? (
+                <>
+                  <button
+                    className="text-sm text-blue-500 hover:text-blue-700"
+                    onClick={handleEditSave}
+                  >
+                    저장
+                  </button>
+                  <button
+                    className="text-sm text-gray-500 hover:text-gray-700"
+                    onClick={handleEditCancel}
+                  >
+                    취소
+                  </button>
+                </>
+              ) : (
+                <button
+                  className="text-sm text-gray-500 hover:text-gray-700"
+                  onClick={handleEditStart}
                 >
-                  {detail.url}
-                </a>
-              </div>
-            )}
-            {detail.memo && (
-              <div>
-                <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">메모</p>
-                <p className="mt-1 whitespace-pre-wrap text-sm text-gray-700">{detail.memo}</p>
-              </div>
-            )}
+                  편집
+                </button>
+              )}
+            </div>
+
+            {/* Place */}
+            <div>
+              <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">장소</p>
+              {isEditing ? (
+                <input
+                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1 text-sm text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                  value={editForm.place}
+                  onChange={e => setEditForm(f => ({ ...f, place: e.target.value }))}
+                />
+              ) : (
+                detail.place && <p className="mt-1 text-sm text-gray-700">{detail.place}</p>
+              )}
+            </div>
+
+            {/* URL */}
+            <div>
+              <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">URL</p>
+              {isEditing ? (
+                <input
+                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1 text-sm text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                  value={editForm.url}
+                  onChange={e => setEditForm(f => ({ ...f, url: e.target.value }))}
+                />
+              ) : (
+                detail.url && (
+                  <a
+                    href={detail.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1 block text-sm text-blue-500 underline break-all"
+                  >
+                    {detail.url}
+                  </a>
+                )
+              )}
+            </div>
+
+            {/* Memo */}
+            <div>
+              <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">메모</p>
+              {isEditing ? (
+                <textarea
+                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1 text-sm text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                  rows={4}
+                  value={editForm.memo}
+                  onChange={e => setEditForm(f => ({ ...f, memo: e.target.value }))}
+                />
+              ) : (
+                detail.memo && (
+                  <p className="mt-1 whitespace-pre-wrap text-sm text-gray-700">{detail.memo}</p>
+                )
+              )}
+            </div>
           </div>
         )}
+      </div>
+
+      {/* Foremost toggle */}
+      <div className="mt-4 flex justify-center">
+        <button
+          className={`rounded-lg px-4 py-2 text-sm font-medium ${
+            isForemost
+              ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          }`}
+          onClick={handleForemostToggle}
+        >
+          {isForemost ? '고정 해제' : '고정 설정'}
+        </button>
       </div>
     </div>
   )
