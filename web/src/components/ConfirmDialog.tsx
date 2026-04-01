@@ -1,26 +1,29 @@
 interface ConfirmDialogProps {
-  title: string
+  title?: string
   message: string
   confirmLabel?: string
   onConfirm: () => void
   onCancel: () => void
+  danger?: boolean
 }
 
-export function ConfirmDialog({ title, message, confirmLabel = '삭제', onConfirm, onCancel }: ConfirmDialogProps) {
+export function ConfirmDialog({ title, message, confirmLabel = '확인', onConfirm, onCancel, danger = true }: ConfirmDialogProps) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
-        <h2 className="text-base font-semibold text-gray-900">{title}</h2>
-        <p className="mt-2 text-sm text-gray-600">{message}</p>
-        <div className="mt-6 flex justify-end gap-3">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="mx-4 w-full max-w-sm rounded-xl bg-white p-6 shadow-lg">
+        {title && <h2 className="text-base font-semibold text-gray-900">{title}</h2>}
+        <p className={`text-sm text-gray-700${title ? ' mt-2' : ''}`}>{message}</p>
+        <div className="mt-5 flex justify-end gap-2">
           <button
-            className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+            className="rounded-lg px-4 py-2 text-sm text-gray-500 hover:bg-gray-100"
             onClick={onCancel}
           >
             취소
           </button>
           <button
-            className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+            className={`rounded-lg px-4 py-2 text-sm font-medium text-white ${
+              danger ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-500 hover:bg-blue-600'
+            }`}
             onClick={onConfirm}
           >
             {confirmLabel}
