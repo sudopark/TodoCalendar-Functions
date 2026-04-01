@@ -35,13 +35,14 @@ export function EventDetailPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
 
+  const eventType = (location.state as { eventType?: string } | null)?.eventType
+
   useEffect(() => {
     if (!id) return
 
     async function load(eventId: string) {
       setLoading(true)
       try {
-        const eventType = (location.state as { eventType?: string } | null)?.eventType
         let item: EventItem
         if (eventType === 'schedule') {
           item = await scheduleApi.getSchedule(eventId)
@@ -71,7 +72,7 @@ export function EventDetailPage() {
     }
 
     load(id)
-  }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [id, eventType])
 
   if (loading) {
     return (
