@@ -38,10 +38,26 @@ export function RepeatingPicker({ value, onChange, startTimestamp }: RepeatingPi
   const [option, setOption] = useState<RepeatingOption>(
     value?.option ?? defaultOption('every_day', startTimestamp)
   )
-  const [endType, setEndType] = useState<'none' | 'date' | 'count'>('none')
-  const [endDate, setEndDate] = useState('')
-  const [endCount, setEndCount] = useState(10)
-  const [monthMode, setMonthMode] = useState<'days' | 'week'>('days')
+  const [endType, setEndType] = useState<'none' | 'date' | 'count'>(() => {
+    if (value?.end_count != null) return 'count'
+    if (value?.end != null) return 'date'
+    return 'none'
+  })
+  const [endDate, setEndDate] = useState(() => {
+    if (value?.end != null) {
+      const d = new Date(value.end * 1000)
+      const p = (n: number) => String(n).padStart(2, '0')
+      return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`
+    }
+    return ''
+  })
+  const [endCount, setEndCount] = useState(() => value?.end_count ?? 10)
+  const [monthMode, setMonthMode] = useState<'days' | 'week'>(() => {
+    if (value?.option.optionType === 'every_month') {
+      return 'weekOrdinals' in value.option.monthDaySelection ? 'week' : 'days'
+    }
+    return 'days'
+  })
 
   function emitWithEnd(opt: RepeatingOption, et: 'none' | 'date' | 'count', ed: string, ec: number) {
     const end = et === 'date' && ed ? Math.floor(new Date(ed + 'T00:00:00').getTime() / 1000) : undefined
@@ -59,7 +75,7 @@ export function RepeatingPicker({ value, onChange, startTimestamp }: RepeatingPi
     if (!next) {
       onChange(null)
     } else {
-      emit(option)
+      emitWithEnd(option, endType, endDate, endCount)
     }
   }
 
