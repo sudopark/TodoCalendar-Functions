@@ -3,7 +3,9 @@ import type { Repeating, RepeatingOption } from '../models'
 
 const TZ = Intl.DateTimeFormat().resolvedOptions().timeZone
 
-const DAYS = ['일', '월', '화', '수', '목', '금', '토']
+const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0] // 월~일 display order
+const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토']
+const DAY_FULL_LABELS = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일']
 
 function defaultOption(type: string, startTs: number): RepeatingOption {
   const d = new Date(startTs * 1000)
@@ -41,17 +43,14 @@ export function RepeatingPicker({ value, onChange, startTimestamp }: RepeatingPi
   const [endCount, setEndCount] = useState(10)
   const [monthMode, setMonthMode] = useState<'days' | 'week'>('days')
 
-  function buildRepeating(opt: RepeatingOption): Repeating {
-    const end =
-      endType === 'date' && endDate
-        ? Math.floor(new Date(endDate + 'T00:00:00').getTime() / 1000)
-        : undefined
-    const end_count = endType === 'count' ? endCount : undefined
-    return { start: startTimestamp, option: opt, end, end_count }
+  function emitWithEnd(opt: RepeatingOption, et: 'none' | 'date' | 'count', ed: string, ec: number) {
+    const end = et === 'date' && ed ? Math.floor(new Date(ed + 'T00:00:00').getTime() / 1000) : undefined
+    const end_count = et === 'count' ? ec : undefined
+    onChange({ start: startTimestamp, option: opt, end, end_count })
   }
 
   function emit(opt: RepeatingOption) {
-    onChange(buildRepeating(opt))
+    emitWithEnd(opt, endType, endDate, endCount)
   }
 
   function handleToggle() {
@@ -73,6 +72,7 @@ export function RepeatingPicker({ value, onChange, startTimestamp }: RepeatingPi
   // Type-narrowed helpers to avoid TS narrowing issues in JSX
   const weekOption = option.optionType === 'every_week' ? option : null
   const monthOption = option.optionType === 'every_month' ? option : null
+  const yearOption = option.optionType === 'every_year' ? option : null
   const yearSomeDayOption = option.optionType === 'every_year_some_day' ? option : null
   const lunarOption = option.optionType === 'lunar_calendar_every_year' ? option : null
   const specificDayOption = yearSomeDayOption ?? lunarOption
@@ -124,15 +124,16 @@ export function RepeatingPicker({ value, onChange, startTimestamp }: RepeatingPi
             </div>
           )}
 
-          {/* 매주: 요일 체크박스 */}
+          {/* 매주: 요일 체크박스 (월~일 순서) */}
           {weekOption && (
             <div>
               <p className="text-xs text-gray-500">요일</p>
               <div className="mt-1 flex gap-1">
-                {DAYS.map((d, i) => (
-                  <label key={i} className="flex flex-col items-center text-xs">
+                {DAY_ORDER.map(i => (
+                  <div key={i} className="flex flex-col items-center text-xs">
                     <input
                       type="checkbox"
+                      aria-label={DAY_FULL_LABELS[i]}
                       checked={weekOption.dayOfWeek.includes(i)}
                       onChange={() => {
                         const days = weekOption.dayOfWeek.includes(i)
@@ -143,8 +144,8 @@ export function RepeatingPicker({ value, onChange, startTimestamp }: RepeatingPi
                         emit(opt)
                       }}
                     />
-                    {d}
-                  </label>
+                    <span aria-hidden="true">{DAY_LABELS[i]}</span>
+                  </div>
                 ))}
               </div>
             </div>
@@ -197,6 +198,153 @@ export function RepeatingPicker({ value, onChange, startTimestamp }: RepeatingPi
                   />
                 </div>
               )}
+              {monthMode === 'week' && (
+                <div className="space-y-2">
+                  <div>
+                    <label className="block text-xs text-gray-500" htmlFor="month-week-seq">주차</label>
+                    <input
+                      id="month-week-seq"
+                      type="number"
+                      min={1}
+                      max={5}
+                      aria-label="주차"
+                      className="mt-1 w-20 rounded border border-gray-300 px-2 py-1 text-sm"
+                      value={
+                        'weekOrdinals' in monthOption.monthDaySelection &&
+                        monthOption.monthDaySelection.weekOrdinals.length > 0
+                          ? (monthOption.monthDaySelection.weekOrdinals[0].seq ?? 1)
+                          : 1
+                      }
+                      onChange={e => {
+                        const seq = Number(e.target.value)
+                        const prevDays =
+                          'weekDays' in monthOption.monthDaySelection
+                            ? monthOption.monthDaySelection.weekDays
+                            : []
+                        const opt: RepeatingOption = {
+                          ...monthOption,
+                          monthDaySelection: {
+                            weekOrdinals: [{ isLast: false, seq }],
+                            weekDays: prevDays,
+                          },
+                        }
+                        setOption(opt)
+                        emit(opt)
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">요일</p>
+                    <div className="mt-1 flex gap-1">
+                      {DAY_ORDER.map(i => {
+                        const currentDays =
+                          'weekDays' in monthOption.monthDaySelection
+                            ? monthOption.monthDaySelection.weekDays
+                            : []
+                        return (
+                          <div key={i} className="flex flex-col items-center text-xs">
+                            <input
+                              type="checkbox"
+                              aria-label={DAY_FULL_LABELS[i]}
+                              checked={currentDays.includes(i)}
+                              onChange={() => {
+                                const days = currentDays.includes(i)
+                                  ? currentDays.filter(x => x !== i)
+                                  : [...currentDays, i]
+                                const currentOrdinals =
+                                  'weekOrdinals' in monthOption.monthDaySelection
+                                    ? monthOption.monthDaySelection.weekOrdinals
+                                    : [{ isLast: false, seq: 1 }]
+                                const opt: RepeatingOption = {
+                                  ...monthOption,
+                                  monthDaySelection: {
+                                    weekOrdinals: currentOrdinals,
+                                    weekDays: days,
+                                  },
+                                }
+                                setOption(opt)
+                                emit(opt)
+                              }}
+                            />
+                            <span aria-hidden="true">{DAY_LABELS[i]}</span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 매년: 월 + 주차 + 요일 입력 */}
+          {yearOption && (
+            <div className="space-y-2">
+              <div>
+                <label className="block text-xs text-gray-500" htmlFor="year-month">월</label>
+                <input
+                  id="year-month"
+                  type="number"
+                  min={1}
+                  max={12}
+                  aria-label="월"
+                  className="mt-1 w-20 rounded border border-gray-300 px-2 py-1 text-sm"
+                  value={yearOption.months[0] ?? 1}
+                  onChange={e => {
+                    const opt: RepeatingOption = { ...yearOption, months: [Number(e.target.value)] }
+                    setOption(opt)
+                    emit(opt)
+                  }}
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500" htmlFor="year-week-seq">주차</label>
+                <input
+                  id="year-week-seq"
+                  type="number"
+                  min={1}
+                  max={5}
+                  aria-label="주차"
+                  className="mt-1 w-20 rounded border border-gray-300 px-2 py-1 text-sm"
+                  value={
+                    yearOption.weekOrdinals.length > 0
+                      ? (yearOption.weekOrdinals[0].seq ?? 1)
+                      : 1
+                  }
+                  onChange={e => {
+                    const seq = Number(e.target.value)
+                    const opt: RepeatingOption = {
+                      ...yearOption,
+                      weekOrdinals: [{ isLast: false, seq }],
+                    }
+                    setOption(opt)
+                    emit(opt)
+                  }}
+                />
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">요일</p>
+                <div className="mt-1 flex gap-1">
+                  {DAY_ORDER.map(i => (
+                    <div key={i} className="flex flex-col items-center text-xs">
+                      <input
+                        type="checkbox"
+                        aria-label={DAY_FULL_LABELS[i]}
+                        checked={yearOption.dayOfWeek.includes(i)}
+                        onChange={() => {
+                          const days = yearOption.dayOfWeek.includes(i)
+                            ? yearOption.dayOfWeek.filter(x => x !== i)
+                            : [...yearOption.dayOfWeek, i]
+                          const opt: RepeatingOption = { ...yearOption, dayOfWeek: days }
+                          setOption(opt)
+                          emit(opt)
+                        }}
+                      />
+                      <span aria-hidden="true">{DAY_LABELS[i]}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
 
@@ -246,7 +394,10 @@ export function RepeatingPicker({ value, onChange, startTimestamp }: RepeatingPi
                     type="radio"
                     name="end-type"
                     checked={endType === t}
-                    onChange={() => setEndType(t)}
+                    onChange={() => {
+                      setEndType(t)
+                      emitWithEnd(option, t, endDate, endCount)
+                    }}
                   />
                   {t === 'none' ? '없음' : t === 'date' ? '날짜' : '횟수'}
                 </label>
@@ -257,7 +408,10 @@ export function RepeatingPicker({ value, onChange, startTimestamp }: RepeatingPi
                 type="date"
                 className="mt-2 rounded border border-gray-300 px-2 py-1 text-sm"
                 value={endDate}
-                onChange={e => setEndDate(e.target.value)}
+                onChange={e => {
+                  setEndDate(e.target.value)
+                  emitWithEnd(option, endType, e.target.value, endCount)
+                }}
               />
             )}
             {endType === 'count' && (
@@ -266,7 +420,10 @@ export function RepeatingPicker({ value, onChange, startTimestamp }: RepeatingPi
                 min={1}
                 className="mt-2 w-20 rounded border border-gray-300 px-2 py-1 text-sm"
                 value={endCount}
-                onChange={e => setEndCount(Number(e.target.value))}
+                onChange={e => {
+                  setEndCount(Number(e.target.value))
+                  emitWithEnd(option, endType, endDate, Number(e.target.value))
+                }}
               />
             )}
           </div>
