@@ -36,7 +36,7 @@ describe('TagSelector', () => {
   it('"태그 관리" 버튼 클릭 시 /tags로 이동한다', async () => {
     mockTags([])
     render(<MemoryRouter><TagSelector value={null} onChange={vi.fn()} /></MemoryRouter>)
-    await userEvent.click(screen.getByRole('button', { name: '태그 관리' }))
+    await userEvent.click(screen.getByRole('button', { name: '태그 관리 >' }))
     expect(mockNavigate).toHaveBeenCalled()
   })
 })
