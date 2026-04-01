@@ -90,6 +90,19 @@ describe('useDoneTodosStore', () => {
     expect(useDoneTodosStore.getState().items.map(i => i.uuid)).toEqual(['d2'])
   })
 
+  it('마지막 항목의 done_at이 null이면 hasMore가 false가 된다', async () => {
+    // given: PAGE_SIZE(20)개를 반환하지만 마지막 항목의 done_at이 null
+    const items = Array.from({ length: 20 }, (_, i) => makeDone(`d${i}`, i < 19 ? 2000 - i : null as any))
+    vi.mocked(doneTodoApi.getDoneTodos).mockResolvedValue(items)
+
+    // when
+    await useDoneTodosStore.getState().fetchNext()
+
+    // then: cursor가 null이므로 다음 페이지 없음
+    expect(useDoneTodosStore.getState().hasMore).toBe(false)
+    expect(useDoneTodosStore.getState().cursor).toBeNull()
+  })
+
   it('reset 호출 시 상태가 초기화된다', async () => {
     // given
     useDoneTodosStore.setState({ items: [makeDone('d1')], hasMore: false, cursor: 999 })

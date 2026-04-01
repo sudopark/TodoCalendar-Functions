@@ -29,10 +29,11 @@ export const useDoneTodosStore = create<DoneTodosState>((set, get) => ({
       const fetched = await doneTodoApi.getDoneTodos(PAGE_SIZE, cursor ?? undefined)
       set(state => {
         const last = fetched[fetched.length - 1]
+        const nextCursor = last?.done_at ?? null
         return {
           items: [...state.items, ...fetched],
-          cursor: last?.done_at ?? state.cursor,
-          hasMore: fetched.length === PAGE_SIZE,
+          cursor: nextCursor,
+          hasMore: fetched.length === PAGE_SIZE && nextCursor !== null,
           isLoading: false,
         }
       })
@@ -43,13 +44,23 @@ export const useDoneTodosStore = create<DoneTodosState>((set, get) => ({
   },
 
   revert: async (id: string) => {
-    await doneTodoApi.revertDoneTodo(id)
-    set(state => ({ items: state.items.filter(i => i.uuid !== id) }))
+    try {
+      await doneTodoApi.revertDoneTodo(id)
+      set(state => ({ items: state.items.filter(i => i.uuid !== id) }))
+    } catch (e) {
+      console.warn('Todo 되돌리기 실패:', e)
+      throw e
+    }
   },
 
   remove: async (id: string) => {
-    await doneTodoApi.deleteDoneTodo(id)
-    set(state => ({ items: state.items.filter(i => i.uuid !== id) }))
+    try {
+      await doneTodoApi.deleteDoneTodo(id)
+      set(state => ({ items: state.items.filter(i => i.uuid !== id) }))
+    } catch (e) {
+      console.warn('Done todo 삭제 실패:', e)
+      throw e
+    }
   },
 
   reset: () => set({ items: [], cursor: null, hasMore: true, isLoading: false }),
