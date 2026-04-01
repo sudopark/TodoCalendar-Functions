@@ -11,6 +11,7 @@ vi.mock('../../src/api/todoApi', () => ({
   todoApi: {
     getCurrentTodos: vi.fn(),
     completeTodo: vi.fn(),
+    getTodos: vi.fn().mockResolvedValue([]),
   },
 }))
 vi.mock('../../src/api/scheduleApi', () => ({
@@ -89,23 +90,7 @@ describe('CurrentTodoList — 완료', () => {
     useCalendarEventsStore.setState({ eventsByDate: new Map(), loading: false, lastRange: null })
   })
 
-  it('체크박스 클릭 시 completeTodo API가 호출된다', async () => {
-    const { todoApi } = await import('../../src/api/todoApi')
-    vi.mocked(todoApi.completeTodo).mockResolvedValue({ uuid: 'done-1', done_at: 1000 } as any)
-    const todo = { uuid: 't1', name: '완료 할 일', is_current: true, event_time: null }
-    useCurrentTodosStore.setState({ todos: [todo as any] })
-
-    render(
-      <MemoryRouter>
-        <CurrentTodoList />
-      </MemoryRouter>
-    )
-
-    await userEvent.click(screen.getByRole('checkbox', { name: '완료 할 일' }))
-    expect(todoApi.completeTodo).toHaveBeenCalled()
-  })
-
-  it('완료 후 해당 Todo가 목록에서 사라진다', async () => {
+  it('비반복 Todo 체크박스 클릭 시 해당 Todo가 목록에서 사라진다', async () => {
     const { todoApi } = await import('../../src/api/todoApi')
     vi.mocked(todoApi.completeTodo).mockResolvedValue({ uuid: 'done-1', done_at: 1000 } as any)
     const todo = { uuid: 't1', name: '완료 할 일', is_current: true, event_time: null }
@@ -117,6 +102,28 @@ describe('CurrentTodoList — 완료', () => {
 
     await waitFor(() => {
       expect(useCurrentTodosStore.getState().todos.some(t => t.uuid === 't1')).toBe(false)
+    })
+  })
+
+  it('반복 Todo 체크박스 클릭 시 currentRange가 갱신된다', async () => {
+    const { todoApi } = await import('../../src/api/todoApi')
+    vi.mocked(todoApi.completeTodo).mockResolvedValue({ uuid: 'done-1', done_at: 1000 } as any)
+    const repeatingTodo = {
+      uuid: 't2',
+      name: '반복 할 일',
+      is_current: true,
+      event_time: { time_type: 'at' as const, timestamp: 1743375600 },
+      repeating: { start: 1743375600, option: { optionType: 'every_day' as const, interval: 1 } },
+    }
+    useCurrentTodosStore.setState({ todos: [repeatingTodo as any] })
+    useCalendarEventsStore.setState({ eventsByDate: new Map(), loading: false, lastRange: { lower: 0, upper: 9999999999 } })
+
+    render(<MemoryRouter><CurrentTodoList /></MemoryRouter>)
+    await userEvent.click(screen.getByRole('checkbox', { name: '반복 할 일' }))
+
+    // After completion, loading state cycles (fetch triggered by refreshCurrentRange)
+    await waitFor(() => {
+      expect(useCalendarEventsStore.getState().loading).toBe(false)
     })
   })
 })

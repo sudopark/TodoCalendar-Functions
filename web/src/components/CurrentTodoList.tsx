@@ -8,12 +8,16 @@ import type { Todo } from '../models'
 async function completeTodo(todo: Todo) {
   const { removeTodo } = useCurrentTodosStore.getState()
   const { removeEvent, refreshCurrentRange } = useCalendarEventsStore.getState()
-  await todoApi.completeTodo(todo.uuid, { origin: todo })
-  if (todo.repeating) {
-    await refreshCurrentRange()
-  } else {
-    removeEvent(todo.uuid)
-    removeTodo(todo.uuid)
+  try {
+    await todoApi.completeTodo(todo.uuid, { origin: todo })
+    if (todo.repeating) {
+      await refreshCurrentRange()
+    } else {
+      removeEvent(todo.uuid)
+      removeTodo(todo.uuid)
+    }
+  } catch (e) {
+    console.warn('완료 처리 실패:', e)
   }
 }
 
