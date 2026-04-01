@@ -15,7 +15,7 @@ export function ScheduleFormPage() {
   const navigate = useNavigate()
   const selectedDate = useUiStore(s => s.selectedDate)
 
-  const { addEvent, removeEvent, replaceEvent, refreshCurrentRange } = useCalendarEventsStore()
+  const { addEvent, removeEvent, refreshCurrentRange } = useCalendarEventsStore()
 
   const defaultEventTime = (): EventTime => {
     const base = selectedDate ?? new Date()
@@ -32,6 +32,7 @@ export function ScheduleFormPage() {
   const [showSaveScope, setShowSaveScope] = useState(false)
   const [showDeleteScope, setShowDeleteScope] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!id) return
@@ -63,14 +64,15 @@ export function ScheduleFormPage() {
   async function applyUpdate(scope: RepeatScope) {
     if (!id || !original) return
     if (!original.repeating) {
-      // Non-repeating: optimistic replaceEvent
+      // Non-repeating: event_time이 바뀌면 날짜 키가 달라질 수 있으므로 remove → add로 갱신
       const updated = await scheduleApi.updateSchedule(id, {
         name: name.trim(),
         event_tag_id: tagId,
         event_time: eventTime,
         repeating: repeating ?? undefined,
       })
-      replaceEvent(id, { type: 'schedule', event: updated })
+      removeEvent(id)
+      addEvent({ type: 'schedule', event: updated })
     } else if (scope === 'all') {
       // Full repeating series: refresh calendar
       await scheduleApi.updateSchedule(id, {
@@ -116,6 +118,7 @@ export function ScheduleFormPage() {
         await scheduleApi.deleteSchedule(id)
         await refreshCurrentRange()
       } else if (scope === 'this') {
+        // show_turns[0]: 현재 화면에 표시된 반복 회차. 없으면 0(첫 번째 회차)으로 폴백
         const turn = original.show_turns?.[0] ?? 0
         await scheduleApi.excludeRepeating(id, { exclude_repeatings: [...(original.exclude_repeatings ?? []), turn] })
         await refreshCurrentRange()
@@ -128,6 +131,7 @@ export function ScheduleFormPage() {
       navigate(-1)
     } catch (e) {
       console.warn('삭제 실패:', e)
+      setError('삭제에 실패했습니다. 다시 시도해주세요.')
       setShowDeleteScope(false)
       setShowDeleteConfirm(false)
     }
@@ -143,6 +147,7 @@ export function ScheduleFormPage() {
       navigate(-1)
     } catch (e) {
       console.warn('저장 실패:', e)
+      setError('저장에 실패했습니다. 다시 시도해주세요.')
     } finally {
       setSaving(false)
     }
@@ -156,6 +161,7 @@ export function ScheduleFormPage() {
       navigate(-1)
     } catch (e) {
       console.warn('저장 실패:', e)
+      setError('저장에 실패했습니다. 다시 시도해주세요.')
     } finally {
       setSaving(false)
     }
@@ -210,6 +216,9 @@ export function ScheduleFormPage() {
           </div>
         </div>
 
+        {error && (
+          <p className="text-sm text-red-600">{error}</p>
+        )}
         <div className="flex gap-3 pt-2">
           <button
             className="flex-1 rounded-lg bg-blue-600 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
