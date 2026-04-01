@@ -35,7 +35,7 @@ export function TagSelector({ value, onChange }: TagSelectorProps) {
         className="text-xs text-blue-500 hover:underline"
         onClick={() => navigate('/tags', { state: { background: location } })}
       >
-        태그 관리
+        태그 관리 &gt;
       </button>
     </div>
   )
