@@ -38,7 +38,8 @@ function AppRoutes() {
         />
       </Routes>
 
-      {/* background location이 있을 때 오버레이로 렌더 */}
+      {/* 오버레이 렌더: background가 있을 때 EventDetailPage를 배경 위에 표시.
+          배경 페이지의 Header가 이미 표시 중이므로 Header 불필요. */}
       {background && (
         <Routes>
           {[
