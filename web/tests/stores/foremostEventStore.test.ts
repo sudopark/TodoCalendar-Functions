@@ -3,7 +3,11 @@ import { useForemostEventStore } from '../../src/stores/foremostEventStore'
 import { foremostApi } from '../../src/api/foremostApi'
 
 vi.mock('../../src/api/foremostApi', () => ({
-  foremostApi: { getForemostEvent: vi.fn() },
+  foremostApi: {
+    getForemostEvent: vi.fn(),
+    setForemostEvent: vi.fn(),
+    removeForemostEvent: vi.fn(),
+  },
 }))
 
 describe('useForemostEventStore', () => {
@@ -42,5 +46,29 @@ describe('useForemostEventStore', () => {
     expect(warnSpy).toHaveBeenCalled()
 
     warnSpy.mockRestore()
+  })
+
+  it('setForemost 호출 시 foremostEvent가 API 응답으로 갱신된다', async () => {
+    // given
+    const event = { event_id: 'e1', is_todo: true, event: { uuid: 'e1', name: '할 일', is_current: false } }
+    vi.mocked(foremostApi.setForemostEvent).mockResolvedValue(event as any)
+
+    // when
+    await useForemostEventStore.getState().setForemost('e1', true)
+
+    // then
+    expect(useForemostEventStore.getState().foremostEvent).toEqual(event)
+  })
+
+  it('removeForemost 호출 시 foremostEvent가 null이 된다', async () => {
+    // given
+    useForemostEventStore.setState({ foremostEvent: { event_id: 'e1', is_todo: true } as any })
+    vi.mocked(foremostApi.removeForemostEvent).mockResolvedValue({ status: 'ok' })
+
+    // when
+    await useForemostEventStore.getState().removeForemost()
+
+    // then
+    expect(useForemostEventStore.getState().foremostEvent).toBeNull()
   })
 })
