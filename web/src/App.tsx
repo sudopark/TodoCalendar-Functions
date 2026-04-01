@@ -1,6 +1,7 @@
 import React from 'react'
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { AuthGuard } from './components/AuthGuard'
+import { Header } from './components/Header'
 import { LoginPage } from './pages/LoginPage'
 import { MainPage } from './pages/MainPage'
 import { EventDetailPage } from './pages/EventDetailPage'
@@ -14,13 +15,13 @@ function AppRoutes() {
 
   return (
     <>
-      {/* background가 있으면 캘린더 유지, 없으면 현재 위치로 라우팅 */}
       <Routes location={background ?? location}>
         <Route path="/login" element={<LoginPage />} />
         <Route
           path="/*"
           element={
             <AuthGuard>
+              <Header />
               <Routes>
                 <Route path="/" element={<MainPage />} />
                 <Route path="/events/:id" element={<EventDetailPage />} />
@@ -29,6 +30,8 @@ function AppRoutes() {
                 <Route path="/schedules/new" element={<ScheduleFormPage />} />
                 <Route path="/schedules/:id/edit" element={<ScheduleFormPage />} />
                 <Route path="/tags" element={<TagManagementPage />} />
+                <Route path="/done" element={<div className="p-8 text-gray-400 text-sm">준비 중</div>} />
+                <Route path="/settings" element={<div className="p-8 text-gray-400 text-sm">준비 중</div>} />
               </Routes>
             </AuthGuard>
           }
