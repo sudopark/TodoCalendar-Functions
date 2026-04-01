@@ -9,6 +9,7 @@ import { TodoFormPage } from './pages/TodoFormPage'
 import { ScheduleFormPage } from './pages/ScheduleFormPage'
 import { TagManagementPage } from './pages/TagManagementPage'
 import { DoneTodosPage } from './pages/DoneTodosPage'
+import { SettingsPage } from './pages/SettingsPage'
 
 function AppRoutes() {
   const location = useLocation()
@@ -32,7 +33,7 @@ function AppRoutes() {
                 <Route path="/schedules/:id/edit" element={<ScheduleFormPage />} />
                 <Route path="/tags" element={<TagManagementPage />} />
                 <Route path="/done" element={<DoneTodosPage />} />
-                <Route path="/settings" element={<div className="p-8 text-gray-400 text-sm">준비 중</div>} />
+                <Route path="/settings" element={<SettingsPage />} />
               </Routes>
             </AuthGuard>
           }
