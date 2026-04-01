@@ -52,8 +52,20 @@ export function TodoFormPage() {
           event_time: eventTime,
           repeating,
         })
-        replaceEvent(id, { type: 'todo', event: updated })
-        if (updated.is_current) replaceTodo(updated)
+        if (updated.event_time && !original?.event_time) {
+          addEvent({ type: 'todo', event: updated })
+        } else if (!updated.event_time && original?.event_time) {
+          removeEvent(id)
+        } else {
+          replaceEvent(id, { type: 'todo', event: updated })
+        }
+        if (updated.is_current && original?.is_current) {
+          replaceTodo(updated)
+        } else if (updated.is_current && !original?.is_current) {
+          addTodo(updated)
+        } else if (!updated.is_current && original?.is_current) {
+          removeTodo(id)
+        }
       } else {
         const created = await todoApi.createTodo({
           name: name.trim(),
@@ -74,14 +86,19 @@ export function TodoFormPage() {
 
   async function handleDelete() {
     if (!id) return
-    await todoApi.deleteTodo(id)
-    if (original?.repeating) {
-      await refreshCurrentRange()
-    } else {
-      removeEvent(id)
-      removeTodo(id)
+    try {
+      await todoApi.deleteTodo(id)
+      if (original?.repeating) {
+        await refreshCurrentRange()
+      } else {
+        removeEvent(id)
+        removeTodo(id)
+      }
+      navigate(-1)
+    } catch (e) {
+      console.warn('삭제 실패:', e)
+      setShowConfirm(false)
     }
-    navigate(-1)
   }
 
   if (loading) {
