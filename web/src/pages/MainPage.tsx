@@ -1,13 +1,24 @@
+import { useState } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import MonthCalendar from '../calendar/MonthCalendar'
 import { DayEventList } from '../components/DayEventList'
 import { CurrentTodoList } from '../components/CurrentTodoList'
 import { ForemostEventBanner } from '../components/ForemostEventBanner'
+import { TypeSelectorPopup } from '../components/TypeSelectorPopup'
 import { useUiStore } from '../stores/uiStore'
 import { useForemostEventStore } from '../stores/foremostEventStore'
 
 export function MainPage() {
   const selectedDate = useUiStore(s => s.selectedDate)
   const foremostEvent = useForemostEventStore(s => s.foremostEvent)
+  const [showTypeSelector, setShowTypeSelector] = useState(false)
+  const navigate = useNavigate()
+  const location = useLocation()
+
+  function handleTypeSelect(type: 'todo' | 'schedule') {
+    setShowTypeSelector(false)
+    navigate(type === 'todo' ? '/todos/new' : '/schedules/new', { state: { background: location } })
+  }
 
   return (
     <div className="flex min-h-screen flex-col bg-gray-50 md:flex-row">
@@ -38,6 +49,19 @@ export function MainPage() {
           </section>
         )}
       </div>
+
+      {/* FAB */}
+      <button
+        className="fixed bottom-6 right-6 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-2xl text-white shadow-lg hover:bg-blue-700"
+        onClick={() => setShowTypeSelector(o => !o)}
+        aria-label="새 이벤트 추가"
+      >
+        +
+      </button>
+
+      {showTypeSelector && (
+        <TypeSelectorPopup onSelect={handleTypeSelect} onClose={() => setShowTypeSelector(false)} />
+      )}
     </div>
   )
 }
