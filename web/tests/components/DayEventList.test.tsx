@@ -69,9 +69,9 @@ describe('DayEventList', () => {
 
     renderComponent(new Date(2024, 2, 15))
 
-    const items = screen.getAllByRole('button')
-    expect(items[0]).toHaveTextContent('할 일')
-    expect(items[1]).toHaveTextContent('일정')
+    const listItems = screen.getAllByRole('listitem')
+    expect(listItems[0]).toHaveTextContent('할 일')
+    expect(listItems[1]).toHaveTextContent('일정')
   })
 
   it('이벤트를 클릭하면 해당 이벤트 상세 페이지로 이동한다', async () => {
@@ -86,5 +86,27 @@ describe('DayEventList', () => {
     await userEvent.click(screen.getByRole('button', { name: /상세 확인 할 일/ }))
 
     expect(mockNavigate.mock.calls[0][0]).toBe('/events/todo-abc')
+  })
+})
+
+describe('DayEventList — 편집 메뉴', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockEventTagStore()
+  })
+
+  it('이벤트 아이템에 "···" 메뉴 버튼이 표시된다', () => {
+    const todo = { uuid: 't1', name: '할 일', is_current: false, event_time: null }
+    mockCalendarEventsStore(new Map([['2024-03-15', [{ type: 'todo' as const, event: todo }]]]))
+    renderComponent(new Date(2024, 2, 15))
+    expect(screen.getByRole('button', { name: '메뉴' })).toBeInTheDocument()
+  })
+
+  it('"···" 메뉴 클릭 시 수정 옵션이 표시된다', async () => {
+    const todo = { uuid: 't1', name: '할 일', is_current: false, event_time: null }
+    mockCalendarEventsStore(new Map([['2024-03-15', [{ type: 'todo' as const, event: todo }]]]))
+    renderComponent(new Date(2024, 2, 15))
+    await userEvent.click(screen.getByRole('button', { name: '메뉴' }))
+    expect(screen.getByText('수정')).toBeInTheDocument()
   })
 })

@@ -96,12 +96,26 @@ export function EventDetailPage() {
 
   return (
     <div className="mx-auto max-w-lg px-4 py-6">
-      <button
-        className="mb-4 flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
-        onClick={() => navigate(-1)}
-      >
-        ← 뒤로
-      </button>
+      <div className="mb-4 flex items-center justify-between">
+        <button
+          className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
+          onClick={() => navigate(-1)}
+        >
+          ← 뒤로
+        </button>
+        {event && (
+          <button
+            className="text-sm text-blue-500 hover:text-blue-700"
+            onClick={() => {
+              const eventType = (location.state as { eventType?: string } | null)?.eventType
+              const path = eventType === 'schedule' ? `/schedules/${id}/edit` : `/todos/${id}/edit`
+              navigate(path, { state: { background: location } })
+            }}
+          >
+            수정
+          </button>
+        )}
+      </div>
 
       <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
         {/* Header */}

@@ -10,7 +10,7 @@ interface CurrentTodosState {
   replaceTodo: (todo: Todo) => void
 }
 
-export const useCurrentTodosStore = create<CurrentTodosState>((set, get) => ({
+export const useCurrentTodosStore = create<CurrentTodosState>((set, _get) => ({
   todos: [],
 
   fetch: async () => {
