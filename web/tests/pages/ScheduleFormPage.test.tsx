@@ -64,7 +64,6 @@ function renderEdit(id: string) {
 
 describe('ScheduleFormPage — create', () => {
   beforeEach(() => {
-    setupMocks()
     vi.clearAllMocks()
     setupMocks()
   })
@@ -103,7 +102,6 @@ describe('ScheduleFormPage — edit (반복)', () => {
   }
 
   beforeEach(() => {
-    setupMocks()
     vi.clearAllMocks()
     setupMocks()
   })
