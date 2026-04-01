@@ -34,7 +34,7 @@ export const useEventTagStore = create<EventTagState>((set, get) => ({
   },
 
   updateTag: async (id: string, updates: { name?: string; color_hex?: string }) => {
-    const tag = await eventTagApi.updateTag(id, { name: updates.name ?? '', color_hex: updates.color_hex })
+    const tag = await eventTagApi.updateTag(id, { name: updates.name ?? get().tags.get(id)?.name ?? '', color_hex: updates.color_hex })
     set(s => { const tags = new Map(s.tags); tags.set(tag.uuid, tag); return { tags } })
     return tag
   },
