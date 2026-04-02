@@ -84,6 +84,7 @@ export function TagManagementPage() {
         <ConfirmDialog
           title="태그 삭제"
           message={`"${deleteTarget.name}" 태그를 삭제할까요?`}
+          confirmLabel="삭제"
           onConfirm={async () => { await deleteTag(deleteTarget.uuid); setDeleteTarget(null) }}
           onCancel={() => setDeleteTarget(null)}
         />

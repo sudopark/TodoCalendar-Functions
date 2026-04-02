@@ -242,6 +242,7 @@ export function ScheduleFormPage() {
         <ConfirmDialog
           title="Schedule 삭제"
           message={`"${name}"을 삭제할까요?`}
+          confirmLabel="삭제"
           onConfirm={async () => { setShowDeleteConfirm(false); await applyDelete('all') }}
           onCancel={() => setShowDeleteConfirm(false)}
         />
