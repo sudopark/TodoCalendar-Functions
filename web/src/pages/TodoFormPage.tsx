@@ -185,6 +185,7 @@ export function TodoFormPage() {
         <ConfirmDialog
           title="Todo 삭제"
           message={`"${name}" 을 정말 삭제할까요?${original?.repeating ? '\n반복 Todo는 전체 시리즈가 삭제됩니다.' : ''}`}
+          confirmLabel="삭제"
           onConfirm={handleDelete}
           onCancel={() => setShowConfirm(false)}
         />
