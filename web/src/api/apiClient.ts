@@ -14,6 +14,10 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   })
 
   if (!response.ok) {
+    if (response.status === 401) {
+      const { useAuthStore } = await import('../stores/authStore')
+      await useAuthStore.getState().signOut()
+    }
     throw new Error(`API error: ${response.status}`)
   }
 

@@ -7,6 +7,7 @@ import { todoApi } from '../../src/api/todoApi'
 import { eventDetailApi } from '../../src/api/eventDetailApi'
 import { useForemostEventStore } from '../../src/stores/foremostEventStore'
 import { foremostApi } from '../../src/api/foremostApi'
+import { useToastStore } from '../../src/stores/toastStore'
 
 vi.mock('../../src/stores/eventTagStore', () => ({
   useEventTagStore: vi.fn((selector: any) => selector({ getColorForTagId: () => null })),
@@ -48,6 +49,7 @@ describe('EventDetailPage — 인라인 편집', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     useForemostEventStore.setState({ foremostEvent: null })
+    useToastStore.setState({ toasts: [] })
     vi.mocked(todoApi.getTodo).mockResolvedValue(mockTodo as any)
   })
 
@@ -99,6 +101,26 @@ describe('EventDetailPage — 인라인 편집', () => {
       expect(screen.queryByRole('button', { name: '저장' })).not.toBeInTheDocument()
       expect(screen.getByText('부산')).toBeInTheDocument()
     })
+  })
+
+  it('저장 실패 시 에러 토스트가 표시된다', async () => {
+    // given
+    vi.mocked(eventDetailApi.getEventDetail).mockResolvedValue({ place: '서울', url: '', memo: '' })
+    vi.mocked(eventDetailApi.updateEventDetail).mockRejectedValue(new Error('save fail'))
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    renderPage()
+    await waitFor(() => screen.getByRole('button', { name: '편집' }))
+    await userEvent.click(screen.getByRole('button', { name: '편집' }))
+
+    // when
+    await userEvent.click(screen.getByRole('button', { name: '저장' }))
+
+    // then
+    await waitFor(() => {
+      const toasts = useToastStore.getState().toasts
+      expect(toasts.some(t => t.message === '이벤트 상세 저장에 실패했습니다' && t.type === 'error')).toBe(true)
+    })
+    warnSpy.mockRestore()
   })
 
   it('취소 클릭 시 입력값이 원복되고 읽기 모드로 돌아간다', async () => {

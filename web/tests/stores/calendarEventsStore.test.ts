@@ -66,6 +66,27 @@ describe('calendarEventsStore', () => {
 const AT_TIMESTAMP = 1743375600
 // 'MARCH31_KEY' and 'MARCH31_KEY' already defined at top of file as '2025-03-31'
 
+describe('calendarEventsStore — reset', () => {
+  it('reset 호출 시 초기 상태로 돌아간다', async () => {
+    // given: 스토어에 데이터가 있는 상태
+    const { todoApi } = await import('../../src/api/todoApi')
+    const { scheduleApi } = await import('../../src/api/scheduleApi')
+    vi.mocked(todoApi.getTodos).mockResolvedValue([
+      { uuid: 'todo-1', name: 'Task', is_current: false, event_time: { time_type: 'at' as const, timestamp: MARCH31_TIMESTAMP } },
+    ])
+    vi.mocked(scheduleApi.getSchedules).mockResolvedValue([])
+    await useCalendarEventsStore.getState().fetchEventsForRange(1743292800, 1743465600)
+
+    // when: reset 호출
+    useCalendarEventsStore.getState().reset()
+
+    // then: 초기 상태
+    const state = useCalendarEventsStore.getState()
+    expect(state.eventsByDate.size).toBe(0)
+    expect(state.lastRange).toBeNull()
+  })
+})
+
 describe('calendarEventsStore — mutation', () => {
   beforeEach(() => {
     useCalendarEventsStore.setState({ eventsByDate: new Map(), loading: false, lastRange: null })

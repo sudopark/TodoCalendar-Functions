@@ -5,6 +5,7 @@ import { scheduleApi } from '../api/scheduleApi'
 import { eventDetailApi } from '../api/eventDetailApi'
 import { useEventTagStore } from '../stores/eventTagStore'
 import { useForemostEventStore } from '../stores/foremostEventStore'
+import { useToastStore } from '../stores/toastStore'
 import { EventTimeDisplay } from '../components/EventTimeDisplay'
 import type { Todo } from '../models/Todo'
 import type { Schedule } from '../models/Schedule'
@@ -123,6 +124,7 @@ export function EventDetailPage() {
       setIsEditing(false)
     } catch (e) {
       console.warn('이벤트 상세 저장 실패:', e)
+      useToastStore.getState().show('이벤트 상세 저장에 실패했습니다', 'error')
     }
   }
 

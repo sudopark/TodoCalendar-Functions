@@ -69,6 +69,23 @@ describe('eventTagStore', () => {
   })
 })
 
+describe('eventTagStore — reset', () => {
+  it('reset 호출 시 초기 상태로 돌아간다', async () => {
+    // given: 태그가 있는 상태
+    const { eventTagApi } = await import('../../src/api/eventTagApi')
+    vi.mocked(eventTagApi.getAllTags).mockResolvedValue([
+      { uuid: 'tag-1', name: 'Work', color_hex: '#ff0000' },
+    ])
+    await useEventTagStore.getState().fetchAll()
+
+    // when: reset 호출
+    useEventTagStore.getState().reset()
+
+    // then: 빈 상태
+    expect(useEventTagStore.getState().getColorForTagId('tag-1')).toBeUndefined()
+  })
+})
+
 describe('eventTagStore — CRUD', () => {
   beforeEach(() => {
     useEventTagStore.setState({ tags: new Map() })

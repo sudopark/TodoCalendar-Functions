@@ -102,5 +102,31 @@ describe('authStore', () => {
 
       await expect(useAuthStore.getState().signOut()).resolves.toBeUndefined()
     })
+
+    it('로그아웃 시 데이터 스토어들이 초기화된다', async () => {
+      // given: 각 스토어에 데이터가 있는 상태
+      const { signOut } = await import('firebase/auth')
+      vi.mocked(signOut).mockResolvedValue(undefined)
+
+      const { useEventTagStore } = await import('../../src/stores/eventTagStore')
+      const { useCurrentTodosStore } = await import('../../src/stores/currentTodosStore')
+      const { useForemostEventStore } = await import('../../src/stores/foremostEventStore')
+      const { useCalendarEventsStore } = await import('../../src/stores/calendarEventsStore')
+
+      useEventTagStore.setState({ tags: new Map([['t1', { uuid: 't1', name: 'tag', color_hex: '#ff0000' }]]) })
+      useCurrentTodosStore.setState({ todos: [{ uuid: 'td1', name: 'todo', is_current: true, event_time: null }] })
+      useForemostEventStore.setState({ foremostEvent: { event_id: 'e1', is_todo: true } as any })
+      useCalendarEventsStore.setState({ eventsByDate: new Map([['2025-01-01', []]]), lastRange: { lower: 0, upper: 100 } })
+
+      // when: signOut 호출
+      await useAuthStore.getState().signOut()
+
+      // then: 모든 스토어가 초기 상태
+      expect(useEventTagStore.getState().getColorForTagId('t1')).toBeUndefined()
+      expect(useCurrentTodosStore.getState().todos).toEqual([])
+      expect(useForemostEventStore.getState().foremostEvent).toBeNull()
+      expect(useCalendarEventsStore.getState().eventsByDate.size).toBe(0)
+      expect(useCalendarEventsStore.getState().lastRange).toBeNull()
+    })
   })
 })
