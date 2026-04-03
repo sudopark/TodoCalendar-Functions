@@ -53,6 +53,14 @@ export const useAuthStore = create<AuthState>((set) => {
     },
     signOut: async () => {
       await firebaseSignOut(auth)
+      const { useEventTagStore } = await import('./eventTagStore')
+      const { useCurrentTodosStore } = await import('./currentTodosStore')
+      const { useForemostEventStore } = await import('./foremostEventStore')
+      const { useCalendarEventsStore } = await import('./calendarEventsStore')
+      useEventTagStore.getState().reset()
+      useCurrentTodosStore.getState().reset()
+      useForemostEventStore.getState().reset()
+      useCalendarEventsStore.getState().reset()
     },
   }
 })

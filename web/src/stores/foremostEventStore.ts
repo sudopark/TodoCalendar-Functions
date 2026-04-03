@@ -7,6 +7,7 @@ interface ForemostEventState {
   fetch: () => Promise<void>
   setForemost: (eventId: string, isTodo: boolean) => Promise<void>
   removeForemost: () => Promise<void>
+  reset: () => void
 }
 
 export const useForemostEventStore = create<ForemostEventState>((set) => ({
@@ -39,4 +40,6 @@ export const useForemostEventStore = create<ForemostEventState>((set) => ({
       console.warn('Foremost 해제 실패:', e)
     }
   },
+
+  reset: () => set({ foremostEvent: null }),
 }))

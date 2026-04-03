@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { TagManagementPage } from '../../src/pages/TagManagementPage'
+import { useToastStore } from '../../src/stores/toastStore'
 
 vi.mock('../../src/api/eventTagApi', () => ({
   eventTagApi: {
@@ -26,6 +27,7 @@ function renderPage() {
 describe('TagManagementPage', () => {
   beforeEach(async () => {
     vi.clearAllMocks()
+    useToastStore.setState({ toasts: [] })
     const { useEventTagStore } = await import('../../src/stores/eventTagStore')
     useEventTagStore.setState({ tags: new Map() })
   })
@@ -55,6 +57,75 @@ describe('TagManagementPage', () => {
     await userEvent.click(screen.getByRole('button', { name: '수정' }))
     // then: 인라인 편집 입력 필드가 나타남
     expect(screen.getByDisplayValue('업무')).toBeInTheDocument()
+  })
+
+  it('태그 생성 실패 시 에러 토스트가 표시된다', async () => {
+    // given
+    const { eventTagApi } = await import('../../src/api/eventTagApi')
+    vi.mocked(eventTagApi.createTag).mockRejectedValue(new Error('fail'))
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    renderPage()
+
+    // when
+    await userEvent.type(screen.getByPlaceholderText('새 태그 이름'), '실패 태그')
+    await userEvent.click(screen.getByRole('button', { name: '추가' }))
+
+    // then
+    await waitFor(() => {
+      const toasts = useToastStore.getState().toasts
+      expect(toasts.some(t => t.message === '태그 생성에 실패했습니다' && t.type === 'error')).toBe(true)
+    })
+    warnSpy.mockRestore()
+  })
+
+  it('태그 수정 실패 시 에러 토스트가 표시된다', async () => {
+    // given: 태그가 있는 상태
+    const { useEventTagStore } = await import('../../src/stores/eventTagStore')
+    useEventTagStore.setState({
+      tags: new Map([['t1', { uuid: 't1', name: '업무', color_hex: '#ff0000' }]])
+    })
+    const { eventTagApi } = await import('../../src/api/eventTagApi')
+    vi.mocked(eventTagApi.updateTag).mockRejectedValue(new Error('fail'))
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    renderPage()
+
+    // when: 수정 버튼 → 저장
+    await userEvent.click(screen.getByRole('button', { name: '수정' }))
+    await userEvent.click(screen.getByText('저장'))
+
+    // then
+    await waitFor(() => {
+      const toasts = useToastStore.getState().toasts
+      expect(toasts.some(t => t.message === '태그 수정에 실패했습니다' && t.type === 'error')).toBe(true)
+    })
+    warnSpy.mockRestore()
+  })
+
+  it('태그 삭제 실패 시 에러 토스트가 표시된다', async () => {
+    // given
+    const { useEventTagStore } = await import('../../src/stores/eventTagStore')
+    useEventTagStore.setState({
+      tags: new Map([['t1', { uuid: 't1', name: '업무', color_hex: '#ff0000' }]])
+    })
+    const { eventTagApi } = await import('../../src/api/eventTagApi')
+    vi.mocked(eventTagApi.deleteTag).mockRejectedValue(new Error('fail'))
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    renderPage()
+
+    // when: 목록의 삭제 버튼 클릭 → 다이얼로그의 삭제 버튼 클릭
+    const deleteButtons = screen.getAllByRole('button', { name: '삭제' })
+    await userEvent.click(deleteButtons[0]) // 목록의 삭제 버튼
+    const confirmDeleteButtons = screen.getAllByRole('button', { name: '삭제' })
+    // 다이얼로그의 삭제 버튼은 bg-red-500 스타일을 가진 것
+    const dialogDeleteBtn = confirmDeleteButtons.find(btn => btn.className.includes('bg-red-500'))!
+    await userEvent.click(dialogDeleteBtn)
+
+    // then
+    await waitFor(() => {
+      const toasts = useToastStore.getState().toasts
+      expect(toasts.some(t => t.message === '태그 삭제에 실패했습니다' && t.type === 'error')).toBe(true)
+    })
+    warnSpy.mockRestore()
   })
 
   it('태그 삭제 버튼 클릭 시 확인 다이얼로그가 표시된다', async () => {

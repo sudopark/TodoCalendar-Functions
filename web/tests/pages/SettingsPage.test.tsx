@@ -6,6 +6,7 @@ import { SettingsPage } from '../../src/pages/SettingsPage'
 import { settingApi } from '../../src/api/settingApi'
 import { accountApi } from '../../src/api/accountApi'
 import { useAuthStore } from '../../src/stores/authStore'
+import { useToastStore } from '../../src/stores/toastStore'
 
 vi.mock('../../src/api/settingApi', () => ({
   settingApi: {
@@ -30,6 +31,7 @@ describe('SettingsPage', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    useToastStore.setState({ toasts: [] })
     vi.mocked(useAuthStore).mockImplementation((selector: any) =>
       selector({ account: { uid: 'u1', email: 'test@example.com' }, signOut: mockSignOut })
     )
@@ -84,6 +86,75 @@ describe('SettingsPage', () => {
     await waitFor(() => {
       expect(screen.queryByRole('alert')).toBeNull()
     })
+  })
+
+  it('색상 로드 실패 시 에러 토스트가 표시된다', async () => {
+    // given
+    vi.mocked(settingApi.getDefaultTagColors).mockRejectedValue(new Error('network'))
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    // when
+    renderPage()
+
+    // then
+    await waitFor(() => {
+      const toasts = useToastStore.getState().toasts
+      expect(toasts.some(t => t.message === '색상 로드에 실패했습니다' && t.type === 'error')).toBe(true)
+    })
+    warnSpy.mockRestore()
+  })
+
+  it('색상 저장 실패 시 에러 토스트가 표시된다', async () => {
+    // given
+    vi.mocked(settingApi.updateDefaultTagColors).mockRejectedValue(new Error('save fail'))
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    renderPage()
+    await waitFor(() => screen.getByRole('button', { name: '색상 저장' }))
+
+    // when
+    await userEvent.click(screen.getByRole('button', { name: '색상 저장' }))
+
+    // then
+    await waitFor(() => {
+      const toasts = useToastStore.getState().toasts
+      expect(toasts.some(t => t.message === '색상 저장에 실패했습니다' && t.type === 'error')).toBe(true)
+    })
+    warnSpy.mockRestore()
+  })
+
+  it('색상 저장 성공 시 성공 토스트가 표시된다', async () => {
+    // given
+    vi.mocked(settingApi.updateDefaultTagColors).mockResolvedValue(mockColors)
+    renderPage()
+    await waitFor(() => screen.getByRole('button', { name: '색상 저장' }))
+
+    // when
+    await userEvent.click(screen.getByRole('button', { name: '색상 저장' }))
+
+    // then
+    await waitFor(() => {
+      const toasts = useToastStore.getState().toasts
+      expect(toasts.some(t => t.message === '색상이 저장되었습니다' && t.type === 'success')).toBe(true)
+    })
+  })
+
+  it('계정 삭제 실패 시 에러 토스트가 표시된다', async () => {
+    // given
+    vi.mocked(accountApi.deleteAccount).mockRejectedValue(new Error('fail'))
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    renderPage()
+    await waitFor(() => screen.getByRole('button', { name: '계정 삭제' }))
+
+    // when
+    await userEvent.click(screen.getByRole('button', { name: '계정 삭제' }))
+    await userEvent.click(screen.getByRole('button', { name: '확인' }))
+
+    // then
+    await waitFor(() => {
+      const toasts = useToastStore.getState().toasts
+      expect(toasts.some(t => t.message === '계정 삭제에 실패했습니다' && t.type === 'error')).toBe(true)
+    })
+    warnSpy.mockRestore()
   })
 
   it('계정 삭제 버튼 클릭 → 확인 다이얼로그 → 확인 시 signOut이 호출된다', async () => {

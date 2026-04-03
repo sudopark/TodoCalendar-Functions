@@ -13,6 +13,7 @@ interface CalendarEventsState {
   addEvent: (event: CalendarEvent) => void
   removeEvent: (uuid: string) => void
   replaceEvent: (uuid: string, next: CalendarEvent) => void
+  reset: () => void
 }
 
 export const useCalendarEventsStore = create<CalendarEventsState>((set, get) => ({
@@ -84,4 +85,6 @@ export const useCalendarEventsStore = create<CalendarEventsState>((set, get) => 
     }
     set({ eventsByDate: updated })
   },
+
+  reset: () => set({ eventsByDate: new Map(), loading: false, lastRange: null }),
 }))

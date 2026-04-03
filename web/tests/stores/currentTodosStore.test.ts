@@ -33,6 +33,15 @@ describe('useCurrentTodosStore', () => {
     expect(useCurrentTodosStore.getState().todos.some(t => t.uuid === 't1')).toBe(false)
   })
 
+  it('reset 호출 시 초기 상태로 돌아간다', () => {
+    // given: 스토어에 데이터가 있는 상태
+    useCurrentTodosStore.setState({ todos: [makeTodo('t1', '할 일')] })
+    // when: reset 호출
+    useCurrentTodosStore.getState().reset()
+    // then: 빈 목록
+    expect(useCurrentTodosStore.getState().todos).toEqual([])
+  })
+
   it('replaceTodo를 호출하면 기존 todo가 새 데이터로 교체된다', () => {
     // given: todo가 있는 상태
     useCurrentTodosStore.setState({ todos: [makeTodo('t1', '원래')] })

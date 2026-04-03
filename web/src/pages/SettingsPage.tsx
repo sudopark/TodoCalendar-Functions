@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useAuthStore } from '../stores/authStore'
+import { useToastStore } from '../stores/toastStore'
 import { settingApi } from '../api/settingApi'
 import { accountApi } from '../api/accountApi'
 import { ColorPalette } from '../components/ColorPalette'
@@ -16,7 +17,7 @@ export function SettingsPage() {
   useEffect(() => {
     settingApi.getDefaultTagColors()
       .then(c => { setColors(c); setEditColors(c) })
-      .catch(e => console.warn('색상 로드 실패:', e))
+      .catch(e => { console.warn('색상 로드 실패:', e); useToastStore.getState().show('색상 로드에 실패했습니다', 'error') })
   }, [])
 
   const handleSaveColors = async () => {
@@ -25,8 +26,10 @@ export function SettingsPage() {
       const updated = await settingApi.updateDefaultTagColors(editColors)
       setColors(updated)
       setEditColors(updated)
+      useToastStore.getState().show('색상이 저장되었습니다', 'success')
     } catch (e) {
       console.warn('색상 저장 실패:', e)
+      useToastStore.getState().show('색상 저장에 실패했습니다', 'error')
     }
   }
 
@@ -36,6 +39,7 @@ export function SettingsPage() {
       await signOut()
     } catch (e) {
       console.warn('계정 삭제 실패:', e)
+      useToastStore.getState().show('계정 삭제에 실패했습니다', 'error')
     }
   }
 
