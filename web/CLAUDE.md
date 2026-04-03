@@ -31,16 +31,39 @@ npm run test:e2e:ui
 
 ## Architecture Overview
 
-React 19 + TypeScript 웹 클라이언트. Vite 빌드, Tailwind CSS 스타일링.
+React 19 + TypeScript 웹 클라이언트. Vite 빌드, Tailwind CSS 스타일링, Zustand 상태 관리.
 
 ```
 src/
-├── App.tsx         # 루트 컴포넌트
-├── main.tsx        # 엔트리포인트
-└── index.css       # Tailwind 임포트
-tests/              # Vitest 단위/컴포넌트 테스트
-e2e/                # Playwright E2E 테스트
+├── App.tsx              # 루트 컴포넌트 (ErrorBoundary + React.lazy 라우트 분할)
+├── main.tsx             # 엔트리포인트
+├── index.css            # Tailwind 임포트 + safe-area 지원
+├── firebase.ts          # Firebase 앱 초기화
+├── api/                 # REST API 클라이언트 (apiClient + 도메인별 모듈)
+├── calendar/            # 캘린더 컴포넌트 (MonthCalendar, CalendarGrid)
+├── components/          # 재사용 UI 컴포넌트
+│   ├── AuthGuard.tsx    # 인증 게이트 + 부트 스토어 초기화
+│   ├── ErrorBoundary.tsx # React 에러 경계
+│   ├── Toast.tsx        # 글로벌 토스트 알림
+│   └── LoadingSkeleton.tsx # 로딩 스켈레톤
+├── models/              # TypeScript 데이터 모델
+├── pages/               # 페이지 컴포넌트 (lazy 로딩)
+├── stores/              # Zustand 스토어 (authStore, toastStore 등)
+└── utils/               # 유틸리티 함수
+tests/                   # Vitest 단위/컴포넌트 테스트
+e2e/                     # Playwright E2E 테스트
 ```
+
+### 에러 처리 패턴
+
+- **글로벌**: `ErrorBoundary`가 앱 최상위를 감싸서 렌더 에러 캐치
+- **API 에러**: 페이지에서 try/catch 후 `useToastStore.getState().show(msg, 'error')` 호출
+- **401 응답**: `apiClient`가 자동으로 `signOut()` 호출 → 로그인 페이지 리다이렉트
+- **로그아웃 시**: `authStore.signOut()`이 모든 데이터 스토어 `reset()` 호출
+
+### 라우트 분할
+
+`EventDetailPage`, `TodoFormPage`, `ScheduleFormPage`, `TagManagementPage`, `DoneTodosPage`, `SettingsPage`는 `React.lazy`로 동적 로딩. `LoginPage`와 `MainPage`는 초기 번들에 포함.
 
 ## Testing Strategy
 
