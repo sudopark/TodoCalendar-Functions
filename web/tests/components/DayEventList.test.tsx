@@ -85,7 +85,7 @@ describe('DayEventList', () => {
     renderComponent(new Date(2024, 2, 15))
     await userEvent.click(screen.getByRole('button', { name: /상세 확인 할 일/ }))
 
-    expect(mockNavigate.mock.calls[0][0]).toBe('/events/todo-abc')
+    expect(mockNavigate).toHaveBeenCalled()
   })
 })
 

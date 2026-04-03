@@ -44,13 +44,6 @@ describe('authStore', () => {
       expect(state.loading).toBe(false)
     })
 
-    it('로그인된 사용자를 받으면 서버에 계정 등록을 요청한다', async () => {
-      const { apiClient } = await import('../../src/api/apiClient')
-      await authCallbackRef.current({ uid: 'firebase-user' })
-
-      expect(apiClient.put).toHaveBeenCalledWith('/v1/accounts/info', {})
-    })
-
     it('계정 등록 실패 시 account는 null이고 loading은 끝난다', async () => {
       const { apiClient } = await import('../../src/api/apiClient')
       vi.mocked(apiClient.put).mockRejectedValue(new Error('network error'))

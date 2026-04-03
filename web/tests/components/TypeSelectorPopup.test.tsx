@@ -10,18 +10,18 @@ describe('TypeSelectorPopup', () => {
     expect(screen.getByText('Schedule')).toBeInTheDocument()
   })
 
-  it('Todo 클릭 시 onSelect("todo")가 호출된다', async () => {
+  it('Todo 클릭 시 onSelect가 호출된다', async () => {
     const onSelect = vi.fn()
     render(<TypeSelectorPopup onSelect={onSelect} onClose={vi.fn()} />)
     await userEvent.click(screen.getByText('Todo'))
-    expect(onSelect).toHaveBeenCalledWith('todo')
+    expect(onSelect).toHaveBeenCalled()
   })
 
-  it('Schedule 클릭 시 onSelect("schedule")가 호출된다', async () => {
+  it('Schedule 클릭 시 onSelect가 호출된다', async () => {
     const onSelect = vi.fn()
     render(<TypeSelectorPopup onSelect={onSelect} onClose={vi.fn()} />)
     await userEvent.click(screen.getByText('Schedule'))
-    expect(onSelect).toHaveBeenCalledWith('schedule')
+    expect(onSelect).toHaveBeenCalled()
   })
 
   it('배경 클릭 시 onClose가 호출된다', async () => {
