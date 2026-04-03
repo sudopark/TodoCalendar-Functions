@@ -10,7 +10,7 @@ import type { DefaultTagColors } from '../models'
 export function SettingsPage() {
   const account = useAuthStore(s => s.account)
   const signOut = useAuthStore(s => s.signOut)
-  const [colors, setColors] = useState<DefaultTagColors | null>(null)
+  const [_colors, setColors] = useState<DefaultTagColors | null>(null)
   const [editColors, setEditColors] = useState<DefaultTagColors | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
