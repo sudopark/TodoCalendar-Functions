@@ -1,7 +1,9 @@
 import React from 'react'
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { AuthGuard } from './components/AuthGuard'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import { Header } from './components/Header'
+import { ToastContainer } from './components/Toast'
 import { LoginPage } from './pages/LoginPage'
 import { MainPage } from './pages/MainPage'
 import { EventDetailPage } from './pages/EventDetailPage'
@@ -62,9 +64,12 @@ function AppRoutes() {
 
 function App() {
   return (
-    <BrowserRouter>
-      <AppRoutes />
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <AppRoutes />
+      </BrowserRouter>
+      <ToastContainer />
+    </ErrorBoundary>
   )
 }
 
