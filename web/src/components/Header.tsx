@@ -2,7 +2,7 @@ import { NavLink } from 'react-router-dom'
 
 export function Header() {
   const linkClass = ({ isActive }: { isActive: boolean }) =>
-    `rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+    `rounded-md px-3 py-2 text-xs md:text-sm font-medium transition-colors ${
       isActive ? 'bg-gray-100 text-gray-900' : 'text-gray-500 hover:text-gray-700'
     }`
 

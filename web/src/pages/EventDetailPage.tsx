@@ -225,7 +225,7 @@ export function EventDetailPage() {
               {isEditing ? (
                 <input
                   className="mt-1 w-full rounded border border-gray-300 px-2 py-1 text-sm text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-400"
-                  value={editForm.place}
+                  value={editForm.place ?? ''}
                   onChange={e => setEditForm(f => ({ ...f, place: e.target.value }))}
                 />
               ) : (
@@ -239,7 +239,7 @@ export function EventDetailPage() {
               {isEditing ? (
                 <input
                   className="mt-1 w-full rounded border border-gray-300 px-2 py-1 text-sm text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-400"
-                  value={editForm.url}
+                  value={editForm.url ?? ''}
                   onChange={e => setEditForm(f => ({ ...f, url: e.target.value }))}
                 />
               ) : (
@@ -263,7 +263,7 @@ export function EventDetailPage() {
                 <textarea
                   className="mt-1 w-full rounded border border-gray-300 px-2 py-1 text-sm text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-400"
                   rows={4}
-                  value={editForm.memo}
+                  value={editForm.memo ?? ''}
                   onChange={e => setEditForm(f => ({ ...f, memo: e.target.value }))}
                 />
               ) : (
