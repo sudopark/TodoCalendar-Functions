@@ -23,6 +23,7 @@ export const useEventTagStore = create<EventTagState>((set, get) => ({
       set({ tags: map })
     } catch (e) {
       console.warn('태그 로드 실패:', e)
+      throw e
     }
   },
 

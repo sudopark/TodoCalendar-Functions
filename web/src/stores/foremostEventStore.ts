@@ -20,6 +20,7 @@ export const useForemostEventStore = create<ForemostEventState>((set) => ({
     } catch (e) {
       console.warn('Foremost event 로드 실패:', e)
       set({ foremostEvent: null })
+      throw e
     }
   },
 

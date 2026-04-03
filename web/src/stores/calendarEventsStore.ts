@@ -22,7 +22,12 @@ export const useCalendarEventsStore = create<CalendarEventsState>((set, get) => 
   lastRange: null,
 
   fetchEventsForRange: async (lower: number, upper: number) => {
-    set({ loading: true, eventsByDate: new Map(), lastRange: { lower, upper } })
+    const { lastRange, eventsByDate } = get()
+    // 같은 범위 재요청 + 캐시 있음 → 스킵
+    if (lastRange && lastRange.lower === lower && lastRange.upper === upper && eventsByDate.size > 0) {
+      return
+    }
+    set({ loading: true, lastRange: { lower, upper } })
     try {
       const [todos, schedules] = await Promise.all([
         todoApi.getTodos(lower, upper),
@@ -37,9 +42,11 @@ export const useCalendarEventsStore = create<CalendarEventsState>((set, get) => 
   },
 
   refreshCurrentRange: async () => {
-    const { lastRange, fetchEventsForRange } = get()
+    const { lastRange } = get()
     if (!lastRange) return
-    await fetchEventsForRange(lastRange.lower, lastRange.upper)
+    // 캐시 무효화 후 재요청
+    set({ lastRange: null })
+    await get().fetchEventsForRange(lastRange.lower, lastRange.upper)
   },
 
   addEvent: (event: CalendarEvent) => {

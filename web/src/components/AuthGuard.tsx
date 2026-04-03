@@ -4,6 +4,7 @@ import { useAuthStore } from '../stores/authStore'
 import { useEventTagStore } from '../stores/eventTagStore'
 import { useCurrentTodosStore } from '../stores/currentTodosStore'
 import { useForemostEventStore } from '../stores/foremostEventStore'
+import { useToastStore } from '../stores/toastStore'
 
 interface AuthGuardProps {
   children: React.ReactNode
@@ -14,9 +15,13 @@ export function AuthGuard({ children }: AuthGuardProps) {
 
   useEffect(() => {
     if (account) {
-      useEventTagStore.getState().fetchAll()
-      useCurrentTodosStore.getState().fetch()
-      useForemostEventStore.getState().fetch()
+      Promise.all([
+        useEventTagStore.getState().fetchAll(),
+        useCurrentTodosStore.getState().fetch(),
+        useForemostEventStore.getState().fetch(),
+      ]).catch(() => {
+        useToastStore.getState().show('데이터 로드에 실패했습니다', 'error')
+      })
     }
   }, [account])
 

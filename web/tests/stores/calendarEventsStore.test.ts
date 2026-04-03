@@ -47,6 +47,44 @@ describe('calendarEventsStore', () => {
     expect(events?.some(e => e.type === 'schedule' && e.event.uuid === 'sch-1')).toBe(true)
   })
 
+  it('같은 범위로 재요청하면 기존 데이터가 유지된다', async () => {
+    // given: 이미 한 번 fetch 완료
+    const { todoApi } = await import('../../src/api/todoApi')
+    const { scheduleApi } = await import('../../src/api/scheduleApi')
+    vi.mocked(todoApi.getTodos).mockResolvedValue([
+      { uuid: 'todo-1', name: 'Task', is_current: false, event_time: { time_type: 'at' as const, timestamp: MARCH31_TIMESTAMP } },
+    ])
+    vi.mocked(scheduleApi.getSchedules).mockResolvedValue([])
+    await useCalendarEventsStore.getState().fetchEventsForRange(1743292800, 1743465600)
+
+    // when: 같은 범위로 다시 fetch
+    await useCalendarEventsStore.getState().fetchEventsForRange(1743292800, 1743465600)
+
+    // then: 기존 데이터가 유지된다
+    const events = useCalendarEventsStore.getState().eventsByDate
+    expect(events.get(MARCH31_KEY)?.some(e => e.event.uuid === 'todo-1')).toBe(true)
+  })
+
+  it('다른 범위로 요청하면 새로 fetch한다', async () => {
+    // given: 이미 한 번 fetch 완료
+    const { todoApi } = await import('../../src/api/todoApi')
+    const { scheduleApi } = await import('../../src/api/scheduleApi')
+    vi.mocked(todoApi.getTodos).mockResolvedValue([
+      { uuid: 'todo-1', name: 'Task', is_current: false, event_time: { time_type: 'at' as const, timestamp: MARCH31_TIMESTAMP } },
+    ])
+    vi.mocked(scheduleApi.getSchedules).mockResolvedValue([])
+    await useCalendarEventsStore.getState().fetchEventsForRange(1743292800, 1743465600)
+
+    // when: 다른 범위로 fetch — API가 빈 결과 반환
+    vi.mocked(todoApi.getTodos).mockResolvedValue([])
+    vi.mocked(scheduleApi.getSchedules).mockResolvedValue([])
+    await useCalendarEventsStore.getState().fetchEventsForRange(1743465600, 1743552000)
+
+    // then: 새 범위의 데이터로 교체된다 (빈 결과)
+    const events = useCalendarEventsStore.getState().eventsByDate
+    expect(events.get(MARCH31_KEY)).toBeUndefined()
+  })
+
   it('API 호출이 실패하면 이벤트를 조회할 수 없다', async () => {
     // given: API가 실패한다
     const { todoApi } = await import('../../src/api/todoApi')

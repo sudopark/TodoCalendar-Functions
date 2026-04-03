@@ -20,6 +20,7 @@ export const useCurrentTodosStore = create<CurrentTodosState>((set, _get) => ({
       set({ todos })
     } catch (e) {
       console.warn('Current todo 로드 실패:', e)
+      throw e
     }
   },
 
