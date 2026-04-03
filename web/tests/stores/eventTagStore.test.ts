@@ -62,7 +62,7 @@ describe('eventTagStore', () => {
 
     // when: 재로드가 실패한다
     vi.mocked(eventTagApi.getAllTags).mockRejectedValue(new Error('network'))
-    await useEventTagStore.getState().fetchAll()
+    await useEventTagStore.getState().fetchAll().catch(() => {})
 
     // then: 이전 태그 색상은 여전히 조회 가능하다
     expect(useEventTagStore.getState().getColorForTagId('tag-1')).toBe('#ff0000')

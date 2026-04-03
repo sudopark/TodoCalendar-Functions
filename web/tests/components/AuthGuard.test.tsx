@@ -1,23 +1,24 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { AuthGuard } from '../../src/components/AuthGuard'
 import { useAuthStore } from '../../src/stores/authStore'
+import { useToastStore } from '../../src/stores/toastStore'
 
 vi.mock('../../src/stores/authStore', () => ({
   useAuthStore: vi.fn(),
 }))
 
 vi.mock('../../src/api/eventTagApi', () => ({
-  eventTagApi: { getAllTags: async () => [] },
+  eventTagApi: { getAllTags: vi.fn() },
 }))
 
 vi.mock('../../src/api/todoApi', () => ({
-  todoApi: { getCurrentTodos: async () => [] },
+  todoApi: { getCurrentTodos: vi.fn() },
 }))
 
 vi.mock('../../src/api/foremostApi', () => ({
-  foremostApi: { getForemostEvent: async () => null },
+  foremostApi: { getForemostEvent: vi.fn() },
 }))
 
 function renderWithRouter(ui: React.ReactNode) {
@@ -32,8 +33,15 @@ function renderWithRouter(ui: React.ReactNode) {
 }
 
 describe('AuthGuard', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks()
+    const { eventTagApi } = await import('../../src/api/eventTagApi')
+    const { todoApi } = await import('../../src/api/todoApi')
+    const { foremostApi } = await import('../../src/api/foremostApi')
+    vi.mocked(eventTagApi.getAllTags).mockResolvedValue([])
+    vi.mocked(todoApi.getCurrentTodos).mockResolvedValue([])
+    vi.mocked(foremostApi.getForemostEvent).mockResolvedValue(null)
+    useToastStore.setState({ toasts: [] })
   })
 
   it('인증 확인 중에는 보호된 컨텐츠도 로그인 페이지도 보이지 않는다', () => {
@@ -61,5 +69,24 @@ describe('AuthGuard', () => {
 
     expect(screen.getByText('보호된 페이지')).toBeInTheDocument()
     expect(screen.queryByText('로그인 페이지')).toBeNull()
+  })
+
+  it('로그인 후 데이터 로드에 실패하면 에러 토스트가 표시된다', async () => {
+    // given: API가 실패하도록 설정
+    const { eventTagApi } = await import('../../src/api/eventTagApi')
+    vi.mocked(eventTagApi.getAllTags).mockRejectedValue(new Error('network'))
+
+    // when: 로그인 상태로 렌더링
+    vi.mocked(useAuthStore).mockReturnValue({
+      account: { uid: 'user-123' },
+      loading: false,
+    } as any)
+    renderWithRouter(<AuthGuard><div>보호된 페이지</div></AuthGuard>)
+
+    // then: 에러 토스트가 표시된다
+    await waitFor(() => {
+      const toasts = useToastStore.getState().toasts
+      expect(toasts.some(t => t.type === 'error')).toBe(true)
+    })
   })
 })

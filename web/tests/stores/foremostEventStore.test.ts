@@ -39,7 +39,7 @@ describe('useForemostEventStore', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
     // when: fetch 실행
-    await useForemostEventStore.getState().fetch()
+    await useForemostEventStore.getState().fetch().catch(() => {})
 
     // then: foremostEvent가 null로 초기화됨
     expect(useForemostEventStore.getState().foremostEvent).toBeNull()
