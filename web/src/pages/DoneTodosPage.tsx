@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useDoneTodosStore } from '../stores/doneTodosStore'
 import { useCurrentTodosStore } from '../stores/currentTodosStore'
 import { useEventTagStore } from '../stores/eventTagStore'
+import { useToastStore } from '../stores/toastStore'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 
 export function DoneTodosPage() {
@@ -28,8 +29,13 @@ export function DoneTodosPage() {
   }, [fetchNext])
 
   const handleRevert = async (id: string) => {
-    await revert(id)
-    await fetchCurrentTodos()
+    try {
+      await revert(id)
+      await fetchCurrentTodos()
+    } catch (e) {
+      console.warn('되돌리기 실패:', e)
+      useToastStore.getState().show('되돌리기에 실패했습니다', 'error')
+    }
   }
 
   return (
@@ -82,7 +88,12 @@ export function DoneTodosPage() {
           message="완료 항목을 삭제할까요? 되돌릴 수 없습니다."
           danger
           onConfirm={async () => {
-            await remove(confirmId)
+            try {
+              await remove(confirmId)
+            } catch (e) {
+              console.warn('삭제 실패:', e)
+              useToastStore.getState().show('삭제에 실패했습니다', 'error')
+            }
             setConfirmId(null)
           }}
           onCancel={() => setConfirmId(null)}

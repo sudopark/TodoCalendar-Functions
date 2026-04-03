@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useEventTagStore } from '../stores/eventTagStore'
+import { useToastStore } from '../stores/toastStore'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import type { EventTag } from '../models'
 
@@ -15,13 +16,23 @@ export function TagManagementPage() {
 
   async function handleCreate() {
     if (!newName.trim()) return
-    await createTag(newName.trim())
-    setNewName('')
+    try {
+      await createTag(newName.trim())
+      setNewName('')
+    } catch (e) {
+      console.warn('태그 생성 실패:', e)
+      useToastStore.getState().show('태그 생성에 실패했습니다', 'error')
+    }
   }
 
   async function handleUpdate(id: string) {
-    await updateTag(id, { name: editName, color_hex: editColor || undefined })
-    setEditingId(null)
+    try {
+      await updateTag(id, { name: editName, color_hex: editColor || undefined })
+      setEditingId(null)
+    } catch (e) {
+      console.warn('태그 수정 실패:', e)
+      useToastStore.getState().show('태그 수정에 실패했습니다', 'error')
+    }
   }
 
   function startEdit(tag: EventTag) {
@@ -85,7 +96,16 @@ export function TagManagementPage() {
           title="태그 삭제"
           message={`"${deleteTarget.name}" 태그를 삭제할까요?`}
           confirmLabel="삭제"
-          onConfirm={async () => { await deleteTag(deleteTarget.uuid); setDeleteTarget(null) }}
+          onConfirm={async () => {
+            try {
+              await deleteTag(deleteTarget.uuid)
+              setDeleteTarget(null)
+            } catch (e) {
+              console.warn('태그 삭제 실패:', e)
+              useToastStore.getState().show('태그 삭제에 실패했습니다', 'error')
+              setDeleteTarget(null)
+            }
+          }}
           onCancel={() => setDeleteTarget(null)}
         />
       )}

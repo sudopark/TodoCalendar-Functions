@@ -8,6 +8,7 @@ interface CurrentTodosState {
   addTodo: (todo: Todo) => void
   removeTodo: (uuid: string) => void
   replaceTodo: (todo: Todo) => void
+  reset: () => void
 }
 
 export const useCurrentTodosStore = create<CurrentTodosState>((set, _get) => ({
@@ -25,4 +26,5 @@ export const useCurrentTodosStore = create<CurrentTodosState>((set, _get) => ({
   addTodo: (todo: Todo) => set(s => ({ todos: [...s.todos, todo] })),
   removeTodo: (uuid: string) => set(s => ({ todos: s.todos.filter(t => t.uuid !== uuid) })),
   replaceTodo: (todo: Todo) => set(s => ({ todos: s.todos.map(t => t.uuid === todo.uuid ? todo : t) })),
+  reset: () => set({ todos: [] }),
 }))

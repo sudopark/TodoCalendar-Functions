@@ -9,6 +9,7 @@ interface EventTagState {
   createTag: (name: string, color_hex?: string) => Promise<EventTag>
   updateTag: (id: string, updates: { name?: string; color_hex?: string }) => Promise<EventTag>
   deleteTag: (id: string) => Promise<void>
+  reset: () => void
 }
 
 export const useEventTagStore = create<EventTagState>((set, get) => ({
@@ -43,4 +44,6 @@ export const useEventTagStore = create<EventTagState>((set, get) => ({
     await eventTagApi.deleteTag(id)
     set(s => { const tags = new Map(s.tags); tags.delete(id); return { tags } })
   },
+
+  reset: () => set({ tags: new Map() }),
 }))

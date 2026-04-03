@@ -59,6 +59,15 @@ describe('useForemostEventStore', () => {
     expect(useForemostEventStore.getState().foremostEvent).toEqual(event)
   })
 
+  it('reset 호출 시 foremostEvent가 null이 된다', () => {
+    // given: foremostEvent가 설정된 상태
+    useForemostEventStore.setState({ foremostEvent: { event_id: 'e1', is_todo: true } as any })
+    // when: reset 호출
+    useForemostEventStore.getState().reset()
+    // then: null
+    expect(useForemostEventStore.getState().foremostEvent).toBeNull()
+  })
+
   it('removeForemost 호출 시 foremostEvent가 null이 된다', async () => {
     // given
     useForemostEventStore.setState({ foremostEvent: { event_id: 'e1', is_todo: true } as any })

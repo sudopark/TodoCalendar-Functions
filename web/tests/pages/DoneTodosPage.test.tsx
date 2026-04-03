@@ -8,6 +8,7 @@ import { useDoneTodosStore } from '../../src/stores/doneTodosStore'
 import { useCurrentTodosStore } from '../../src/stores/currentTodosStore'
 import { useEventTagStore } from '../../src/stores/eventTagStore'
 import { todoApi } from '../../src/api/todoApi'
+import { useToastStore } from '../../src/stores/toastStore'
 
 vi.mock('../../src/api/doneTodoApi', () => ({
   doneTodoApi: {
@@ -42,6 +43,7 @@ describe('DoneTodosPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     useDoneTodosStore.getState().reset()
+    useToastStore.setState({ toasts: [] })
     vi.stubGlobal('IntersectionObserver', MockIntersectionObserver)
     vi.mocked(useEventTagStore).mockImplementation((selector: any) =>
       selector({ getColorForTagId: () => null })
@@ -95,6 +97,47 @@ describe('DoneTodosPage', () => {
     await waitFor(() => {
       expect(screen.queryByText('완료-d1')).not.toBeInTheDocument()
     })
+  })
+
+  it('되돌리기 실패 시 에러 토스트가 표시된다', async () => {
+    // given
+    vi.mocked(doneTodoApi.getDoneTodos).mockResolvedValue([makeDone('d1')])
+    vi.mocked(doneTodoApi.revertDoneTodo).mockRejectedValue(new Error('fail'))
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    renderPage()
+    await waitFor(() => screen.getByText('완료-d1'))
+
+    // when
+    await userEvent.click(screen.getByRole('button', { name: '되돌리기' }))
+
+    // then
+    await waitFor(() => {
+      const toasts = useToastStore.getState().toasts
+      expect(toasts.some(t => t.message === '되돌리기에 실패했습니다' && t.type === 'error')).toBe(true)
+    })
+    warnSpy.mockRestore()
+  })
+
+  it('삭제 실패 시 에러 토스트가 표시된다', async () => {
+    // given
+    vi.mocked(doneTodoApi.getDoneTodos).mockResolvedValue([makeDone('d1')])
+    vi.mocked(doneTodoApi.deleteDoneTodo).mockRejectedValue(new Error('fail'))
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    renderPage()
+    await waitFor(() => screen.getByText('완료-d1'))
+
+    // when: 삭제 버튼 → 다이얼로그 확인
+    await userEvent.click(screen.getByRole('button', { name: '삭제' }))
+    await userEvent.click(screen.getByRole('button', { name: '확인' }))
+
+    // then
+    await waitFor(() => {
+      const toasts = useToastStore.getState().toasts
+      expect(toasts.some(t => t.message === '삭제에 실패했습니다' && t.type === 'error')).toBe(true)
+    })
+    warnSpy.mockRestore()
   })
 
   it('되돌리기 버튼 클릭 시 항목이 목록에서 제거된다', async () => {
