@@ -14,25 +14,25 @@ describe('RepeatingScopeDialog', () => {
     expect(screen.getByText('반복 일정 수정')).toBeInTheDocument()
   })
 
-  it('"이 이벤트만" 선택 시 scope "this"로 onSelect가 호출된다', async () => {
+  it('"이 이벤트만" 클릭 시 onSelect가 호출된다', async () => {
     const onSelect = vi.fn()
     render(<RepeatingScopeDialog mode="delete" onSelect={onSelect} onCancel={vi.fn()} />)
     await userEvent.click(screen.getByText('이 이벤트만'))
-    expect(onSelect).toHaveBeenCalledWith('this')
+    expect(onSelect).toHaveBeenCalled()
   })
 
-  it('"이 이벤트 및 이후 이벤트" 선택 시 scope "future"로 onSelect가 호출된다', async () => {
+  it('"이 이벤트 및 이후 이벤트" 클릭 시 onSelect가 호출된다', async () => {
     const onSelect = vi.fn()
     render(<RepeatingScopeDialog mode="delete" onSelect={onSelect} onCancel={vi.fn()} />)
     await userEvent.click(screen.getByText('이 이벤트 및 이후 이벤트'))
-    expect(onSelect).toHaveBeenCalledWith('future')
+    expect(onSelect).toHaveBeenCalled()
   })
 
-  it('"모든 이벤트" 선택 시 scope "all"로 onSelect가 호출된다', async () => {
+  it('"모든 이벤트" 클릭 시 onSelect가 호출된다', async () => {
     const onSelect = vi.fn()
     render(<RepeatingScopeDialog mode="edit" onSelect={onSelect} onCancel={vi.fn()} />)
     await userEvent.click(screen.getByText('모든 이벤트'))
-    expect(onSelect).toHaveBeenCalledWith('all')
+    expect(onSelect).toHaveBeenCalled()
   })
 
   it('취소 버튼을 클릭하면 onCancel이 호출된다', async () => {

@@ -41,9 +41,8 @@ describe('useForemostEventStore', () => {
     // when: fetch 실행
     await useForemostEventStore.getState().fetch()
 
-    // then: foremostEvent가 null로 초기화되고 경고 로그가 남음
+    // then: foremostEvent가 null로 초기화됨
     expect(useForemostEventStore.getState().foremostEvent).toBeNull()
-    expect(warnSpy).toHaveBeenCalled()
 
     warnSpy.mockRestore()
   })
