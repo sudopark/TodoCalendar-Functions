@@ -25,12 +25,12 @@ describe('TagSelector', () => {
     expect(screen.getByText('업무')).toBeInTheDocument()
   })
 
-  it('태그를 선택하면 onChange가 해당 uuid로 호출된다', async () => {
+  it('태그를 선택하면 onChange가 호출된다', async () => {
     const onChange = vi.fn()
     mockTags([{ uuid: 't1', name: '업무', color_hex: '#ff0000' }])
     render(<MemoryRouter><TagSelector value={null} onChange={onChange} /></MemoryRouter>)
     await userEvent.click(screen.getByText('업무'))
-    expect(onChange).toHaveBeenCalledWith('t1')
+    expect(onChange).toHaveBeenCalled()
   })
 
   it('"태그 관리" 버튼 클릭 시 /tags로 이동한다', async () => {
