@@ -7,6 +7,7 @@ import { useEventDefaultsStore } from '../stores/eventDefaultsStore'
 import { useEventTagStore } from '../stores/eventTagStore'
 import { useTimezoneStore } from '../stores/timezoneStore'
 import { useCalendarAppearanceStore } from '../stores/calendarAppearanceStore'
+import { useNotificationStore } from '../stores/notificationStore'
 import { settingApi } from '../api/settingApi'
 import { accountApi } from '../api/accountApi'
 import { ColorPalette } from '../components/ColorPalette'
@@ -54,6 +55,8 @@ export function SettingsPage() {
   const { rowHeight, fontSize: calFontSize, showEventNames, setAppearance, resetToDefaults: resetAppearance } = useCalendarAppearanceStore()
   const timezoneState = useTimezoneStore()
   const { timezone, isCustom, setTimezone } = timezoneState
+  const notifPermission = useNotificationStore(s => s.permission)
+  const requestNotifPermission = useNotificationStore(s => s.requestPermission)
   const [_colors, setColors] = useState<DefaultTagColors | null>(null)
   const [editColors, setEditColors] = useState<DefaultTagColors | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -246,6 +249,23 @@ export function SettingsPage() {
             ))}
           </select>
         </div>
+      </section>
+
+      {/* 알림 */}
+      <section className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 shadow-sm space-y-3">
+        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">알림</h2>
+        {notifPermission === 'granted' ? (
+          <p className="text-sm text-green-600 dark:text-green-400">알림이 허용되었습니다</p>
+        ) : notifPermission === 'denied' ? (
+          <p className="text-sm text-red-500">알림이 차단되었습니다. 브라우저 설정에서 변경해주세요.</p>
+        ) : (
+          <button
+            className="rounded-lg border border-gray-200 dark:border-gray-600 px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+            onClick={requestNotifPermission}
+          >
+            알림 허용
+          </button>
+        )}
       </section>
 
       {/* 계정 정보 */}
