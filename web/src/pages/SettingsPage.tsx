@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useAuthStore } from '../stores/authStore'
 import { useToastStore } from '../stores/toastStore'
 import { useHolidayStore, type HolidayCountry } from '../stores/holidayStore'
+import { useThemeStore } from '../stores/themeStore'
 import { settingApi } from '../api/settingApi'
 import { accountApi } from '../api/accountApi'
 import { ColorPalette } from '../components/ColorPalette'
@@ -23,6 +24,8 @@ export function SettingsPage() {
   const signOut = useAuthStore(s => s.signOut)
   const holidayCountry = useHolidayStore(s => s.country)
   const setHolidayCountry = useHolidayStore(s => s.setCountry)
+  const theme = useThemeStore(s => s.theme)
+  const setTheme = useThemeStore(s => s.setTheme)
   const [_colors, setColors] = useState<DefaultTagColors | null>(null)
   const [editColors, setEditColors] = useState<DefaultTagColors | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -58,22 +61,38 @@ export function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-lg px-4 py-6 space-y-8">
-      <h1 className="text-lg font-bold text-gray-900">설정</h1>
+      <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100">설정</h1>
+
+      {/* 테마 */}
+      <section className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 shadow-sm space-y-3">
+        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">테마</h2>
+        <div className="flex gap-2">
+          {(['system', 'light', 'dark'] as const).map(t => (
+            <button
+              key={t}
+              onClick={() => setTheme(t)}
+              className={`rounded-lg px-3 py-2 text-sm ${theme === t ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'}`}
+            >
+              {t === 'system' ? '시스템' : t === 'light' ? '라이트' : '다크'}
+            </button>
+          ))}
+        </div>
+      </section>
 
       {/* 기본 태그 색상 */}
-      <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm space-y-4">
-        <h2 className="text-sm font-semibold text-gray-700">기본 태그 색상</h2>
+      <section className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 shadow-sm space-y-4">
+        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">기본 태그 색상</h2>
         {editColors && (
           <>
             <div>
-              <p className="mb-2 text-xs text-gray-500">공휴일 색상</p>
+              <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">공휴일 색상</p>
               <ColorPalette
                 selected={editColors.holiday}
                 onChange={hex => setEditColors(c => c ? { ...c, holiday: hex } : c)}
               />
             </div>
             <div>
-              <p className="mb-2 text-xs text-gray-500">기본 색상</p>
+              <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">기본 색상</p>
               <ColorPalette
                 selected={editColors.default}
                 onChange={hex => setEditColors(c => c ? { ...c, default: hex } : c)}
@@ -90,10 +109,10 @@ export function SettingsPage() {
       </section>
 
       {/* 공휴일 국가 */}
-      <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm space-y-3">
-        <h2 className="text-sm font-semibold text-gray-700">공휴일 국가</h2>
+      <section className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 shadow-sm space-y-3">
+        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">공휴일 국가</h2>
         <select
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+          className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-gray-100"
           value={`${holidayCountry.locale}:${holidayCountry.region}`}
           onChange={e => {
             const [locale, region] = e.target.value.split(':')
@@ -107,13 +126,13 @@ export function SettingsPage() {
       </section>
 
       {/* 계정 정보 */}
-      <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm space-y-3">
-        <h2 className="text-sm font-semibold text-gray-700">계정</h2>
+      <section className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 shadow-sm space-y-3">
+        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">계정</h2>
         {account && (
-          <p className="text-sm text-gray-500">{account.email ?? account.uid}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{account.email ?? account.uid}</p>
         )}
         <button
-          className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50"
+          className="rounded-lg border border-gray-200 dark:border-gray-600 px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
           onClick={signOut}
         >
           로그아웃
@@ -121,10 +140,10 @@ export function SettingsPage() {
       </section>
 
       {/* 계정 삭제 */}
-      <section className="rounded-xl border border-red-100 bg-white p-5 shadow-sm">
+      <section className="rounded-xl border border-red-100 dark:border-red-900 bg-white dark:bg-gray-800 p-5 shadow-sm">
         <h2 className="mb-3 text-sm font-semibold text-red-500">위험 구역</h2>
         <button
-          className="rounded-lg border border-red-200 px-4 py-2 text-sm text-red-500 hover:bg-red-50"
+          className="rounded-lg border border-red-200 dark:border-red-800 px-4 py-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30"
           onClick={() => setShowDeleteConfirm(true)}
         >
           계정 삭제

@@ -25,7 +25,7 @@ export default function CalendarGrid({ days }: CalendarGridProps) {
       {WEEKDAYS.map((day, i) => (
         <div
           key={day}
-          className={`py-2 text-center text-xs font-medium ${i === 0 ? 'text-red-400' : 'text-gray-500'}`}
+          className={`py-2 text-center text-xs font-medium ${i === 0 ? 'text-red-400' : 'text-gray-500 dark:text-gray-400'}`}
         >
           {day}
         </div>
@@ -47,10 +47,10 @@ export default function CalendarGrid({ days }: CalendarGridProps) {
         const textColor = day.isToday
           ? 'font-semibold text-white'
           : !day.isCurrentMonth
-            ? 'text-gray-300'
+            ? 'text-gray-300 dark:text-gray-600'
             : (isHoliday || isSunday)
               ? 'text-red-500'
-              : 'text-gray-900'
+              : 'text-gray-900 dark:text-gray-100'
 
         const bgClass = day.isToday ? 'bg-blue-500 rounded-full' : ''
         const selectedClass = isSelected && !day.isToday ? 'ring-2 ring-blue-400 rounded-full' : ''
