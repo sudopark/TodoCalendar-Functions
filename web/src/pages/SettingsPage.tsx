@@ -3,11 +3,21 @@ import { useAuthStore } from '../stores/authStore'
 import { useToastStore } from '../stores/toastStore'
 import { useHolidayStore, type HolidayCountry } from '../stores/holidayStore'
 import { useThemeStore } from '../stores/themeStore'
+import { useEventDefaultsStore } from '../stores/eventDefaultsStore'
+import { useEventTagStore } from '../stores/eventTagStore'
 import { settingApi } from '../api/settingApi'
 import { accountApi } from '../api/accountApi'
 import { ColorPalette } from '../components/ColorPalette'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import type { DefaultTagColors } from '../models'
+
+const NOTIFICATION_PRESETS = [
+  { label: '없음', value: null },
+  { label: '5분 전', value: -300 },
+  { label: '10분 전', value: -600 },
+  { label: '30분 전', value: -1800 },
+  { label: '1시간 전', value: -3600 },
+]
 
 const COUNTRIES = [
   { label: '한국', locale: 'ko', region: 'south_korea' },
@@ -26,6 +36,8 @@ export function SettingsPage() {
   const setHolidayCountry = useHolidayStore(s => s.setCountry)
   const theme = useThemeStore(s => s.theme)
   const setTheme = useThemeStore(s => s.setTheme)
+  const { defaultTagId, defaultNotificationSeconds, setDefaults } = useEventDefaultsStore()
+  const tags = useEventTagStore(s => s.tags)
   const [_colors, setColors] = useState<DefaultTagColors | null>(null)
   const [editColors, setEditColors] = useState<DefaultTagColors | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -123,6 +135,36 @@ export function SettingsPage() {
             <option key={c.region} value={`${c.locale}:${c.region}`}>{c.label}</option>
           ))}
         </select>
+      </section>
+
+      {/* 이벤트 기본값 */}
+      <section className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 shadow-sm space-y-4">
+        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">이벤트 기본값</h2>
+        <div>
+          <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">기본 태그</p>
+          <select
+            className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-gray-100"
+            value={defaultTagId ?? ''}
+            onChange={e => setDefaults({ defaultTagId: e.target.value || null })}
+          >
+            <option value="">없음</option>
+            {Array.from(tags.values()).map(tag => (
+              <option key={tag.uuid} value={tag.uuid}>{tag.name}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">기본 알림</p>
+          <select
+            className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-gray-100"
+            value={defaultNotificationSeconds ?? ''}
+            onChange={e => setDefaults({ defaultNotificationSeconds: e.target.value ? Number(e.target.value) : null })}
+          >
+            {NOTIFICATION_PRESETS.map(p => (
+              <option key={p.label} value={p.value ?? ''}>{p.label}</option>
+            ))}
+          </select>
+        </div>
       </section>
 
       {/* 계정 정보 */}
