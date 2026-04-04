@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useCalendarEventsStore } from '../stores/calendarEventsStore'
 import { useEventTagStore } from '../stores/eventTagStore'
+import { useTagFilterStore } from '../stores/tagFilterStore'
 import { formatDateKey } from '../utils/eventTimeUtils'
 import { EventTimeDisplay } from './EventTimeDisplay'
 import type { CalendarEvent } from '../utils/eventTimeUtils'
@@ -67,11 +68,12 @@ export function DayEventList({ selectedDate }: DayEventListProps) {
   const navigate = useNavigate()
   const location = useLocation()
   const eventsByDate = useCalendarEventsStore(s => s.eventsByDate)
+  const isTagHidden = useTagFilterStore(s => s.isTagHidden)
 
   if (!selectedDate) return null
 
   const dateKey = formatDateKey(selectedDate)
-  const allEvents = eventsByDate.get(dateKey) ?? []
+  const allEvents = (eventsByDate.get(dateKey) ?? []).filter(ev => !isTagHidden(ev.event.event_tag_id))
 
   const todos = allEvents.filter(e => e.type === 'todo')
   const schedules = allEvents.filter(e => e.type === 'schedule')

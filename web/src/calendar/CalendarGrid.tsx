@@ -4,6 +4,7 @@ import { useUiStore } from '../stores/uiStore'
 import { useCalendarEventsStore } from '../stores/calendarEventsStore'
 import { useHolidayStore } from '../stores/holidayStore'
 import { useEventTagStore } from '../stores/eventTagStore'
+import { useTagFilterStore } from '../stores/tagFilterStore'
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
@@ -17,6 +18,7 @@ export default function CalendarGrid({ days }: CalendarGridProps) {
   const eventsByDate = useCalendarEventsStore(s => s.eventsByDate)
   const getHolidayNames = useHolidayStore(s => s.getHolidayNames)
   const getColorForTagId = useEventTagStore(s => s.getColorForTagId)
+  const isTagHidden = useTagFilterStore(s => s.isTagHidden)
 
   return (
     <div className="grid grid-cols-7">
@@ -34,7 +36,7 @@ export default function CalendarGrid({ days }: CalendarGridProps) {
         const isHoliday = holidayNames.length > 0
         const isSunday = day.date.getDay() === 0
 
-        const events = eventsByDate.get(day.dateKey) ?? []
+        const events = (eventsByDate.get(day.dateKey) ?? []).filter(ev => !isTagHidden(ev.event.event_tag_id))
         const dotColors: string[] = []
         for (const ev of events.slice(0, 3)) {
           const tagId = ev.event.event_tag_id
