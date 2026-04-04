@@ -61,6 +61,22 @@ export function CurrentTodoList() {
     await doComplete(todo, scope)
   }
 
+  async function handleSkip(todo: Todo) {
+    if (!todo.repeating || !todo.event_time) return
+    try {
+      const next = nextRepeatingTime(todo.event_time, todo.repeating_turn ?? 1, todo.repeating, todo.exclude_repeatings)
+      if (next) {
+        await todoApi.patchTodo(todo.uuid, { event_time: next.time, repeating_turn: next.turn })
+      } else {
+        await todoApi.deleteTodo(todo.uuid)
+      }
+      await fetchTodos()
+      await useCalendarEventsStore.getState().refreshCurrentRange()
+    } catch (e) {
+      console.warn('건너뛰기 실패:', e)
+    }
+  }
+
   if (todos.length === 0) return null
 
   return (
@@ -90,6 +106,14 @@ export function CurrentTodoList() {
                 <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: color }} />
                 <span className="truncate text-sm text-gray-900">{todo.name}</span>
               </button>
+              {todo.repeating && (
+                <button
+                  onClick={() => handleSkip(todo)}
+                  className="shrink-0 text-xs text-gray-400 hover:text-gray-600"
+                >
+                  건너뛰기
+                </button>
+              )}
             </li>
           )
         })}
