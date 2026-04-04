@@ -26,6 +26,14 @@ export const todoApi = {
     return apiClient.post(`/v1/todos/todo/${id}/complete`, body)
   },
 
+  replaceTodo(id: string, body: { new: Record<string, unknown>; origin_next_event_time?: EventTime; next_repeating_turn?: number }): Promise<unknown> {
+    return apiClient.post(`/v1/todos/todo/${id}/replace`, body)
+  },
+
+  patchTodo(id: string, body: Record<string, unknown>): Promise<Todo> {
+    return apiClient.patch(`/v1/todos/todo/${id}`, body)
+  },
+
   deleteTodo(id: string): Promise<{ status: string }> {
     return apiClient.delete(`/v1/todos/todo/${id}`)
   },
