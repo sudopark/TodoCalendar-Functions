@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import MonthCalendar from '../calendar/MonthCalendar'
 import { DayEventList } from '../components/DayEventList'
 import { CurrentTodoList } from '../components/CurrentTodoList'
@@ -12,6 +13,8 @@ import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts'
 
 export function MainPage() {
   useKeyboardShortcuts()
+  const { i18n } = useTranslation()
+  const dateLocale = i18n.language === 'en' ? 'en-US' : 'ko-KR'
   const selectedDate = useUiStore(s => s.selectedDate)
   const foremostEvent = useForemostEventStore(s => s.foremostEvent)
   const [showTypeSelector, setShowTypeSelector] = useState(false)
@@ -51,7 +54,7 @@ export function MainPage() {
           {selectedDate && (
             <section className="mt-4">
               <h2 className="mb-2 px-3 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                {selectedDate.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' })}
+                {selectedDate.toLocaleDateString(dateLocale, { month: 'long', day: 'numeric', weekday: 'short' })}
               </h2>
               <DayEventList selectedDate={selectedDate} />
             </section>
