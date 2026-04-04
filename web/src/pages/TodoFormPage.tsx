@@ -11,6 +11,7 @@ import { ConfirmDialog } from '../components/ConfirmDialog'
 import { RepeatingScopeDialog, type RepeatScope } from '../components/RepeatingScopeDialog'
 import { nextRepeatingTime, getStartTimestamp } from '../utils/repeatingTimeCalculator'
 import { NotificationPicker } from '../components/NotificationPicker'
+import { useEventDefaultsStore } from '../stores/eventDefaultsStore'
 import type { Todo, EventTime, Repeating, NotificationOption } from '../models'
 
 export function TodoFormPage() {
@@ -20,16 +21,19 @@ export function TodoFormPage() {
 
   const { addEvent, removeEvent, refreshCurrentRange } = useCalendarEventsStore()
   const { addTodo, removeTodo, replaceTodo } = useCurrentTodosStore()
+  const { defaultTagId, defaultNotificationSeconds } = useEventDefaultsStore()
 
   const [loading, setLoading] = useState(!!id)
   const [original, setOriginal] = useState<Todo | null>(null)
   const [name, setName] = useState('')
-  const [tagId, setTagId] = useState<string | null>(null)
+  const [tagId, setTagId] = useState<string | null>(() => id ? null : defaultTagId)
   const [eventTime, setEventTime] = useState<EventTime | null>(() =>
     selectedDate ? { time_type: 'at', timestamp: Math.floor(selectedDate.getTime() / 1000) } : null
   )
   const [repeating, setRepeating] = useState<Repeating | null>(null)
-  const [notifications, setNotifications] = useState<NotificationOption[]>([])
+  const [notifications, setNotifications] = useState<NotificationOption[]>(() =>
+    !id && defaultNotificationSeconds != null ? [{ type: 'time' as const, seconds: defaultNotificationSeconds }] : []
+  )
   const [showConfirm, setShowConfirm] = useState(false)
   const [showSaveScope, setShowSaveScope] = useState(false)
   const [showDeleteScope, setShowDeleteScope] = useState(false)
