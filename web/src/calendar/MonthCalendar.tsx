@@ -4,6 +4,7 @@ import CalendarHeader from './CalendarHeader'
 import CalendarGrid from './CalendarGrid'
 import { useCalendarEventsStore } from '../stores/calendarEventsStore'
 import { useHolidayStore } from '../stores/holidayStore'
+import { TagFilter } from '../components/TagFilter'
 import { dayRange } from '../utils/eventTimeUtils'
 
 interface MonthCalendarProps {
@@ -35,6 +36,7 @@ export default function MonthCalendar({ today = new Date() }: MonthCalendarProps
     <div className="mx-auto max-w-md p-4">
       <CalendarHeader year={year} month={month} onPrev={goToPrev} onNext={goToNext} />
       <CalendarGrid days={days} />
+      <TagFilter />
     </div>
   )
 }
