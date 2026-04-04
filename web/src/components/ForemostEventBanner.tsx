@@ -25,7 +25,7 @@ export function ForemostEventBanner() {
     <button
       data-testid="foremost-banner"
       className="flex w-full items-start gap-3 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-left hover:bg-blue-100"
-      onClick={() => navigate(`/events/${event.uuid}`, {
+      onClick={() => navigate(`/events/${event.uuid}?type=${eventType}`, {
         state: { background: location, eventType },
       })}
     >
