@@ -18,7 +18,7 @@ describe('Header', () => {
 
     // then
     expect(screen.getByRole('link', { name: '캘린더' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Done' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '완료' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '설정' })).toBeInTheDocument()
   })
 
@@ -28,15 +28,15 @@ describe('Header', () => {
 
     // then
     expect(screen.getByRole('link', { name: '캘린더' })).toHaveClass('bg-gray-100')
-    expect(screen.getByRole('link', { name: 'Done' })).not.toHaveClass('bg-gray-100')
+    expect(screen.getByRole('link', { name: '완료' })).not.toHaveClass('bg-gray-100')
   })
 
-  it('/done 경로에서 Done 탭이 active 클래스를 갖는다', () => {
+  it('/done 경로에서 완료 탭이 active 클래스를 갖는다', () => {
     // given / when
     renderHeader('/done')
 
     // then
-    expect(screen.getByRole('link', { name: 'Done' })).toHaveClass('bg-gray-100')
+    expect(screen.getByRole('link', { name: '완료' })).toHaveClass('bg-gray-100')
     expect(screen.getByRole('link', { name: '캘린더' })).not.toHaveClass('bg-gray-100')
   })
 })
