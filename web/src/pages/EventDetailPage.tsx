@@ -189,61 +189,79 @@ export function EventDetailPage() {
           </div>
         )}
 
-        {/* EventDetail */}
-        {detail && (
-          <div className="mt-4 space-y-3 border-t border-gray-100 pt-4">
-            {/* Edit / Save / Cancel buttons */}
-            <div className="flex justify-end gap-2">
-              {isEditing ? (
-                <>
-                  <button
-                    className="text-sm text-blue-500 hover:text-blue-700"
-                    onClick={handleEditSave}
-                  >
-                    저장
-                  </button>
-                  <button
-                    className="text-sm text-gray-500 hover:text-gray-700"
-                    onClick={handleEditCancel}
-                  >
-                    취소
-                  </button>
-                </>
-              ) : (
+        {/* EventDetail — 항상 표시 */}
+        <div className="mt-4 space-y-3 border-t border-gray-100 pt-4">
+          {/* Edit / Save / Cancel buttons */}
+          <div className="flex justify-end gap-2">
+            {isEditing ? (
+              <>
+                <button
+                  className="text-sm text-blue-500 hover:text-blue-700"
+                  onClick={handleEditSave}
+                >
+                  저장
+                </button>
                 <button
                   className="text-sm text-gray-500 hover:text-gray-700"
-                  onClick={handleEditStart}
+                  onClick={handleEditCancel}
                 >
-                  편집
+                  취소
                 </button>
-              )}
-            </div>
+              </>
+            ) : (
+              <button
+                className="text-sm text-gray-500 hover:text-gray-700"
+                onClick={handleEditStart}
+              >
+                {detail ? '편집' : '상세 추가'}
+              </button>
+            )}
+          </div>
 
-            {/* Place */}
-            <div>
-              <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">장소</p>
-              {isEditing ? (
+          {isEditing ? (
+            <>
+              {/* Place */}
+              <div>
+                <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">장소</p>
                 <input
                   className="mt-1 w-full rounded border border-gray-300 px-2 py-1 text-sm text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-400"
                   value={editForm.place ?? ''}
                   onChange={e => setEditForm(f => ({ ...f, place: e.target.value }))}
                 />
-              ) : (
-                detail.place && <p className="mt-1 text-sm text-gray-700">{detail.place}</p>
-              )}
-            </div>
+              </div>
 
-            {/* URL */}
-            <div>
-              <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">URL</p>
-              {isEditing ? (
+              {/* URL */}
+              <div>
+                <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">URL</p>
                 <input
                   className="mt-1 w-full rounded border border-gray-300 px-2 py-1 text-sm text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-400"
                   value={editForm.url ?? ''}
                   onChange={e => setEditForm(f => ({ ...f, url: e.target.value }))}
                 />
-              ) : (
-                detail.url && (
+              </div>
+
+              {/* Memo */}
+              <div>
+                <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">메모</p>
+                <textarea
+                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1 text-sm text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                  rows={4}
+                  value={editForm.memo ?? ''}
+                  onChange={e => setEditForm(f => ({ ...f, memo: e.target.value }))}
+                />
+              </div>
+            </>
+          ) : detail ? (
+            <>
+              {detail.place && (
+                <div>
+                  <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">장소</p>
+                  <p className="mt-1 text-sm text-gray-700">{detail.place}</p>
+                </div>
+              )}
+              {detail.url && (
+                <div>
+                  <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">URL</p>
                   <a
                     href={detail.url}
                     target="_blank"
@@ -252,28 +270,19 @@ export function EventDetailPage() {
                   >
                     {detail.url}
                   </a>
-                )
+                </div>
               )}
-            </div>
-
-            {/* Memo */}
-            <div>
-              <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">메모</p>
-              {isEditing ? (
-                <textarea
-                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1 text-sm text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-400"
-                  rows={4}
-                  value={editForm.memo ?? ''}
-                  onChange={e => setEditForm(f => ({ ...f, memo: e.target.value }))}
-                />
-              ) : (
-                detail.memo && (
+              {detail.memo && (
+                <div>
+                  <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">메모</p>
                   <p className="mt-1 whitespace-pre-wrap text-sm text-gray-700">{detail.memo}</p>
-                )
+                </div>
               )}
-            </div>
-          </div>
-        )}
+            </>
+          ) : (
+            <p className="text-sm text-gray-400">장소, URL, 메모를 추가하세요</p>
+          )}
+        </div>
       </div>
 
       {/* Foremost toggle */}
