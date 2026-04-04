@@ -91,7 +91,7 @@ export function DayEventList({ selectedDate }: DayEventListProps) {
         <li key={calEvent.event.uuid}>
           <EventItem
             calEvent={calEvent}
-            onNavigate={() => navigate(`/events/${calEvent.event.uuid}`, {
+            onNavigate={() => navigate(`/events/${calEvent.event.uuid}?type=${calEvent.type}`, {
               state: { background: location, eventType: calEvent.type },
             })}
           />
