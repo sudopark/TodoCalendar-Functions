@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useMemo } from 'react'
 import { useDoneTodosStore } from '../stores/doneTodosStore'
 import { useCurrentTodosStore } from '../stores/currentTodosStore'
 import { useEventTagStore } from '../stores/eventTagStore'
@@ -25,6 +25,7 @@ export function DoneTodosPage() {
   const getColorForTagId = useEventTagStore(s => s.getColorForTagId)
   const sentinelRef = useRef<HTMLDivElement>(null)
   const [confirmId, setConfirmId] = useState<string | null>(null)
+  const groups = useMemo(() => groupByDate(items), [items])
 
   useEffect(() => {
     reset()
@@ -60,7 +61,7 @@ export function DoneTodosPage() {
         <p className="py-8 text-center text-sm text-gray-400 dark:text-gray-500">완료된 할 일이 없습니다</p>
       )}
 
-      {Array.from(groupByDate(items).entries()).map(([dateKey, groupItems]) => (
+      {Array.from(groups.entries()).map(([dateKey, groupItems]) => (
         <div key={dateKey}>
           <h3 className="px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 sticky top-0">
             {dateKey}
