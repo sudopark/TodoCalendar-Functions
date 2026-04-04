@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import MonthCalendar from '../calendar/MonthCalendar'
 import { DayEventList } from '../components/DayEventList'
 import { CurrentTodoList } from '../components/CurrentTodoList'
+import { UncompletedTodoList } from '../components/UncompletedTodoList'
 import { ForemostEventBanner } from '../components/ForemostEventBanner'
 import { TypeSelectorPopup } from '../components/TypeSelectorPopup'
 import { useUiStore } from '../stores/uiStore'
@@ -35,6 +36,9 @@ export function MainPage() {
             <ForemostEventBanner />
           </div>
         )}
+
+        {/* Uncompleted todos */}
+        <UncompletedTodoList />
 
         {/* Current todos */}
         <CurrentTodoList />
