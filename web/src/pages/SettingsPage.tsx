@@ -1,15 +1,28 @@
 import { useEffect, useState } from 'react'
 import { useAuthStore } from '../stores/authStore'
 import { useToastStore } from '../stores/toastStore'
+import { useHolidayStore, type HolidayCountry } from '../stores/holidayStore'
 import { settingApi } from '../api/settingApi'
 import { accountApi } from '../api/accountApi'
 import { ColorPalette } from '../components/ColorPalette'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import type { DefaultTagColors } from '../models'
 
+const COUNTRIES = [
+  { label: '한국', locale: 'ko', region: 'south_korea' },
+  { label: '미국', locale: 'en', region: 'united_states' },
+  { label: '일본', locale: 'ja', region: 'japan' },
+  { label: '중국', locale: 'zh', region: 'china' },
+  { label: '영국', locale: 'en', region: 'united_kingdom' },
+  { label: '독일', locale: 'de', region: 'germany' },
+  { label: '프랑스', locale: 'fr', region: 'france' },
+]
+
 export function SettingsPage() {
   const account = useAuthStore(s => s.account)
   const signOut = useAuthStore(s => s.signOut)
+  const holidayCountry = useHolidayStore(s => s.country)
+  const setHolidayCountry = useHolidayStore(s => s.setCountry)
   const [_colors, setColors] = useState<DefaultTagColors | null>(null)
   const [editColors, setEditColors] = useState<DefaultTagColors | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -74,6 +87,23 @@ export function SettingsPage() {
             </button>
           </>
         )}
+      </section>
+
+      {/* 공휴일 국가 */}
+      <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm space-y-3">
+        <h2 className="text-sm font-semibold text-gray-700">공휴일 국가</h2>
+        <select
+          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+          value={`${holidayCountry.locale}:${holidayCountry.region}`}
+          onChange={e => {
+            const [locale, region] = e.target.value.split(':')
+            setHolidayCountry({ locale, region } as HolidayCountry)
+          }}
+        >
+          {COUNTRIES.map(c => (
+            <option key={c.region} value={`${c.locale}:${c.region}`}>{c.label}</option>
+          ))}
+        </select>
       </section>
 
       {/* 계정 정보 */}
