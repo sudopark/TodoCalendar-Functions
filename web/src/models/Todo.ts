@@ -1,5 +1,6 @@
 import type { EventTime } from './EventTime'
 import type { Repeating } from './Repeating'
+import type { NotificationOption } from './NotificationOption'
 
 export interface Todo {
   uuid: string
@@ -9,6 +10,6 @@ export interface Todo {
   repeating?: Repeating | null
   repeating_turn?: number
   exclude_repeatings?: number[]
-  notification_options?: unknown[] | null
+  notification_options?: NotificationOption[] | null
   is_current: boolean
 }
