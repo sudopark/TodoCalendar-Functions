@@ -51,7 +51,7 @@ export const useEventTagStore = create<EventTagState>((set, get) => ({
   deleteTagAndEvents: async (id: string) => {
     await eventTagApi.deleteTagAndEvents(id)
     set(s => { const tags = new Map(s.tags); tags.delete(id); return { tags } })
-    await useCalendarEventsStore.getState().refreshCurrentRange()
+    await useCalendarEventsStore.getState().refreshCurrentRange().catch(() => {})
   },
 
   reset: () => set({ tags: new Map() }),
