@@ -8,6 +8,7 @@ import { useEventTagStore } from '../stores/eventTagStore'
 import { useTimezoneStore } from '../stores/timezoneStore'
 import { useCalendarAppearanceStore } from '../stores/calendarAppearanceStore'
 import { useNotificationStore } from '../stores/notificationStore'
+import { useTranslation } from 'react-i18next'
 import { settingApi } from '../api/settingApi'
 import { accountApi } from '../api/accountApi'
 import { ColorPalette } from '../components/ColorPalette'
@@ -44,6 +45,7 @@ const COUNTRIES = [
 ]
 
 export function SettingsPage() {
+  const { t, i18n } = useTranslation()
   const account = useAuthStore(s => s.account)
   const signOut = useAuthStore(s => s.signOut)
   const holidayCountry = useHolidayStore(s => s.country)
@@ -92,30 +94,47 @@ export function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-lg px-4 py-6 space-y-8">
-      <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100">설정</h1>
+      <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100">{t('settings.title')}</h1>
 
       {/* 테마 */}
       <section className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 shadow-sm space-y-3">
-        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">테마</h2>
+        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t('settings.theme')}</h2>
         <div className="flex gap-2">
-          {(['system', 'light', 'dark'] as const).map(t => (
+          {(['system', 'light', 'dark'] as const).map(th => (
             <button
-              key={t}
-              onClick={() => setTheme(t)}
-              className={`rounded-lg px-3 py-2 text-sm ${theme === t ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'}`}
+              key={th}
+              onClick={() => setTheme(th)}
+              className={`rounded-lg px-3 py-2 text-sm ${theme === th ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'}`}
             >
-              {t === 'system' ? '시스템' : t === 'light' ? '라이트' : '다크'}
+              {th === 'system' ? t('settings.theme_system') : th === 'light' ? t('settings.theme_light') : t('settings.theme_dark')}
             </button>
           ))}
         </div>
       </section>
 
+      {/* 언어 */}
+      <section className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 shadow-sm space-y-3">
+        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t('settings.language')}</h2>
+        <select
+          className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-gray-100"
+          value={i18n.language}
+          onChange={e => {
+            const lang = e.target.value
+            i18n.changeLanguage(lang)
+            localStorage.setItem('language', lang)
+          }}
+        >
+          <option value="ko">한국어</option>
+          <option value="en">English</option>
+        </select>
+      </section>
+
       {/* 캘린더 외형 */}
       <section className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 shadow-sm space-y-4">
-        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">캘린더 외형</h2>
+        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t('settings.calendar_appearance')}</h2>
         <div>
           <label className="mb-1 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-            <span>행 높이</span>
+            <span>{t('settings.row_height')}</span>
             <span>{rowHeight}px</span>
           </label>
           <input
@@ -129,7 +148,7 @@ export function SettingsPage() {
         </div>
         <div>
           <label className="mb-1 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-            <span>글꼴 크기</span>
+            <span>{t('settings.font_size')}</span>
             <span>{calFontSize}px</span>
           </label>
           <input
@@ -142,7 +161,7 @@ export function SettingsPage() {
           />
         </div>
         <div className="flex items-center justify-between">
-          <span className="text-xs text-gray-500 dark:text-gray-400">이벤트 이름 표시</span>
+          <span className="text-xs text-gray-500 dark:text-gray-400">{t('settings.show_event_names')}</span>
           <button
             onClick={() => setAppearance({ showEventNames: !showEventNames })}
             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${showEventNames ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'}`}
@@ -154,24 +173,24 @@ export function SettingsPage() {
           className="rounded-lg border border-gray-200 dark:border-gray-600 px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
           onClick={resetAppearance}
         >
-          기본값 복원
+          {t('settings.reset_defaults')}
         </button>
       </section>
 
       {/* 기본 태그 색상 */}
       <section className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 shadow-sm space-y-4">
-        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">기본 태그 색상</h2>
+        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t('settings.tag_colors')}</h2>
         {editColors && (
           <>
             <div>
-              <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">공휴일 색상</p>
+              <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">{t('settings.holiday_color')}</p>
               <ColorPalette
                 selected={editColors.holiday}
                 onChange={hex => setEditColors(c => c ? { ...c, holiday: hex } : c)}
               />
             </div>
             <div>
-              <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">기본 색상</p>
+              <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">{t('settings.default_color')}</p>
               <ColorPalette
                 selected={editColors.default}
                 onChange={hex => setEditColors(c => c ? { ...c, default: hex } : c)}
@@ -181,7 +200,7 @@ export function SettingsPage() {
               className="rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-600"
               onClick={handleSaveColors}
             >
-              색상 저장
+              {t('settings.save_colors')}
             </button>
           </>
         )}
@@ -189,7 +208,7 @@ export function SettingsPage() {
 
       {/* 공휴일 국가 */}
       <section className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 shadow-sm space-y-3">
-        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">공휴일 국가</h2>
+        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t('settings.holiday_country')}</h2>
         <select
           className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-gray-100"
           value={`${holidayCountry.locale}:${holidayCountry.region}`}
@@ -206,7 +225,7 @@ export function SettingsPage() {
 
       {/* 타임존 */}
       <section className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 shadow-sm space-y-3">
-        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">타임존</h2>
+        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t('settings.timezone')}</h2>
         <select
           className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-gray-100"
           value={isCustom ? timezone : ''}
@@ -223,22 +242,22 @@ export function SettingsPage() {
 
       {/* 이벤트 기본값 */}
       <section className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 shadow-sm space-y-4">
-        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">이벤트 기본값</h2>
+        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t('settings.defaults')}</h2>
         <div>
-          <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">기본 태그</p>
+          <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">{t('settings.default_tag')}</p>
           <select
             className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-gray-100"
             value={defaultTagId ?? ''}
             onChange={e => setDefaults({ defaultTagId: e.target.value || null })}
           >
-            <option value="">없음</option>
+            <option value="">{t('settings.none')}</option>
             {Array.from(tags.values()).map(tag => (
               <option key={tag.uuid} value={tag.uuid}>{tag.name}</option>
             ))}
           </select>
         </div>
         <div>
-          <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">기본 알림</p>
+          <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">{t('settings.default_notification')}</p>
           <select
             className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-gray-100"
             value={defaultNotificationSeconds ?? ''}
@@ -253,24 +272,24 @@ export function SettingsPage() {
 
       {/* 알림 */}
       <section className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 shadow-sm space-y-3">
-        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">알림</h2>
+        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t('settings.notification')}</h2>
         {notifPermission === 'granted' ? (
-          <p className="text-sm text-green-600 dark:text-green-400">알림이 허용되었습니다</p>
+          <p className="text-sm text-green-600 dark:text-green-400">{t('settings.notification_granted')}</p>
         ) : notifPermission === 'denied' ? (
-          <p className="text-sm text-red-500">알림이 차단되었습니다. 브라우저 설정에서 변경해주세요.</p>
+          <p className="text-sm text-red-500">{t('settings.notification_denied')}</p>
         ) : (
           <button
             className="rounded-lg border border-gray-200 dark:border-gray-600 px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
             onClick={requestNotifPermission}
           >
-            알림 허용
+            {t('settings.notification_allow')}
           </button>
         )}
       </section>
 
       {/* 계정 정보 */}
       <section className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 shadow-sm space-y-3">
-        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">계정</h2>
+        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t('settings.account')}</h2>
         {account && (
           <p className="text-sm text-gray-500 dark:text-gray-400">{account.email ?? account.uid}</p>
         )}
@@ -278,18 +297,18 @@ export function SettingsPage() {
           className="rounded-lg border border-gray-200 dark:border-gray-600 px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
           onClick={signOut}
         >
-          로그아웃
+          {t('settings.logout')}
         </button>
       </section>
 
       {/* 계정 삭제 */}
       <section className="rounded-xl border border-red-100 dark:border-red-900 bg-white dark:bg-gray-800 p-5 shadow-sm">
-        <h2 className="mb-3 text-sm font-semibold text-red-500">위험 구역</h2>
+        <h2 className="mb-3 text-sm font-semibold text-red-500">{t('settings.danger')}</h2>
         <button
           className="rounded-lg border border-red-200 dark:border-red-800 px-4 py-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30"
           onClick={() => setShowDeleteConfirm(true)}
         >
-          계정 삭제
+          {t('settings.delete_account')}
         </button>
       </section>
 
