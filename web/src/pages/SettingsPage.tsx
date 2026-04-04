@@ -6,6 +6,7 @@ import { useThemeStore } from '../stores/themeStore'
 import { useEventDefaultsStore } from '../stores/eventDefaultsStore'
 import { useEventTagStore } from '../stores/eventTagStore'
 import { useTimezoneStore } from '../stores/timezoneStore'
+import { useCalendarAppearanceStore } from '../stores/calendarAppearanceStore'
 import { settingApi } from '../api/settingApi'
 import { accountApi } from '../api/accountApi'
 import { ColorPalette } from '../components/ColorPalette'
@@ -50,6 +51,7 @@ export function SettingsPage() {
   const setTheme = useThemeStore(s => s.setTheme)
   const { defaultTagId, defaultNotificationSeconds, setDefaults } = useEventDefaultsStore()
   const tags = useEventTagStore(s => s.tags)
+  const { rowHeight, fontSize: calFontSize, showEventNames, setAppearance, resetToDefaults: resetAppearance } = useCalendarAppearanceStore()
   const timezoneState = useTimezoneStore()
   const { timezone, isCustom, setTimezone } = timezoneState
   const [_colors, setColors] = useState<DefaultTagColors | null>(null)
@@ -103,6 +105,54 @@ export function SettingsPage() {
             </button>
           ))}
         </div>
+      </section>
+
+      {/* 캘린더 외형 */}
+      <section className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 shadow-sm space-y-4">
+        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">캘린더 외형</h2>
+        <div>
+          <label className="mb-1 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+            <span>행 높이</span>
+            <span>{rowHeight}px</span>
+          </label>
+          <input
+            type="range"
+            min={50}
+            max={120}
+            value={rowHeight}
+            onChange={e => setAppearance({ rowHeight: Number(e.target.value) })}
+            className="w-full accent-blue-500"
+          />
+        </div>
+        <div>
+          <label className="mb-1 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+            <span>글꼴 크기</span>
+            <span>{calFontSize}px</span>
+          </label>
+          <input
+            type="range"
+            min={10}
+            max={18}
+            value={calFontSize}
+            onChange={e => setAppearance({ fontSize: Number(e.target.value) })}
+            className="w-full accent-blue-500"
+          />
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-gray-500 dark:text-gray-400">이벤트 이름 표시</span>
+          <button
+            onClick={() => setAppearance({ showEventNames: !showEventNames })}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${showEventNames ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+          >
+            <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${showEventNames ? 'translate-x-6' : 'translate-x-1'}`} />
+          </button>
+        </div>
+        <button
+          className="rounded-lg border border-gray-200 dark:border-gray-600 px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+          onClick={resetAppearance}
+        >
+          기본값 복원
+        </button>
       </section>
 
       {/* 기본 태그 색상 */}

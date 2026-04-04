@@ -5,6 +5,7 @@ import { useCalendarEventsStore } from '../stores/calendarEventsStore'
 import { useHolidayStore } from '../stores/holidayStore'
 import { useEventTagStore } from '../stores/eventTagStore'
 import { useTagFilterStore } from '../stores/tagFilterStore'
+import { useCalendarAppearanceStore } from '../stores/calendarAppearanceStore'
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
@@ -19,6 +20,7 @@ export default function CalendarGrid({ days }: CalendarGridProps) {
   const getHolidayNames = useHolidayStore(s => s.getHolidayNames)
   const getColorForTagId = useEventTagStore(s => s.getColorForTagId)
   const isTagHidden = useTagFilterStore(s => s.isTagHidden)
+  const { rowHeight, fontSize, showEventNames } = useCalendarAppearanceStore()
 
   return (
     <div className="grid grid-cols-7">
@@ -58,8 +60,9 @@ export default function CalendarGrid({ days }: CalendarGridProps) {
         return (
           <div
             key={i}
-            className="flex flex-col items-center py-1 cursor-pointer md:items-start md:min-h-[70px] md:py-1.5"
+            className="flex flex-col items-center py-1 cursor-pointer md:items-start md:py-1.5"
             data-testid="day-cell"
+            style={{ minHeight: `${rowHeight}px`, fontSize: `${fontSize}px` }}
             onClick={() => setSelectedDate(day.date)}
             title={holidayNames.join(', ') || undefined}
           >
@@ -78,7 +81,7 @@ export default function CalendarGrid({ days }: CalendarGridProps) {
                       className="truncate rounded-sm px-0.5 text-[10px] leading-tight text-white"
                       style={{ backgroundColor: color ?? '#9ca3af' }}
                     >
-                      {ev.event.name}
+                      {showEventNames ? ev.event.name : '\u00A0'}
                     </div>
                   )
                 })}
