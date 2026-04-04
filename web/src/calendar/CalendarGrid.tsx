@@ -58,16 +58,40 @@ export default function CalendarGrid({ days }: CalendarGridProps) {
         return (
           <div
             key={i}
-            className="flex flex-col items-center py-1 cursor-pointer"
+            className="flex flex-col items-center py-1 cursor-pointer md:items-start md:min-h-[70px] md:py-1.5"
             data-testid="day-cell"
             onClick={() => setSelectedDate(day.date)}
             title={holidayNames.join(', ') || undefined}
           >
-            <div className={`flex h-7 w-7 items-center justify-center text-sm ${textColor} ${bgClass} ${selectedClass}`}>
+            <div className={`flex h-7 w-7 items-center justify-center text-sm md:ml-0.5 ${textColor} ${bgClass} ${selectedClass}`}>
               {day.dayOfMonth}
             </div>
+            {/* Desktop: color bars with event names */}
+            {events.length > 0 && (
+              <div className="hidden md:block mt-0.5 space-y-px w-full px-0.5">
+                {events.slice(0, 2).map((ev, j) => {
+                  const tagId = ev.event.event_tag_id
+                  const color = tagId ? getColorForTagId(tagId) : '#9ca3af'
+                  return (
+                    <div
+                      key={j}
+                      className="truncate rounded-sm px-0.5 text-[10px] leading-tight text-white"
+                      style={{ backgroundColor: color ?? '#9ca3af' }}
+                    >
+                      {ev.event.name}
+                    </div>
+                  )
+                })}
+                {events.length > 2 && (
+                  <div className="text-[9px] text-gray-400 dark:text-gray-500 px-0.5">
+                    +{events.length - 2}
+                  </div>
+                )}
+              </div>
+            )}
+            {/* Mobile: dots */}
             {dotColors.length > 0 && (
-              <div className="mt-0.5 flex gap-0.5" data-testid="event-dots">
+              <div className="md:hidden mt-0.5 flex gap-0.5" data-testid="event-dots">
                 {dotColors.map((color, j) => (
                   <span
                     key={j}
