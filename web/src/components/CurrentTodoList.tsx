@@ -1,33 +1,63 @@
+import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { todoApi } from '../api/todoApi'
 import { useCurrentTodosStore } from '../stores/currentTodosStore'
 import { useCalendarEventsStore } from '../stores/calendarEventsStore'
 import { useEventTagStore } from '../stores/eventTagStore'
+import { RepeatingScopeDialog, type RepeatScope } from './RepeatingScopeDialog'
+import { nextRepeatingTime } from '../utils/repeatingTimeCalculator'
 import type { Todo } from '../models'
-
-// 이벤트 핸들러로 전달되므로 렌더 사이클 밖에서 실행됨.
-// React 훅 규칙 위반 없이 스토어 상태를 읽으려면 getState()를 직접 호출해야 한다.
-async function completeTodo(todo: Todo) {
-  const { removeTodo } = useCurrentTodosStore.getState()
-  const { removeEvent, refreshCurrentRange } = useCalendarEventsStore.getState()
-  try {
-    await todoApi.completeTodo(todo.uuid, { origin: todo })
-    if (todo.repeating) {
-      await refreshCurrentRange()
-    } else {
-      removeEvent(todo.uuid)
-      removeTodo(todo.uuid)
-    }
-  } catch (e) {
-    console.warn('완료 처리 실패:', e)
-  }
-}
 
 export function CurrentTodoList() {
   const todos = useCurrentTodosStore(s => s.todos)
+  const fetchTodos = useCurrentTodosStore(s => s.fetch)
   const getColorForTagId = useEventTagStore(s => s.getColorForTagId)
   const navigate = useNavigate()
   const location = useLocation()
+  const [scopeTarget, setScopeTarget] = useState<Todo | null>(null)
+
+  async function handleComplete(todo: Todo) {
+    if (todo.repeating && todo.event_time) {
+      setScopeTarget(todo)
+      return
+    }
+    await doComplete(todo)
+  }
+
+  async function doComplete(todo: Todo, scope?: RepeatScope) {
+    const { removeTodo } = useCurrentTodosStore.getState()
+    const { removeEvent, refreshCurrentRange } = useCalendarEventsStore.getState()
+    try {
+      if (scope === 'this' && todo.repeating && todo.event_time) {
+        // 이번만 완료: next_event_time 전달로 시리즈 유지
+        const next = nextRepeatingTime(todo.event_time, todo.repeating_turn ?? 1, todo.repeating, todo.exclude_repeatings)
+        await todoApi.completeTodo(todo.uuid, { origin: todo, next_event_time: next?.time, next_repeating_turn: next?.turn })
+      } else if (scope === 'future') {
+        // 지금부터 완료: next_event_time 없이 → 시리즈 종료
+        await todoApi.completeTodo(todo.uuid, { origin: todo })
+      } else {
+        // 비반복
+        await todoApi.completeTodo(todo.uuid, { origin: todo })
+      }
+
+      if (todo.repeating) {
+        await refreshCurrentRange()
+        await fetchTodos()
+      } else {
+        removeEvent(todo.uuid)
+        removeTodo(todo.uuid)
+      }
+    } catch (e) {
+      console.warn('완료 처리 실패:', e)
+    }
+  }
+
+  async function handleCompleteWithScope(scope: RepeatScope) {
+    if (!scopeTarget) return
+    const todo = scopeTarget
+    setScopeTarget(null)
+    await doComplete(todo, scope)
+  }
 
   if (todos.length === 0) return null
 
@@ -47,7 +77,7 @@ export function CurrentTodoList() {
                 type="checkbox"
                 aria-label={todo.name}
                 className="h-4 w-4 rounded border-gray-300"
-                onChange={() => completeTodo(todo)}
+                onChange={() => handleComplete(todo)}
               />
               <button
                 className="flex flex-1 items-center gap-2 rounded text-left hover:bg-gray-50"
@@ -62,6 +92,14 @@ export function CurrentTodoList() {
           )
         })}
       </ul>
+      {scopeTarget && (
+        <RepeatingScopeDialog
+          mode="complete"
+          eventType="todo"
+          onSelect={handleCompleteWithScope}
+          onCancel={() => setScopeTarget(null)}
+        />
+      )}
     </section>
   )
 }
