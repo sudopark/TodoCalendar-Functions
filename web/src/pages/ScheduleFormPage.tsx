@@ -9,6 +9,7 @@ import { TagSelector } from '../components/TagSelector'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { RepeatingScopeDialog, type RepeatScope } from '../components/RepeatingScopeDialog'
 import { NotificationPicker } from '../components/NotificationPicker'
+import { useEventDefaultsStore } from '../stores/eventDefaultsStore'
 import type { Schedule, EventTime, Repeating, NotificationOption } from '../models'
 
 export function ScheduleFormPage() {
@@ -17,6 +18,7 @@ export function ScheduleFormPage() {
   const selectedDate = useUiStore(s => s.selectedDate)
 
   const { addEvent, removeEvent, refreshCurrentRange } = useCalendarEventsStore()
+  const { defaultTagId, defaultNotificationSeconds } = useEventDefaultsStore()
 
   const defaultEventTime = (): EventTime => {
     const base = selectedDate ?? new Date()
@@ -26,10 +28,12 @@ export function ScheduleFormPage() {
   const [loading, setLoading] = useState(!!id)
   const [original, setOriginal] = useState<Schedule | null>(null)
   const [name, setName] = useState('')
-  const [tagId, setTagId] = useState<string | null>(null)
+  const [tagId, setTagId] = useState<string | null>(() => id ? null : defaultTagId)
   const [eventTime, setEventTime] = useState<EventTime>(defaultEventTime)
   const [repeating, setRepeating] = useState<Repeating | null>(null)
-  const [notifications, setNotifications] = useState<NotificationOption[]>([])
+  const [notifications, setNotifications] = useState<NotificationOption[]>(() =>
+    !id && defaultNotificationSeconds != null ? [{ type: 'time' as const, seconds: defaultNotificationSeconds }] : []
+  )
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showSaveScope, setShowSaveScope] = useState(false)
   const [showDeleteScope, setShowDeleteScope] = useState(false)
