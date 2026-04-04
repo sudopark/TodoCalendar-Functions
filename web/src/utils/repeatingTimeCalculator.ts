@@ -31,12 +31,22 @@ export function nextRepeatingTime(
   }
   if (repeating.end_count != null && nextTurn > repeating.end_count) return null
 
-  // 제외 턴이면 재귀적으로 다음 계산
-  if (excludeTurns?.includes(nextTurn)) {
-    return nextRepeatingTime(nextTime, nextTurn, repeating, excludeTurns)
+  // 제외 턴이면 반복문으로 다음 계산
+  let result: RepeatingTimes = { time: nextTime, turn: nextTurn }
+  while (excludeTurns?.includes(result.turn)) {
+    const nextInterval = computeIntervalSeconds(result.time, repeating.option)
+    if (nextInterval === null) return null
+    const skippedTime = shiftEventTime(result.time, nextInterval)
+    const skippedTurn = result.turn + 1
+    if (repeating.end != null) {
+      const ts = getStartTimestamp(skippedTime)
+      if (ts > repeating.end) return null
+    }
+    if (repeating.end_count != null && skippedTurn > repeating.end_count) return null
+    result = { time: skippedTime, turn: skippedTurn }
   }
 
-  return { time: nextTime, turn: nextTurn }
+  return result
 }
 
 export function shiftEventTime(time: EventTime, intervalSeconds: number): EventTime {
@@ -98,9 +108,9 @@ function computeIntervalSeconds(currentTime: EventTime, option: RepeatingOption)
 
   switch (option.optionType) {
     case 'every_day':
-      return everyDayInterval(option.interval)
+      return everyDayInterval(currentDate, startTs, option.interval)
     case 'every_week':
-      return everyWeekInterval(currentDate, option.interval, option.dayOfWeek)
+      return everyWeekInterval(currentDate, startTs, option.interval, option.dayOfWeek)
     case 'every_month':
       return everyMonthInterval(currentDate, startTs, option.interval, option.monthDaySelection)
     case 'every_year':
@@ -113,14 +123,20 @@ function computeIntervalSeconds(currentTime: EventTime, option: RepeatingOption)
   }
 }
 
-// 1. every_day
-function everyDayInterval(interval: number): number {
-  return interval * 86400
+// 1. every_day — Date 날짜 연산으로 DST 안전 처리
+function everyDayInterval(currentDate: Date, currentTs: number, interval: number): number {
+  const nextDate = new Date(currentDate)
+  nextDate.setDate(nextDate.getDate() + interval)
+  return dateToTimestamp(nextDate) - currentTs
 }
 
-// 2. every_week
-function everyWeekInterval(currentDate: Date, interval: number, dayOfWeeks: number[]): number {
-  if (dayOfWeeks.length === 0) return interval * 7 * 86400
+// 2. every_week — Date 날짜 연산으로 DST 안전 처리
+function everyWeekInterval(currentDate: Date, currentTs: number, interval: number, dayOfWeeks: number[]): number {
+  if (dayOfWeeks.length === 0) {
+    const nextDate = new Date(currentDate)
+    nextDate.setDate(nextDate.getDate() + interval * 7)
+    return dateToTimestamp(nextDate) - currentTs
+  }
 
   const currentDow = dateToDayOfWeek(currentDate)
   const sorted = [...dayOfWeeks].sort((a, b) => a - b)
@@ -128,14 +144,20 @@ function everyWeekInterval(currentDate: Date, interval: number, dayOfWeeks: numb
   // 같은 주에서 현재 요일보다 큰 다음 요일 찾기
   const nextInWeek = sorted.find(d => d > currentDow)
   if (nextInWeek !== undefined) {
-    return (nextInWeek - currentDow) * 86400
+    const daysToAdd = nextInWeek - currentDow
+    const nextDate = new Date(currentDate)
+    nextDate.setDate(nextDate.getDate() + daysToAdd)
+    return dateToTimestamp(nextDate) - currentTs
   }
 
   // 없으면 interval주 후의 첫 번째 선택된 요일
   const daysToEndOfWeek = 7 - currentDow
   const additionalWeeks = (interval - 1) * 7
   const daysToFirst = sorted[0]
-  return (daysToEndOfWeek + additionalWeeks + daysToFirst) * 86400
+  const totalDays = daysToEndOfWeek + additionalWeeks + daysToFirst
+  const nextDate = new Date(currentDate)
+  nextDate.setDate(nextDate.getDate() + totalDays)
+  return dateToTimestamp(nextDate) - currentTs
 }
 
 // 3. every_month
@@ -204,9 +226,9 @@ function everyMonthWeekInterval(
 
   // 같은 달에서 현재 날짜 이후의 매칭 날짜 찾기
   const candidates = findWeekSelectionDates(currentYear, currentMonth, selection)
+    .map(d => { preserveTime(d, currentDate); return d })
   const nextInMonth = candidates.find(d => dateToTimestamp(d) > currentTs)
   if (nextInMonth) {
-    preserveTime(nextInMonth, currentDate)
     return dateToTimestamp(nextInMonth) - currentTs
   }
 
@@ -217,9 +239,9 @@ function everyMonthWeekInterval(
 
   for (let attempt = 0; attempt < 24; attempt++) {
     const futureCandidates = findWeekSelectionDates(targetYear, targetMonth, selection)
+      .map(d => { preserveTime(d, currentDate); return d })
     if (futureCandidates.length > 0) {
       const target = futureCandidates[0]
-      preserveTime(target, currentDate)
       return dateToTimestamp(target) - currentTs
     }
     targetMonth += interval
@@ -244,9 +266,9 @@ function everyYearInterval(
   // 같은 해에서 현재 이후 찾기
   for (const month of sortedMonths) {
     const candidates = findYearWeekDates(currentYear, month, weekOrdinals, dayOfWeeks)
+      .map(d => { preserveTime(d, currentDate); return d })
     const next = candidates.find(d => dateToTimestamp(d) > currentTs)
     if (next) {
-      preserveTime(next, currentDate)
       return dateToTimestamp(next) - currentTs
     }
   }
@@ -256,9 +278,9 @@ function everyYearInterval(
   for (let attempt = 0; attempt < 10; attempt++) {
     for (const month of sortedMonths) {
       const candidates = findYearWeekDates(targetYear, month, weekOrdinals, dayOfWeeks)
+        .map(d => { preserveTime(d, currentDate); return d })
       if (candidates.length > 0) {
         const target = candidates[0]
-        preserveTime(target, currentDate)
         return dateToTimestamp(target) - currentTs
       }
     }
