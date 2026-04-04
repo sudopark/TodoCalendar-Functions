@@ -17,4 +17,8 @@ export const eventTagApi = {
   deleteTag(id: string): Promise<{ status: string }> {
     return apiClient.delete(`/v1/tags/tag/${id}`)
   },
+
+  deleteTagAndEvents(id: string): Promise<{ status: string }> {
+    return apiClient.delete(`/v1/tags/tag_and_events/${id}`)
+  },
 }

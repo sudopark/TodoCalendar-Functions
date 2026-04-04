@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { eventTagApi } from '../api/eventTagApi'
+import { useCalendarEventsStore } from './calendarEventsStore'
 import type { EventTag } from '../models'
 
 interface EventTagState {
@@ -9,6 +10,7 @@ interface EventTagState {
   createTag: (name: string, color_hex?: string) => Promise<EventTag>
   updateTag: (id: string, updates: { name?: string; color_hex?: string }) => Promise<EventTag>
   deleteTag: (id: string) => Promise<void>
+  deleteTagAndEvents: (id: string) => Promise<void>
   reset: () => void
 }
 
@@ -44,6 +46,12 @@ export const useEventTagStore = create<EventTagState>((set, get) => ({
   deleteTag: async (id: string) => {
     await eventTagApi.deleteTag(id)
     set(s => { const tags = new Map(s.tags); tags.delete(id); return { tags } })
+  },
+
+  deleteTagAndEvents: async (id: string) => {
+    await eventTagApi.deleteTagAndEvents(id)
+    set(s => { const tags = new Map(s.tags); tags.delete(id); return { tags } })
+    await useCalendarEventsStore.getState().refreshCurrentRange()
   },
 
   reset: () => set({ tags: new Map() }),
