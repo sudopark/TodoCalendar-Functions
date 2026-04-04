@@ -10,6 +10,10 @@ export const todoApi = {
     return apiClient.get('/v1/todos')
   },
 
+  getUncompletedTodos(): Promise<Todo[]> {
+    return apiClient.get('/v1/todos/uncompleted')
+  },
+
   getTodo(id: string): Promise<Todo> {
     return apiClient.get(`/v1/todos/todo/${id}`)
   },
