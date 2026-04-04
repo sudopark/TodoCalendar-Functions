@@ -26,34 +26,37 @@ export function MainPage() {
   return (
     <div className="flex min-h-screen flex-col bg-gray-50 dark:bg-gray-900 md:flex-row">
       {/* Calendar panel */}
-      <div className="w-full shrink-0 bg-white dark:bg-gray-800 shadow-sm md:w-80 md:min-h-screen">
+      {/* Calendar panel — 데스크톱에서 조금 더 넓게 */}
+      <div className="w-full shrink-0 bg-white dark:bg-gray-800 shadow-sm md:w-80 lg:w-96 md:min-h-screen">
         <MonthCalendar />
       </div>
 
-      {/* Event panel */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 md:px-6">
-        {/* Foremost event: foremostEvent가 있을 때만 wrapper 포함해 렌더 */}
-        {foremostEvent && (
-          <div className="mb-4">
-            <ForemostEventBanner />
-          </div>
-        )}
+      {/* Event panel — 데스크톱에서 최대 너비 제한 + 중앙 정렬 */}
+      <div className="flex-1 overflow-y-auto px-4 py-4 md:px-6 lg:px-8">
+        <div className="mx-auto max-w-2xl">
+          {/* Foremost event: foremostEvent가 있을 때만 wrapper 포함해 렌더 */}
+          {foremostEvent && (
+            <div className="mb-4">
+              <ForemostEventBanner />
+            </div>
+          )}
 
-        {/* Uncompleted todos */}
-        <UncompletedTodoList />
+          {/* Uncompleted todos */}
+          <UncompletedTodoList />
 
-        {/* Current todos */}
-        <CurrentTodoList />
+          {/* Current todos */}
+          <CurrentTodoList />
 
-        {/* Day events */}
-        {selectedDate && (
-          <section className="mt-4">
-            <h2 className="mb-2 px-3 text-sm font-semibold text-gray-700 dark:text-gray-300">
-              {selectedDate.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' })}
-            </h2>
-            <DayEventList selectedDate={selectedDate} />
-          </section>
-        )}
+          {/* Day events */}
+          {selectedDate && (
+            <section className="mt-4">
+              <h2 className="mb-2 px-3 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                {selectedDate.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' })}
+              </h2>
+              <DayEventList selectedDate={selectedDate} />
+            </section>
+          )}
+        </div>
       </div>
 
       {/* FAB */}
