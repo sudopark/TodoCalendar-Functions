@@ -2,12 +2,11 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useEventTagStore } from '../stores/eventTagStore'
 import { useToastStore } from '../stores/toastStore'
-import { ConfirmDialog } from '../components/ConfirmDialog'
 import type { EventTag } from '../models'
 
 export function TagManagementPage() {
   const navigate = useNavigate()
-  const { tags, createTag, updateTag, deleteTag } = useEventTagStore()
+  const { tags, createTag, updateTag, deleteTag, deleteTagAndEvents } = useEventTagStore()
   const [newName, setNewName] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
@@ -92,22 +91,50 @@ export function TagManagementPage() {
       </ul>
 
       {deleteTarget && (
-        <ConfirmDialog
-          title="태그 삭제"
-          message={`"${deleteTarget.name}" 태그를 삭제할까요?`}
-          confirmLabel="삭제"
-          onConfirm={async () => {
-            try {
-              await deleteTag(deleteTarget.uuid)
-              setDeleteTarget(null)
-            } catch (e) {
-              console.warn('태그 삭제 실패:', e)
-              useToastStore.getState().show('태그 삭제에 실패했습니다', 'error')
-              setDeleteTarget(null)
-            }
-          }}
-          onCancel={() => setDeleteTarget(null)}
-        />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
+            <h2 className="text-base font-semibold text-gray-900">태그 삭제</h2>
+            <p className="mt-2 text-sm text-gray-600">
+              &ldquo;{deleteTarget.name}&rdquo; 태그를 어떻게 삭제할까요?
+            </p>
+            <div className="mt-4 flex flex-col divide-y divide-gray-100">
+              <button
+                className="px-4 py-3 text-left text-sm text-gray-800 hover:bg-gray-50"
+                onClick={async () => {
+                  try {
+                    await deleteTag(deleteTarget.uuid)
+                  } catch (e) {
+                    console.warn('태그 삭제 실패:', e)
+                    useToastStore.getState().show('태그 삭제에 실패했습니다', 'error')
+                  }
+                  setDeleteTarget(null)
+                }}
+              >
+                태그만 삭제
+              </button>
+              <button
+                className="px-4 py-3 text-left text-sm text-red-600 hover:bg-red-50"
+                onClick={async () => {
+                  try {
+                    await deleteTagAndEvents(deleteTarget.uuid)
+                  } catch (e) {
+                    console.warn('태그+이벤트 삭제 실패:', e)
+                    useToastStore.getState().show('태그 및 이벤트 삭제에 실패했습니다', 'error')
+                  }
+                  setDeleteTarget(null)
+                }}
+              >
+                태그 + 연관 이벤트 모두 삭제
+              </button>
+            </div>
+            <button
+              className="mt-4 w-full rounded-lg px-4 py-2 text-sm text-gray-500 hover:bg-gray-100"
+              onClick={() => setDeleteTarget(null)}
+            >
+              취소
+            </button>
+          </div>
+        </div>
       )}
     </div>
   )
