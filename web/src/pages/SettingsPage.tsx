@@ -5,11 +5,23 @@ import { useHolidayStore, type HolidayCountry } from '../stores/holidayStore'
 import { useThemeStore } from '../stores/themeStore'
 import { useEventDefaultsStore } from '../stores/eventDefaultsStore'
 import { useEventTagStore } from '../stores/eventTagStore'
+import { useTimezoneStore } from '../stores/timezoneStore'
 import { settingApi } from '../api/settingApi'
 import { accountApi } from '../api/accountApi'
 import { ColorPalette } from '../components/ColorPalette'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import type { DefaultTagColors } from '../models'
+
+const TIMEZONES = [
+  { label: '시스템 기본', value: '' },
+  { label: 'Asia/Seoul (KST)', value: 'Asia/Seoul' },
+  { label: 'Asia/Tokyo (JST)', value: 'Asia/Tokyo' },
+  { label: 'America/New_York (EST)', value: 'America/New_York' },
+  { label: 'America/Los_Angeles (PST)', value: 'America/Los_Angeles' },
+  { label: 'Europe/London (GMT)', value: 'Europe/London' },
+  { label: 'Europe/Berlin (CET)', value: 'Europe/Berlin' },
+  { label: 'UTC', value: 'UTC' },
+]
 
 const NOTIFICATION_PRESETS = [
   { label: '없음', value: null },
@@ -38,6 +50,8 @@ export function SettingsPage() {
   const setTheme = useThemeStore(s => s.setTheme)
   const { defaultTagId, defaultNotificationSeconds, setDefaults } = useEventDefaultsStore()
   const tags = useEventTagStore(s => s.tags)
+  const timezoneState = useTimezoneStore()
+  const { timezone, isCustom, setTimezone } = timezoneState
   const [_colors, setColors] = useState<DefaultTagColors | null>(null)
   const [editColors, setEditColors] = useState<DefaultTagColors | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -135,6 +149,23 @@ export function SettingsPage() {
             <option key={c.region} value={`${c.locale}:${c.region}`}>{c.label}</option>
           ))}
         </select>
+      </section>
+
+      {/* 타임존 */}
+      <section className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 shadow-sm space-y-3">
+        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">타임존</h2>
+        <select
+          className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-gray-100"
+          value={isCustom ? timezone : ''}
+          onChange={e => setTimezone(e.target.value || null)}
+        >
+          {TIMEZONES.map(tz => (
+            <option key={tz.value} value={tz.value}>{tz.label}</option>
+          ))}
+        </select>
+        <p className="text-xs text-gray-400 dark:text-gray-500">
+          현재: {timezone}
+        </p>
       </section>
 
       {/* 이벤트 기본값 */}
