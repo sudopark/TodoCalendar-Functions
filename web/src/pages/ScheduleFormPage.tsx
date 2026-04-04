@@ -103,6 +103,7 @@ export function ScheduleFormPage() {
         event_tag_id: tagId ?? undefined,
         event_time: eventTime,
         repeating: undefined,
+        notification_options: notifications.length > 0 ? notifications : undefined,
       })
       await refreshCurrentRange()
     } else {
@@ -114,6 +115,7 @@ export function ScheduleFormPage() {
         event_tag_id: tagId ?? undefined,
         event_time: eventTime,
         repeating: repeating ?? undefined,
+        notification_options: notifications.length > 0 ? notifications : undefined,
       })
       await refreshCurrentRange()
     }

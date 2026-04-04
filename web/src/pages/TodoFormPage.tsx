@@ -134,7 +134,7 @@ export function TodoFormPage() {
         ? nextRepeatingTime(original.event_time, original.repeating_turn ?? 1, original.repeating, original.exclude_repeatings)
         : null
       await todoApi.replaceTodo(id, {
-        new: { name: name.trim(), event_tag_id: tagId, event_time: eventTime },
+        new: { name: name.trim(), event_tag_id: tagId, event_time: eventTime, notification_options: notifications.length > 0 ? notifications : undefined },
         origin_next_event_time: next?.time,
         next_repeating_turn: next?.turn,
       })
@@ -150,6 +150,7 @@ export function TodoFormPage() {
           event_tag_id: tagId ?? undefined,
           event_time: eventTime,
           repeating: repeating ?? undefined,
+          notification_options: notifications.length > 0 ? notifications : undefined,
         })
       }
       await refreshCurrentRange()
