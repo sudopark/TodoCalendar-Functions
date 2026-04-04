@@ -101,13 +101,14 @@ export function TagManagementPage() {
               <button
                 className="px-4 py-3 text-left text-sm text-gray-800 hover:bg-gray-50"
                 onClick={async () => {
+                  const target = deleteTarget
+                  setDeleteTarget(null)
                   try {
-                    await deleteTag(deleteTarget.uuid)
+                    await deleteTag(target.uuid)
                   } catch (e) {
                     console.warn('태그 삭제 실패:', e)
                     useToastStore.getState().show('태그 삭제에 실패했습니다', 'error')
                   }
-                  setDeleteTarget(null)
                 }}
               >
                 태그만 삭제
@@ -115,13 +116,14 @@ export function TagManagementPage() {
               <button
                 className="px-4 py-3 text-left text-sm text-red-600 hover:bg-red-50"
                 onClick={async () => {
+                  const target = deleteTarget
+                  setDeleteTarget(null)
                   try {
-                    await deleteTagAndEvents(deleteTarget.uuid)
+                    await deleteTagAndEvents(target.uuid)
                   } catch (e) {
                     console.warn('태그+이벤트 삭제 실패:', e)
                     useToastStore.getState().show('태그 및 이벤트 삭제에 실패했습니다', 'error')
                   }
-                  setDeleteTarget(null)
                 }}
               >
                 태그 + 연관 이벤트 모두 삭제
