@@ -11,10 +11,12 @@ export function useKeyboardShortcuts() {
       const target = e.target as HTMLElement
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') return
       if (target.isContentEditable) return
+      if (target.closest('[role="dialog"]') || target.closest('.fixed')) return
 
       switch (e.key) {
         case 'n':
           // New event (Todo by default)
+          if (location.state?.background) return  // 이미 모달 열림
           navigate('/todos/new', { state: { background: location } })
           break
         case 'Escape':
