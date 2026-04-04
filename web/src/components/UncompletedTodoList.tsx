@@ -6,6 +6,7 @@ import { useCalendarEventsStore } from '../stores/calendarEventsStore'
 import { useEventTagStore } from '../stores/eventTagStore'
 import { RepeatingScopeDialog, type RepeatScope } from './RepeatingScopeDialog'
 import { nextRepeatingTime, getStartTimestamp } from '../utils/repeatingTimeCalculator'
+import { skipRepeatingTodo, refreshAllTodoStores } from '../utils/todoActions'
 import type { Todo } from '../models'
 
 export function UncompletedTodoList() {
@@ -25,7 +26,7 @@ export function UncompletedTodoList() {
 
   async function doComplete(todo: Todo, scope?: RepeatScope) {
     const { removeTodo } = useUncompletedTodosStore.getState()
-    const { removeEvent, refreshCurrentRange } = useCalendarEventsStore.getState()
+    const { removeEvent } = useCalendarEventsStore.getState()
     try {
       if (scope === 'this' && todo.repeating && todo.event_time) {
         const next = nextRepeatingTime(todo.event_time, todo.repeating_turn ?? 1, todo.repeating, todo.exclude_repeatings)
@@ -39,8 +40,7 @@ export function UncompletedTodoList() {
       }
 
       if (todo.repeating) {
-        await refreshCurrentRange()
-        await useUncompletedTodosStore.getState().fetch()
+        await refreshAllTodoStores()
       } else {
         removeEvent(todo.uuid)
         removeTodo(todo.uuid)
@@ -58,16 +58,8 @@ export function UncompletedTodoList() {
   }
 
   async function handleSkip(todo: Todo) {
-    if (!todo.repeating || !todo.event_time) return
     try {
-      const next = nextRepeatingTime(todo.event_time, todo.repeating_turn ?? 1, todo.repeating, todo.exclude_repeatings)
-      if (next) {
-        await todoApi.patchTodo(todo.uuid, { event_time: next.time, repeating_turn: next.turn })
-      } else {
-        await todoApi.deleteTodo(todo.uuid)
-      }
-      await useUncompletedTodosStore.getState().fetch()
-      await useCalendarEventsStore.getState().refreshCurrentRange()
+      await skipRepeatingTodo(todo)
     } catch (e) {
       console.warn('건너뛰기 실패:', e)
     }
