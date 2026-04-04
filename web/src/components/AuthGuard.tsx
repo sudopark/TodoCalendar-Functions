@@ -4,6 +4,7 @@ import { useAuthStore } from '../stores/authStore'
 import { useEventTagStore } from '../stores/eventTagStore'
 import { useCurrentTodosStore } from '../stores/currentTodosStore'
 import { useForemostEventStore } from '../stores/foremostEventStore'
+import { useUncompletedTodosStore } from '../stores/uncompletedTodosStore'
 import { useToastStore } from '../stores/toastStore'
 
 interface AuthGuardProps {
@@ -19,6 +20,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
         useEventTagStore.getState().fetchAll(),
         useCurrentTodosStore.getState().fetch(),
         useForemostEventStore.getState().fetch(),
+        useUncompletedTodosStore.getState().fetch(),
       ]).catch(() => {
         useToastStore.getState().show('데이터 로드에 실패했습니다', 'error')
       })
