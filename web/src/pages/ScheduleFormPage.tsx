@@ -8,7 +8,8 @@ import { RepeatingPicker } from '../components/RepeatingPicker'
 import { TagSelector } from '../components/TagSelector'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { RepeatingScopeDialog, type RepeatScope } from '../components/RepeatingScopeDialog'
-import type { Schedule, EventTime, Repeating } from '../models'
+import { NotificationPicker } from '../components/NotificationPicker'
+import type { Schedule, EventTime, Repeating, NotificationOption } from '../models'
 
 export function ScheduleFormPage() {
   const { id } = useParams<{ id?: string }>()
@@ -28,6 +29,7 @@ export function ScheduleFormPage() {
   const [tagId, setTagId] = useState<string | null>(null)
   const [eventTime, setEventTime] = useState<EventTime>(defaultEventTime)
   const [repeating, setRepeating] = useState<Repeating | null>(null)
+  const [notifications, setNotifications] = useState<NotificationOption[]>([])
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showSaveScope, setShowSaveScope] = useState(false)
   const [showDeleteScope, setShowDeleteScope] = useState(false)
@@ -42,9 +44,17 @@ export function ScheduleFormPage() {
       setTagId(sch.event_tag_id ?? null)
       setEventTime(sch.event_time)
       setRepeating(sch.repeating ?? null)
+      setNotifications(sch.notification_options ?? [])
       setLoading(false)
     }).catch((e) => { console.warn('일정 로드 실패:', e); setLoading(false) })
   }, [id])
+
+  function handleEventTimeChange(newTime: EventTime) {
+    const prevIsAllDay = eventTime.time_type === 'allday'
+    const nextIsAllDay = newTime.time_type === 'allday'
+    if (prevIsAllDay !== nextIsAllDay) setNotifications([])
+    setEventTime(newTime)
+  }
 
   function occurrenceStart(sch: Schedule): number {
     const et = sch.event_time
@@ -57,6 +67,7 @@ export function ScheduleFormPage() {
       event_tag_id: tagId ?? undefined,
       event_time: eventTime,
       repeating: repeating ?? undefined,
+      notification_options: notifications.length > 0 ? notifications : undefined,
     })
     addEvent({ type: 'schedule', event: created })
   }
@@ -70,6 +81,7 @@ export function ScheduleFormPage() {
         event_tag_id: tagId,
         event_time: eventTime,
         repeating: repeating ?? undefined,
+        notification_options: notifications.length > 0 ? notifications : null,
       })
       removeEvent(id)
       addEvent({ type: 'schedule', event: updated })
@@ -80,6 +92,7 @@ export function ScheduleFormPage() {
         event_tag_id: tagId,
         event_time: eventTime,
         repeating: repeating ?? undefined,
+        notification_options: notifications.length > 0 ? notifications : null,
       })
       await refreshCurrentRange()
     } else if (scope === 'this') {
@@ -201,7 +214,7 @@ export function ScheduleFormPage() {
         <div>
           <label className="block text-sm font-medium text-gray-700">시간</label>
           <div className="mt-1">
-            <EventTimePicker value={eventTime} onChange={v => v && setEventTime(v)} required={true} />
+            <EventTimePicker value={eventTime} onChange={v => v && handleEventTimeChange(v)} required={true} />
           </div>
         </div>
 
@@ -212,6 +225,17 @@ export function ScheduleFormPage() {
               value={repeating}
               onChange={setRepeating}
               startTimestamp={eventTime.time_type === 'at' ? eventTime.timestamp : eventTime.period_start}
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700">알림</label>
+          <div className="mt-1">
+            <NotificationPicker
+              value={notifications}
+              onChange={setNotifications}
+              isAllDay={eventTime.time_type === 'allday'}
             />
           </div>
         </div>
