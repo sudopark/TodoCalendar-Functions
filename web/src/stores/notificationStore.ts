@@ -35,5 +35,8 @@ export const useNotificationStore = create<NotificationState>((set) => ({
     }
   },
 
-  reset: () => set({ fcmToken: null }),
+  reset: () => set({
+    fcmToken: null,
+    permission: typeof Notification !== 'undefined' ? Notification.permission : 'default'
+  }),
 }))
