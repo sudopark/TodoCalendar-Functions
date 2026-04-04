@@ -174,6 +174,7 @@ export function TodoFormPage() {
       console.warn('삭제 실패:', e)
       setError('삭제에 실패했습니다.')
       setShowDeleteScope(false)
+      setShowConfirm(false)
     }
   }
 
@@ -237,7 +238,7 @@ export function TodoFormPage() {
           <button
             className="flex-1 rounded-lg bg-blue-600 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
             onClick={handleSave}
-            disabled={saving}
+            disabled={saving || showSaveScope || showDeleteScope}
           >
             저장
           </button>
