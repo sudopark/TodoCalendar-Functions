@@ -63,6 +63,8 @@ export const useAuthStore = create<AuthState>((set) => {
       useForemostEventStore.getState().reset()
       useCalendarEventsStore.getState().reset()
       useUncompletedTodosStore.getState().reset()
+      const { useNotificationStore } = await import('./notificationStore')
+      useNotificationStore.getState().reset()
     },
   }
 })
