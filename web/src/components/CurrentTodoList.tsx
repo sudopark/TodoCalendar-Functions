@@ -5,7 +5,7 @@ import { useCurrentTodosStore } from '../stores/currentTodosStore'
 import { useCalendarEventsStore } from '../stores/calendarEventsStore'
 import { useEventTagStore } from '../stores/eventTagStore'
 import { RepeatingScopeDialog, type RepeatScope } from './RepeatingScopeDialog'
-import { nextRepeatingTime } from '../utils/repeatingTimeCalculator'
+import { nextRepeatingTime, getStartTimestamp } from '../utils/repeatingTimeCalculator'
 import type { Todo } from '../models'
 
 export function CurrentTodoList() {
@@ -33,7 +33,9 @@ export function CurrentTodoList() {
         const next = nextRepeatingTime(todo.event_time, todo.repeating_turn ?? 1, todo.repeating, todo.exclude_repeatings)
         await todoApi.completeTodo(todo.uuid, { origin: todo, next_event_time: next?.time, next_repeating_turn: next?.turn })
       } else if (scope === 'future') {
-        // 지금부터 완료: next_event_time 없이 → 시리즈 종료
+        // 먼저 시리즈 종료 후 완료 처리
+        const startTs = getStartTimestamp(todo.event_time!)
+        await todoApi.patchTodo(todo.uuid, { repeating: { ...todo.repeating, end: startTs - 1 } })
         await todoApi.completeTodo(todo.uuid, { origin: todo })
       } else {
         // 비반복
