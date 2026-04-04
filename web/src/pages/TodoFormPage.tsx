@@ -10,7 +10,8 @@ import { TagSelector } from '../components/TagSelector'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { RepeatingScopeDialog, type RepeatScope } from '../components/RepeatingScopeDialog'
 import { nextRepeatingTime, getStartTimestamp } from '../utils/repeatingTimeCalculator'
-import type { Todo, EventTime, Repeating } from '../models'
+import { NotificationPicker } from '../components/NotificationPicker'
+import type { Todo, EventTime, Repeating, NotificationOption } from '../models'
 
 export function TodoFormPage() {
   const { id } = useParams<{ id?: string }>()
@@ -28,11 +29,19 @@ export function TodoFormPage() {
     selectedDate ? { time_type: 'at', timestamp: Math.floor(selectedDate.getTime() / 1000) } : null
   )
   const [repeating, setRepeating] = useState<Repeating | null>(null)
+  const [notifications, setNotifications] = useState<NotificationOption[]>([])
   const [showConfirm, setShowConfirm] = useState(false)
   const [showSaveScope, setShowSaveScope] = useState(false)
   const [showDeleteScope, setShowDeleteScope] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  function handleEventTimeChange(newTime: EventTime | null) {
+    const prevIsAllDay = eventTime?.time_type === 'allday'
+    const nextIsAllDay = newTime?.time_type === 'allday'
+    if (prevIsAllDay !== nextIsAllDay) setNotifications([])
+    setEventTime(newTime)
+  }
 
   useEffect(() => {
     if (!id) return
@@ -42,6 +51,7 @@ export function TodoFormPage() {
       setTagId(todo.event_tag_id ?? null)
       setEventTime(todo.event_time ?? null)
       setRepeating(todo.repeating ?? null)
+      setNotifications(todo.notification_options ?? [])
       setLoading(false)
     }).catch(() => setLoading(false))
   }, [id])
@@ -85,6 +95,7 @@ export function TodoFormPage() {
       event_tag_id: tagId ?? undefined,
       event_time: eventTime ?? undefined,
       repeating: repeating ?? undefined,
+      notification_options: notifications.length > 0 ? notifications : undefined,
     })
     if (created.event_time) addEvent({ type: 'todo', event: created })
     if (created.is_current) addTodo(created)
@@ -100,6 +111,7 @@ export function TodoFormPage() {
         event_tag_id: tagId,
         event_time: eventTime,
         repeating,
+        notification_options: notifications.length > 0 ? notifications : null,
       })
       if (updated.event_time && !original.event_time) {
         addEvent({ type: 'todo', event: updated })
@@ -211,7 +223,7 @@ export function TodoFormPage() {
 
         <div>
           <label className="block text-sm font-medium text-gray-700">시간</label>
-          <div className="mt-1"><EventTimePicker value={eventTime} onChange={setEventTime} required={false} /></div>
+          <div className="mt-1"><EventTimePicker value={eventTime} onChange={handleEventTimeChange} required={false} /></div>
         </div>
 
         {eventTime && (
@@ -226,6 +238,19 @@ export function TodoFormPage() {
                     ? eventTime.timestamp
                     : eventTime.period_start
                 }
+              />
+            </div>
+          </div>
+        )}
+
+        {eventTime && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700">알림</label>
+            <div className="mt-1">
+              <NotificationPicker
+                value={notifications}
+                onChange={setNotifications}
+                isAllDay={eventTime.time_type === 'allday'}
               />
             </div>
           </div>
