@@ -8,8 +8,10 @@ import { ForemostEventBanner } from '../components/ForemostEventBanner'
 import { TypeSelectorPopup } from '../components/TypeSelectorPopup'
 import { useUiStore } from '../stores/uiStore'
 import { useForemostEventStore } from '../stores/foremostEventStore'
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts'
 
 export function MainPage() {
+  useKeyboardShortcuts()
   const selectedDate = useUiStore(s => s.selectedDate)
   const foremostEvent = useForemostEventStore(s => s.foremostEvent)
   const [showTypeSelector, setShowTypeSelector] = useState(false)
