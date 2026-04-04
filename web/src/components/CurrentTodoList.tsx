@@ -83,7 +83,7 @@ export function CurrentTodoList() {
               />
               <button
                 className="flex flex-1 items-center gap-2 rounded text-left hover:bg-gray-50"
-                onClick={() => navigate(`/events/${todo.uuid}`, {
+                onClick={() => navigate(`/events/${todo.uuid}?type=todo`, {
                   state: { background: location, eventType: 'todo' },
                 })}
               >

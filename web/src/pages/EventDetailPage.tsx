@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate, useLocation } from 'react-router-dom'
+import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { todoApi } from '../api/todoApi'
 import { scheduleApi } from '../api/scheduleApi'
 import { eventDetailApi } from '../api/eventDetailApi'
@@ -40,7 +40,9 @@ export function EventDetailPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
 
+  const [searchParams] = useSearchParams()
   const eventType = (location.state as { eventType?: string } | null)?.eventType
+    ?? searchParams.get('type')
 
   const [isEditing, setIsEditing] = useState(false)
   const [editForm, setEditForm] = useState<EventDetail>({ place: '', url: '', memo: '' })
@@ -149,7 +151,6 @@ export function EventDetailPage() {
           <button
             className="text-sm text-blue-500 hover:text-blue-700"
             onClick={() => {
-              const eventType = (location.state as { eventType?: string } | null)?.eventType
               const path = eventType === 'schedule' ? `/schedules/${id}/edit` : `/todos/${id}/edit`
               navigate(path, { state: { background: location } })
             }}
