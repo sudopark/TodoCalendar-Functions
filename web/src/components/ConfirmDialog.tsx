@@ -10,12 +10,12 @@ interface ConfirmDialogProps {
 export function ConfirmDialog({ title, message, confirmLabel = '확인', onConfirm, onCancel, danger = true }: ConfirmDialogProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="mx-4 w-full max-w-sm rounded-xl bg-white p-6 shadow-lg">
-        {title && <h2 className="text-base font-semibold text-gray-900">{title}</h2>}
-        <p className={`text-sm text-gray-700${title ? ' mt-2' : ''}`}>{message}</p>
+      <div className="mx-4 w-full max-w-sm rounded-xl bg-white dark:bg-gray-800 p-6 shadow-lg">
+        {title && <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">{title}</h2>}
+        <p className={`text-sm text-gray-700 dark:text-gray-300${title ? ' mt-2' : ''}`}>{message}</p>
         <div className="mt-5 flex justify-end gap-2">
           <button
-            className="rounded-lg px-4 py-2 text-sm text-gray-500 hover:bg-gray-100"
+            className="rounded-lg px-4 py-2 text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
             onClick={onCancel}
           >
             취소

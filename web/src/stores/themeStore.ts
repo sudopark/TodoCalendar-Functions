@@ -4,7 +4,11 @@ type Theme = 'system' | 'light' | 'dark'
 const STORAGE_KEY = 'theme'
 
 function loadTheme(): Theme {
-  return (localStorage.getItem(STORAGE_KEY) as Theme) ?? 'system'
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY)
+    if (stored === 'system' || stored === 'light' || stored === 'dark') return stored
+    return 'system'
+  } catch { return 'system' }
 }
 
 function applyTheme(theme: Theme) {
@@ -32,3 +36,13 @@ export const useThemeStore = create<ThemeState>((set) => ({
 
 // 초기 적용
 applyTheme(loadTheme())
+
+// OS 테마 변경 감지 리스너
+if (typeof window !== 'undefined') {
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+    const { theme } = useThemeStore.getState()
+    if (theme === 'system') {
+      applyTheme('system')
+    }
+  })
+}
