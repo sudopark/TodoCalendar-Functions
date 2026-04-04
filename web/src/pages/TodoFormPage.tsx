@@ -8,6 +8,8 @@ import { EventTimePicker } from '../components/EventTimePicker'
 import { RepeatingPicker } from '../components/RepeatingPicker'
 import { TagSelector } from '../components/TagSelector'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+import { RepeatingScopeDialog, type RepeatScope } from '../components/RepeatingScopeDialog'
+import { nextRepeatingTime, getStartTimestamp } from '../utils/repeatingTimeCalculator'
 import type { Todo, EventTime, Repeating } from '../models'
 
 export function TodoFormPage() {
@@ -27,6 +29,8 @@ export function TodoFormPage() {
   )
   const [repeating, setRepeating] = useState<Repeating | null>(null)
   const [showConfirm, setShowConfirm] = useState(false)
+  const [showSaveScope, setShowSaveScope] = useState(false)
+  const [showDeleteScope, setShowDeleteScope] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -44,40 +48,13 @@ export function TodoFormPage() {
 
   async function handleSave() {
     if (!name.trim()) return
+    if (id && original?.repeating) { setShowSaveScope(true); return }
     setSaving(true)
     try {
       if (id && original) {
-        const updated = await todoApi.updateTodo(id, {
-          name: name.trim(),
-          event_tag_id: tagId,
-          event_time: eventTime,
-          repeating,
-        })
-        if (updated.event_time && !original?.event_time) {
-          addEvent({ type: 'todo', event: updated })
-        } else if (!updated.event_time && original?.event_time) {
-          removeEvent(id)
-        } else if (updated.event_time && original?.event_time) {
-          // event_time이 바뀌면 날짜 키가 달라질 수 있으므로 remove → add로 갱신
-          removeEvent(id)
-          addEvent({ type: 'todo', event: updated })
-        }
-        if (updated.is_current && original?.is_current) {
-          replaceTodo(updated)
-        } else if (updated.is_current && !original?.is_current) {
-          addTodo(updated)
-        } else if (!updated.is_current && original?.is_current) {
-          removeTodo(id)
-        }
+        await applyUpdate()
       } else {
-        const created = await todoApi.createTodo({
-          name: name.trim(),
-          event_tag_id: tagId ?? undefined,
-          event_time: eventTime ?? undefined,
-          repeating: repeating ?? undefined,
-        })
-        if (created.event_time) addEvent({ type: 'todo', event: created })
-        if (created.is_current) addTodo(created)
+        await applyCreate()
       }
       navigate(-1)
     } catch (e) {
@@ -88,21 +65,115 @@ export function TodoFormPage() {
     }
   }
 
-  async function handleDelete() {
-    if (!id) return
+  async function handleSaveWithScope(scope: RepeatScope) {
+    setShowSaveScope(false)
+    setSaving(true)
     try {
-      await todoApi.deleteTodo(id)
-      if (original?.repeating) {
-        await refreshCurrentRange()
-      } else {
+      await applyUpdate(scope)
+      navigate(-1)
+    } catch (e) {
+      console.warn('저장 실패:', e)
+      setError('저장에 실패했습니다. 다시 시도해주세요.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function applyCreate() {
+    const created = await todoApi.createTodo({
+      name: name.trim(),
+      event_tag_id: tagId ?? undefined,
+      event_time: eventTime ?? undefined,
+      repeating: repeating ?? undefined,
+    })
+    if (created.event_time) addEvent({ type: 'todo', event: created })
+    if (created.is_current) addTodo(created)
+  }
+
+  async function applyUpdate(scope?: RepeatScope) {
+    if (!id || !original) return
+
+    if (!original.repeating) {
+      // 비반복: 기존 로직
+      const updated = await todoApi.updateTodo(id, {
+        name: name.trim(),
+        event_tag_id: tagId,
+        event_time: eventTime,
+        repeating,
+      })
+      if (updated.event_time && !original.event_time) {
+        addEvent({ type: 'todo', event: updated })
+      } else if (!updated.event_time && original.event_time) {
+        removeEvent(id)
+      } else if (updated.event_time && original.event_time) {
+        removeEvent(id)
+        addEvent({ type: 'todo', event: updated })
+      }
+      if (updated.is_current && original.is_current) {
+        replaceTodo(updated)
+      } else if (updated.is_current && !original.is_current) {
+        addTodo(updated)
+      } else if (!updated.is_current && original.is_current) {
+        removeTodo(id)
+      }
+    } else if (scope === 'this') {
+      // 이번만: 원본을 다음 턴으로 진행 + 수정된 내용으로 새 비반복 Todo 생성
+      const next = original.event_time
+        ? nextRepeatingTime(original.event_time, original.repeating_turn ?? 1, original.repeating, original.exclude_repeatings)
+        : null
+      await todoApi.replaceTodo(id, {
+        new: { name: name.trim(), event_tag_id: tagId, event_time: eventTime },
+        origin_next_event_time: next?.time,
+        next_repeating_turn: next?.turn,
+      })
+      await refreshCurrentRange()
+    } else {
+      // future: 원본 시리즈 종료 + 새 시리즈 생성
+      const startTs = original.event_time ? getStartTimestamp(original.event_time) : 0
+      const cutoff = startTs - 1
+      await todoApi.patchTodo(id, { repeating: { ...original.repeating, end: cutoff } })
+      if (eventTime) {
+        await todoApi.createTodo({
+          name: name.trim(),
+          event_tag_id: tagId ?? undefined,
+          event_time: eventTime,
+          repeating: repeating ?? undefined,
+        })
+      }
+      await refreshCurrentRange()
+    }
+  }
+
+  async function applyDelete(scope: RepeatScope) {
+    if (!id || !original) return
+    try {
+      if (!original.repeating) {
+        await todoApi.deleteTodo(id)
         removeEvent(id)
         removeTodo(id)
+      } else if (scope === 'this') {
+        // 이번만 삭제: 원본을 다음 턴으로 진행
+        const next = original.event_time
+          ? nextRepeatingTime(original.event_time, original.repeating_turn ?? 1, original.repeating, original.exclude_repeatings)
+          : null
+        if (next) {
+          await todoApi.patchTodo(id, { event_time: next.time, repeating_turn: next.turn })
+        } else {
+          await todoApi.deleteTodo(id)
+        }
+        await refreshCurrentRange()
+      } else {
+        // future: 시리즈 종료
+        const startTs = original.event_time ? getStartTimestamp(original.event_time) : 0
+        const cutoff = startTs - 1
+        await todoApi.patchTodo(id, { repeating: { ...original.repeating, end: cutoff } })
+        await refreshCurrentRange()
       }
       navigate(-1)
     } catch (e) {
       console.warn('삭제 실패:', e)
-      setError('삭제에 실패했습니다. 다시 시도해주세요.')
-      setShowConfirm(false)
+      setError('삭제에 실패했습니다.')
+      setShowDeleteScope(false)
     }
   }
 
@@ -173,7 +244,7 @@ export function TodoFormPage() {
           {id && (
             <button
               className="rounded-lg border border-red-300 px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50"
-              onClick={() => setShowConfirm(true)}
+              onClick={() => original?.repeating ? setShowDeleteScope(true) : setShowConfirm(true)}
             >
               삭제
             </button>
@@ -184,10 +255,26 @@ export function TodoFormPage() {
       {showConfirm && (
         <ConfirmDialog
           title="Todo 삭제"
-          message={`"${name}" 을 정말 삭제할까요?${original?.repeating ? '\n반복 Todo는 전체 시리즈가 삭제됩니다.' : ''}`}
+          message={`"${name}" 을 정말 삭제할까요?`}
           confirmLabel="삭제"
-          onConfirm={handleDelete}
+          onConfirm={async () => { setShowConfirm(false); await applyDelete('this') }}
           onCancel={() => setShowConfirm(false)}
+        />
+      )}
+      {showSaveScope && (
+        <RepeatingScopeDialog
+          mode="edit"
+          eventType="todo"
+          onSelect={handleSaveWithScope}
+          onCancel={() => setShowSaveScope(false)}
+        />
+      )}
+      {showDeleteScope && (
+        <RepeatingScopeDialog
+          mode="delete"
+          eventType="todo"
+          onSelect={async scope => { setShowDeleteScope(false); await applyDelete(scope) }}
+          onCancel={() => setShowDeleteScope(false)}
         />
       )}
     </div>
