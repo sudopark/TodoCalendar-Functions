@@ -5,7 +5,9 @@ const STORAGE_KEY = 'hidden_tag_ids'
 function loadHiddenIds(): Set<string> {
   try {
     const stored = localStorage.getItem(STORAGE_KEY)
-    return stored ? new Set(JSON.parse(stored)) : new Set()
+    if (!stored) return new Set()
+    const parsed = JSON.parse(stored)
+    return Array.isArray(parsed) ? new Set(parsed) : new Set()
   } catch { return new Set() }
 }
 
