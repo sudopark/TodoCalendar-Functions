@@ -7,6 +7,7 @@ import { LoadingSkeleton } from './components/LoadingSkeleton'
 import { ToastContainer } from './components/Toast'
 import { LoginPage } from './pages/LoginPage'
 import { MainPage } from './pages/MainPage'
+import './stores/themeStore'
 
 const EventDetailPage = React.lazy(() => import('./pages/EventDetailPage').then(m => ({ default: m.EventDetailPage })))
 const TodoFormPage = React.lazy(() => import('./pages/TodoFormPage').then(m => ({ default: m.TodoFormPage })))

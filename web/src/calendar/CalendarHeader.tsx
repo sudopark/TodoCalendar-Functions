@@ -12,15 +12,15 @@ export default function CalendarHeader({ year, month, onPrev, onNext }: Calendar
     <div className="mb-4 flex items-center justify-between">
       <button
         onClick={onPrev}
-        className="rounded px-3 py-1 hover:bg-gray-100"
+        className="rounded px-3 py-1 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-gray-300"
         aria-label="Previous month"
       >
         ‹
       </button>
-      <h2 className="text-lg font-semibold">{formatMonthTitle(year, month)}</h2>
+      <h2 className="text-lg font-semibold dark:text-gray-100">{formatMonthTitle(year, month)}</h2>
       <button
         onClick={onNext}
-        className="rounded px-3 py-1 hover:bg-gray-100"
+        className="rounded px-3 py-1 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-gray-300"
         aria-label="Next month"
       >
         ›
