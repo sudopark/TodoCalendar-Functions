@@ -1,12 +1,17 @@
 import { useState } from 'react'
+import { Navigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/authStore'
 
 export function LoginPage() {
   const { t } = useTranslation()
-  const { signInWithGoogle, signInWithApple } = useAuthStore()
+  const { account, signInWithGoogle, signInWithApple } = useAuthStore()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  if (account) {
+    return <Navigate to="/" replace />
+  }
 
   async function handleSignIn(action: () => Promise<void>) {
     setLoading(true)
