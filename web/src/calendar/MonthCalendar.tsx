@@ -11,7 +11,14 @@ interface MonthCalendarProps {
   today?: Date
 }
 
-export default function MonthCalendar({ today = new Date() }: MonthCalendarProps) {
+export default function MonthCalendar({ today: todayProp }: MonthCalendarProps) {
+  const todayKey = todayProp
+    ? `${todayProp.getFullYear()}-${todayProp.getMonth()}-${todayProp.getDate()}`
+    : ''
+  const today = useMemo(() => {
+    if (!todayProp) return new Date()
+    return new Date(todayProp.getFullYear(), todayProp.getMonth(), todayProp.getDate())
+  }, [todayKey]) // todayProp 레퍼런스가 아닌 날짜값만 의존
   const [currentMonth, setCurrentMonth] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1))
   const fetchEventsForRange = useCalendarEventsStore(s => s.fetchEventsForRange)
   const fetchHolidays = useHolidayStore(s => s.fetchHolidays)

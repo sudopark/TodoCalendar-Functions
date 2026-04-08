@@ -67,8 +67,8 @@ export function getStartTimestamp(time: EventTime): number {
 // --- internal helpers ---
 
 function dateToDayOfWeek(date: Date): number {
-  // Sunday=1, Monday=2, ..., Saturday=7
-  return date.getDay() + 1
+  // Sunday=0, Monday=1, ..., Saturday=6 (JS getDay convention)
+  return date.getDay()
 }
 
 function daysInMonth(year: number, month: number): number {
@@ -76,19 +76,18 @@ function daysInMonth(year: number, month: number): number {
 }
 
 function nthWeekdayOfMonth(year: number, month: number, weekday: number, nth: number): Date | null {
-  // weekday: 1(Sun)~7(Sat), nth: 1-based
-  const jsWeekday = weekday - 1 // convert to JS 0-6
+  // weekday: 0(Sun)~6(Sat) (JS getDay convention), nth: 1-based
   const firstDay = new Date(year, month - 1, 1)
-  let firstOccurrence = firstDay.getDate() + ((jsWeekday - firstDay.getDay() + 7) % 7)
+  let firstOccurrence = firstDay.getDate() + ((weekday - firstDay.getDay() + 7) % 7)
   const targetDate = firstOccurrence + (nth - 1) * 7
   if (targetDate > daysInMonth(year, month)) return null
   return new Date(year, month - 1, targetDate)
 }
 
 function lastWeekdayOfMonth(year: number, month: number, weekday: number): Date {
-  const jsWeekday = weekday - 1
+  // weekday: 0(Sun)~6(Sat) (JS getDay convention)
   const lastDay = new Date(year, month, 0)
-  const diff = (lastDay.getDay() - jsWeekday + 7) % 7
+  const diff = (lastDay.getDay() - weekday + 7) % 7
   return new Date(year, month - 1, lastDay.getDate() - diff)
 }
 
