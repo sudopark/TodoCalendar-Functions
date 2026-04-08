@@ -85,12 +85,8 @@ export const useCalendarEventsStore = create<CalendarEventsState>((set, get) => 
   },
 
   replaceEvent: (uuid: string, next: CalendarEvent) => {
-    const { eventsByDate } = get()
-    const updated = new Map<string, CalendarEvent[]>()
-    for (const [key, events] of eventsByDate) {
-      updated.set(key, events.map(e => e.event.uuid === uuid ? next : e))
-    }
-    set({ eventsByDate: updated })
+    get().removeEvent(uuid)
+    get().addEvent(next)
   },
 
   reset: () => set({ eventsByDate: new Map(), loading: false, lastRange: null }),
