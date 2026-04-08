@@ -4,6 +4,7 @@ import { todoApi } from '../api/todoApi'
 import { useCurrentTodosStore } from '../stores/currentTodosStore'
 import { useCalendarEventsStore } from '../stores/calendarEventsStore'
 import { useEventTagStore } from '../stores/eventTagStore'
+import { useTagFilterStore } from '../stores/tagFilterStore'
 import { RepeatingScopeDialog, type RepeatScope } from './RepeatingScopeDialog'
 import { nextRepeatingTime, getStartTimestamp } from '../utils/repeatingTimeCalculator'
 import { skipRepeatingTodo, refreshAllTodoStores } from '../utils/todoActions'
@@ -12,6 +13,7 @@ import type { Todo } from '../models'
 export function CurrentTodoList() {
   const todos = useCurrentTodosStore(s => s.todos)
   const getColorForTagId = useEventTagStore(s => s.getColorForTagId)
+  const { isTagHidden } = useTagFilterStore()
   const navigate = useNavigate()
   const location = useLocation()
   const [scopeTarget, setScopeTarget] = useState<Todo | null>(null)
@@ -68,7 +70,9 @@ export function CurrentTodoList() {
     }
   }
 
-  if (todos.length === 0) return null
+  const visibleTodos = todos.filter(t => !isTagHidden(t.event_tag_id))
+
+  if (visibleTodos.length === 0) return null
 
   return (
     <section>
@@ -76,7 +80,7 @@ export function CurrentTodoList() {
         Current
       </h3>
       <ul className="divide-y divide-gray-100">
-        {todos.map(todo => {
+        {visibleTodos.map(todo => {
           const color = todo.event_tag_id
             ? (getColorForTagId(todo.event_tag_id) ?? '#9ca3af')
             : '#9ca3af'
