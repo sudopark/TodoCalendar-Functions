@@ -77,12 +77,12 @@ describe('nextRepeatingTime - every_day', () => {
 
 describe('nextRepeatingTime - every_week', () => {
   it('같은 주 다음 요일이 있으면 그 요일로 이동한다', () => {
-    // given: 2024-01-15 (월요일=2) → 다음은 수요일(4)
+    // given: 2024-01-15 (월요일=1) → 다음은 수요일(3)
     const startTs = ts(2024, 1, 15, 9, 0, 0)
     const time: EventTime = { time_type: 'at', timestamp: startTs }
     const repeating: Repeating = {
       start: startTs,
-      option: { optionType: 'every_week', interval: 1, dayOfWeek: [2, 4, 6], timeZone: 'Asia/Seoul' },
+      option: { optionType: 'every_week', interval: 1, dayOfWeek: [1, 3, 5], timeZone: 'Asia/Seoul' },
     }
     // when
     const result = nextRepeatingTime(time, 1, repeating)
@@ -93,12 +93,12 @@ describe('nextRepeatingTime - every_week', () => {
   })
 
   it('같은 주 다음 요일이 없으면 interval주 후 첫 요일로 이동한다', () => {
-    // given: 2024-01-19 (금요일=6) → 같은 주 다음 없음 → 1주 후 월요일(2)
+    // given: 2024-01-19 (금요일=5) → 같은 주 다음 없음 → 1주 후 월요일(1)
     const startTs = ts(2024, 1, 19, 9, 0, 0)
     const time: EventTime = { time_type: 'at', timestamp: startTs }
     const repeating: Repeating = {
       start: startTs,
-      option: { optionType: 'every_week', interval: 1, dayOfWeek: [2, 4, 6], timeZone: 'Asia/Seoul' },
+      option: { optionType: 'every_week', interval: 1, dayOfWeek: [1, 3, 5], timeZone: 'Asia/Seoul' },
     }
     // when
     const result = nextRepeatingTime(time, 1, repeating)
@@ -169,7 +169,7 @@ describe('nextRepeatingTime - every_month (week)', () => {
       option: {
         optionType: 'every_month',
         interval: 1,
-        monthDaySelection: { weekOrdinals: [{ isLast: false, seq: 2 }], weekDays: [2] },
+        monthDaySelection: { weekOrdinals: [{ isLast: false, seq: 2 }], weekDays: [1] },
         timeZone: 'Asia/Seoul',
       },
     }
@@ -190,7 +190,7 @@ describe('nextRepeatingTime - every_month (week)', () => {
       option: {
         optionType: 'every_month',
         interval: 1,
-        monthDaySelection: { weekOrdinals: [{ isLast: true }], weekDays: [2] },
+        monthDaySelection: { weekOrdinals: [{ isLast: true }], weekDays: [1] },
         timeZone: 'Asia/Seoul',
       },
     }

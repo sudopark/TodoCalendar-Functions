@@ -17,7 +17,7 @@ function defaultOption(type: string, startTs: number): RepeatingOption {
     case 'every_month':
       return { optionType: 'every_month', interval: 1, monthDaySelection: { days: [d.getDate()] }, timeZone: TZ }
     case 'every_year':
-      return { optionType: 'every_year', interval: 1, months: [d.getMonth() + 1], weekOrdinals: [], dayOfWeek: [d.getDay()], timeZone: TZ }
+      return { optionType: 'every_year', interval: 1, months: [d.getMonth() + 1], weekOrdinals: [{ seq: 1, isLast: false }], dayOfWeek: [d.getDay()], timeZone: TZ }
     case 'every_year_some_day':
       return { optionType: 'every_year_some_day', interval: 1, month: d.getMonth() + 1, day: d.getDate(), timeZone: TZ }
     case 'lunar_calendar_every_year':
@@ -132,7 +132,7 @@ export function RepeatingPicker({ value, onChange, startTimestamp }: RepeatingPi
                 className="mt-1 w-20 rounded border border-gray-300 px-2 py-1 text-sm"
                 value={interval}
                 onChange={e => {
-                  const opt = { ...option, interval: Number(e.target.value) } as RepeatingOption
+                  const opt = { ...option, interval: Math.max(1, Number(e.target.value) || 1) } as RepeatingOption
                   setOption(opt)
                   emit(opt)
                 }}
@@ -152,8 +152,9 @@ export function RepeatingPicker({ value, onChange, startTimestamp }: RepeatingPi
                       aria-label={DAY_FULL_LABELS[i]}
                       checked={weekOption.dayOfWeek.includes(i)}
                       onChange={() => {
+                        const filtered = weekOption.dayOfWeek.filter(x => x !== i)
                         const days = weekOption.dayOfWeek.includes(i)
-                          ? weekOption.dayOfWeek.filter(x => x !== i)
+                          ? (filtered.length > 0 ? filtered : weekOption.dayOfWeek)
                           : [...weekOption.dayOfWeek, i]
                         const opt: RepeatingOption = { ...weekOption, dayOfWeek: days }
                         setOption(opt)
