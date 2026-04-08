@@ -112,13 +112,11 @@ describe('TagManagementPage', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     renderPage()
 
-    // when: 목록의 삭제 버튼 클릭 → 다이얼로그의 삭제 버튼 클릭
+    // when: 목록의 삭제 버튼 클릭 → 다이얼로그에서 "태그만 삭제" 클릭
     const deleteButtons = screen.getAllByRole('button', { name: '삭제' })
     await userEvent.click(deleteButtons[0]) // 목록의 삭제 버튼
-    const confirmDeleteButtons = screen.getAllByRole('button', { name: '삭제' })
-    // 다이얼로그의 삭제 버튼은 bg-red-500 스타일을 가진 것
-    const dialogDeleteBtn = confirmDeleteButtons.find(btn => btn.className.includes('bg-red-500'))!
-    await userEvent.click(dialogDeleteBtn)
+    const tagOnlyBtn = screen.getByRole('button', { name: '태그만 삭제' })
+    await userEvent.click(tagOnlyBtn)
 
     // then
     await waitFor(() => {
