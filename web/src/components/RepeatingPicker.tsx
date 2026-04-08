@@ -352,6 +352,7 @@ export function RepeatingPicker({ value, onChange, startTimestamp }: RepeatingPi
                           const days = yearOption.dayOfWeek.includes(i)
                             ? yearOption.dayOfWeek.filter(x => x !== i)
                             : [...yearOption.dayOfWeek, i]
+                          if (days.length === 0) return
                           const opt: RepeatingOption = { ...yearOption, dayOfWeek: days }
                           setOption(opt)
                           emit(opt)
