@@ -53,8 +53,8 @@ describe('TagManagementPage', () => {
       tags: new Map([['t1', { uuid: 't1', name: '업무', color_hex: '#ff0000' }]])
     })
     renderPage()
-    // when: 수정 버튼 클릭
-    await userEvent.click(screen.getByRole('button', { name: '수정' }))
+    // when: 편집 버튼 클릭
+    await userEvent.click(screen.getByRole('button', { name: '편집' }))
     // then: 인라인 편집 입력 필드가 나타남
     expect(screen.getByDisplayValue('업무')).toBeInTheDocument()
   })
@@ -89,8 +89,8 @@ describe('TagManagementPage', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     renderPage()
 
-    // when: 수정 버튼 → 저장
-    await userEvent.click(screen.getByRole('button', { name: '수정' }))
+    // when: 편집 버튼 → 저장
+    await userEvent.click(screen.getByRole('button', { name: '편집' }))
     await userEvent.click(screen.getByText('저장'))
 
     // then

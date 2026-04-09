@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useEventTagStore } from '../stores/eventTagStore'
 import { useToastStore } from '../stores/toastStore'
 import type { EventTag } from '../models'
 
 export function TagManagementPage() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const { tags, createTag, updateTag, deleteTag, deleteTagAndEvents } = useEventTagStore()
   const [newName, setNewName] = useState('')
@@ -20,7 +22,7 @@ export function TagManagementPage() {
       setNewName('')
     } catch (e) {
       console.warn('태그 생성 실패:', e)
-      useToastStore.getState().show('태그 생성에 실패했습니다', 'error')
+      useToastStore.getState().show(t('tag.create_failed'), 'error')
     }
   }
 
@@ -30,7 +32,7 @@ export function TagManagementPage() {
       setEditingId(null)
     } catch (e) {
       console.warn('태그 수정 실패:', e)
-      useToastStore.getState().show('태그 수정에 실패했습니다', 'error')
+      useToastStore.getState().show(t('tag.update_failed'), 'error')
     }
   }
 
@@ -43,15 +45,15 @@ export function TagManagementPage() {
   return (
     <div className="mx-auto max-w-sm px-4 py-6">
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-lg font-bold">태그 관리</h1>
-        <button className="text-sm text-gray-500" onClick={() => navigate(-1)}>닫기</button>
+        <h1 className="text-lg font-bold">{t('tag.manage')}</h1>
+        <button className="text-sm text-gray-500" onClick={() => navigate(-1)}>{t('common.close')}</button>
       </div>
 
       {/* Create */}
       <div className="mb-4 flex gap-2">
         <input
           className="flex-1 rounded border border-gray-300 px-3 py-2 text-sm"
-          placeholder="새 태그 이름"
+          placeholder={t('tag.new_placeholder')}
           value={newName}
           onChange={e => setNewName(e.target.value)}
         />
@@ -59,7 +61,7 @@ export function TagManagementPage() {
           className="rounded bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
           onClick={handleCreate}
         >
-          추가
+          {t('tag.add')}
         </button>
       </div>
 
@@ -71,8 +73,8 @@ export function TagManagementPage() {
               <div className="flex gap-2">
                 <input className="flex-1 rounded border border-gray-300 px-2 py-1 text-sm" value={editName} onChange={e => setEditName(e.target.value)} />
                 <input type="color" className="h-8 w-8 rounded border" value={editColor || '#000000'} onChange={e => setEditColor(e.target.value)} />
-                <button className="text-xs text-blue-500" onClick={() => handleUpdate(tag.uuid)}>저장</button>
-                <button className="text-xs text-gray-400" onClick={() => setEditingId(null)}>취소</button>
+                <button className="text-xs text-blue-500" onClick={() => handleUpdate(tag.uuid)}>{t('common.save')}</button>
+                <button className="text-xs text-gray-400" onClick={() => setEditingId(null)}>{t('common.cancel')}</button>
               </div>
             ) : (
               <div className="flex items-center justify-between">
@@ -81,8 +83,8 @@ export function TagManagementPage() {
                   <span className="text-sm">{tag.name}</span>
                 </div>
                 <div className="flex gap-2">
-                  <button className="text-xs text-gray-500" onClick={() => startEdit(tag)}>수정</button>
-                  <button className="text-xs text-red-500" onClick={() => setDeleteTarget(tag)}>삭제</button>
+                  <button className="text-xs text-gray-500" onClick={() => startEdit(tag)}>{t('common.edit')}</button>
+                  <button className="text-xs text-red-500" onClick={() => setDeleteTarget(tag)}>{t('common.delete')}</button>
                 </div>
               </div>
             )}
@@ -93,9 +95,9 @@ export function TagManagementPage() {
       {deleteTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
-            <h2 className="text-base font-semibold text-gray-900">태그 삭제</h2>
+            <h2 className="text-base font-semibold text-gray-900">{t('tag.delete_title')}</h2>
             <p className="mt-2 text-sm text-gray-600">
-              &ldquo;{deleteTarget.name}&rdquo; 태그를 어떻게 삭제할까요?
+              {t('tag.delete_message', { name: deleteTarget.name })}
             </p>
             <div className="mt-4 flex flex-col divide-y divide-gray-100">
               <button
@@ -107,11 +109,11 @@ export function TagManagementPage() {
                     await deleteTag(target.uuid)
                   } catch (e) {
                     console.warn('태그 삭제 실패:', e)
-                    useToastStore.getState().show('태그 삭제에 실패했습니다', 'error')
+                    useToastStore.getState().show(t('tag.delete_failed'), 'error')
                   }
                 }}
               >
-                태그만 삭제
+                {t('tag.delete_tag_only')}
               </button>
               <button
                 className="px-4 py-3 text-left text-sm text-red-600 hover:bg-red-50"
@@ -122,18 +124,18 @@ export function TagManagementPage() {
                     await deleteTagAndEvents(target.uuid)
                   } catch (e) {
                     console.warn('태그+이벤트 삭제 실패:', e)
-                    useToastStore.getState().show('태그 및 이벤트 삭제에 실패했습니다', 'error')
+                    useToastStore.getState().show(t('tag.delete_events_failed'), 'error')
                   }
                 }}
               >
-                태그 + 연관 이벤트 모두 삭제
+                {t('tag.delete_tag_and_events')}
               </button>
             </div>
             <button
               className="mt-4 w-full rounded-lg px-4 py-2 text-sm text-gray-500 hover:bg-gray-100"
               onClick={() => setDeleteTarget(null)}
             >
-              취소
+              {t('common.cancel')}
             </button>
           </div>
         </div>

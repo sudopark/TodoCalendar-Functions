@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useAuthStore } from '../stores/authStore'
 import { useToastStore } from '../stores/toastStore'
 import { useHolidayStore, type HolidayCountry } from '../stores/holidayStore'
@@ -15,37 +15,37 @@ import { ColorPalette } from '../components/ColorPalette'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import type { DefaultTagColors } from '../models'
 
-const TIMEZONES = [
-  { label: '시스템 기본', value: '' },
-  { label: 'Asia/Seoul (KST)', value: 'Asia/Seoul' },
-  { label: 'Asia/Tokyo (JST)', value: 'Asia/Tokyo' },
-  { label: 'America/New_York (EST)', value: 'America/New_York' },
-  { label: 'America/Los_Angeles (PST)', value: 'America/Los_Angeles' },
-  { label: 'Europe/London (GMT)', value: 'Europe/London' },
-  { label: 'Europe/Berlin (CET)', value: 'Europe/Berlin' },
-  { label: 'UTC', value: 'UTC' },
-]
-
-const NOTIFICATION_PRESETS = [
-  { label: '없음', value: null },
-  { label: '5분 전', value: -300 },
-  { label: '10분 전', value: -600 },
-  { label: '30분 전', value: -1800 },
-  { label: '1시간 전', value: -3600 },
-]
-
-const COUNTRIES = [
-  { label: '한국', locale: 'ko', region: 'south_korea' },
-  { label: '미국', locale: 'en', region: 'united_states' },
-  { label: '일본', locale: 'ja', region: 'japan' },
-  { label: '중국', locale: 'zh', region: 'china' },
-  { label: '영국', locale: 'en', region: 'united_kingdom' },
-  { label: '독일', locale: 'de', region: 'germany' },
-  { label: '프랑스', locale: 'fr', region: 'france' },
-]
-
 export function SettingsPage() {
   const { t, i18n } = useTranslation()
+
+  const TIMEZONES = useMemo(() => [
+    { label: t('settings.timezone_system'), value: '' },
+    { label: 'Asia/Seoul (KST)', value: 'Asia/Seoul' },
+    { label: 'Asia/Tokyo (JST)', value: 'Asia/Tokyo' },
+    { label: 'America/New_York (EST)', value: 'America/New_York' },
+    { label: 'America/Los_Angeles (PST)', value: 'America/Los_Angeles' },
+    { label: 'Europe/London (GMT)', value: 'Europe/London' },
+    { label: 'Europe/Berlin (CET)', value: 'Europe/Berlin' },
+    { label: 'UTC', value: 'UTC' },
+  ], [t])
+
+  const NOTIFICATION_PRESETS = useMemo(() => [
+    { label: t('settings.none'), value: null },
+    { label: t('settings.notif_5min'), value: -300 },
+    { label: t('settings.notif_10min'), value: -600 },
+    { label: t('settings.notif_30min'), value: -1800 },
+    { label: t('settings.notif_1hour'), value: -3600 },
+  ], [t])
+
+  const COUNTRIES = useMemo(() => [
+    { label: t('settings.country_kr'), locale: 'ko', region: 'south_korea' },
+    { label: t('settings.country_us'), locale: 'en', region: 'united_states' },
+    { label: t('settings.country_jp'), locale: 'ja', region: 'japan' },
+    { label: t('settings.country_cn'), locale: 'zh', region: 'china' },
+    { label: t('settings.country_uk'), locale: 'en', region: 'united_kingdom' },
+    { label: t('settings.country_de'), locale: 'de', region: 'germany' },
+    { label: t('settings.country_fr'), locale: 'fr', region: 'france' },
+  ], [t])
   const account = useAuthStore(s => s.account)
   const signOut = useAuthStore(s => s.signOut)
   const holidayCountry = useHolidayStore(s => s.country)
@@ -66,7 +66,7 @@ export function SettingsPage() {
   useEffect(() => {
     settingApi.getDefaultTagColors()
       .then(c => { setColors(c); setEditColors(c) })
-      .catch(e => { console.warn('색상 로드 실패:', e); useToastStore.getState().show('색상 로드에 실패했습니다', 'error') })
+      .catch(e => { console.warn('색상 로드 실패:', e); useToastStore.getState().show(t('settings.colors_load_failed'), 'error') })
   }, [])
 
   const handleSaveColors = async () => {
@@ -75,10 +75,10 @@ export function SettingsPage() {
       const updated = await settingApi.updateDefaultTagColors(editColors)
       setColors(updated)
       setEditColors(updated)
-      useToastStore.getState().show('색상이 저장되었습니다', 'success')
+      useToastStore.getState().show(t('settings.colors_saved'), 'success')
     } catch (e) {
       console.warn('색상 저장 실패:', e)
-      useToastStore.getState().show('색상 저장에 실패했습니다', 'error')
+      useToastStore.getState().show(t('settings.colors_save_failed'), 'error')
     }
   }
 
@@ -88,7 +88,7 @@ export function SettingsPage() {
       await signOut()
     } catch (e) {
       console.warn('계정 삭제 실패:', e)
-      useToastStore.getState().show('계정 삭제에 실패했습니다', 'error')
+      useToastStore.getState().show(t('settings.account_delete_failed'), 'error')
     }
   }
 
@@ -236,7 +236,7 @@ export function SettingsPage() {
           ))}
         </select>
         <p className="text-xs text-gray-400 dark:text-gray-500">
-          현재: {timezone}
+          {t('settings.current_tz', { tz: timezone })}
         </p>
       </section>
 
@@ -322,7 +322,7 @@ export function SettingsPage() {
 
       {showDeleteConfirm && (
         <ConfirmDialog
-          message="계정을 삭제하면 모든 데이터가 사라집니다. 계속할까요?"
+          message={t('settings.delete_account_confirm')}
           danger
           onConfirm={async () => {
             setShowDeleteConfirm(false)
