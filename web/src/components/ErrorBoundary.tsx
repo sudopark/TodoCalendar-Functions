@@ -1,4 +1,5 @@
 import { Component, type ReactNode, type ErrorInfo } from 'react'
+import i18n from '../i18n'
 
 interface Props { children: ReactNode }
 interface State { hasError: boolean }
@@ -18,12 +19,12 @@ export class ErrorBoundary extends Component<Props, State> {
     if (this.state.hasError) {
       return (
         <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-gray-50">
-          <p className="text-lg font-semibold text-gray-800">문제가 발생했습니다</p>
+          <p className="text-lg font-semibold text-gray-800">{i18n.t('error.something_wrong')}</p>
           <button
             className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
             onClick={() => window.location.reload()}
           >
-            새로고침
+            {i18n.t('error.refresh')}
           </button>
         </div>
       )

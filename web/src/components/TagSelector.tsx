@@ -1,4 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useEventTagStore } from '../stores/eventTagStore'
 
 interface TagSelectorProps {
@@ -9,6 +10,7 @@ interface TagSelectorProps {
 export function TagSelector({ value, onChange }: TagSelectorProps) {
   const navigate = useNavigate()
   const location = useLocation()
+  const { t } = useTranslation()
   const tags = useEventTagStore(s => s.tags)
 
   return (
@@ -18,7 +20,7 @@ export function TagSelector({ value, onChange }: TagSelectorProps) {
           className={`rounded-full border px-3 py-1 text-xs ${!value ? 'border-gray-700 bg-gray-700 text-white' : 'border-gray-300 text-gray-600'}`}
           onClick={() => onChange(null)}
         >
-          없음
+          {t('settings.none')}
         </button>
         {Array.from(tags.values()).map(tag => (
           <button
@@ -35,7 +37,7 @@ export function TagSelector({ value, onChange }: TagSelectorProps) {
         className="text-xs text-blue-500 hover:underline"
         onClick={() => navigate('/tags', { state: { background: location } })}
       >
-        태그 관리 &gt;
+        {t('tag.manage_link')}
       </button>
     </div>
   )

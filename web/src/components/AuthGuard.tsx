@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { Navigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/authStore'
 import { useEventTagStore } from '../stores/eventTagStore'
 import { useCurrentTodosStore } from '../stores/currentTodosStore'
@@ -12,6 +13,7 @@ interface AuthGuardProps {
 }
 
 export function AuthGuard({ children }: AuthGuardProps) {
+  const { t } = useTranslation()
   const { account, loading } = useAuthStore()
 
   useEffect(() => {
@@ -22,10 +24,10 @@ export function AuthGuard({ children }: AuthGuardProps) {
         useForemostEventStore.getState().fetch(),
         useUncompletedTodosStore.getState().fetch(),
       ]).catch(() => {
-        useToastStore.getState().show('데이터 로드에 실패했습니다', 'error')
+        useToastStore.getState().show(t('error.data_load_failed'), 'error')
       })
     }
-  }, [account])
+  }, [account, t])
 
   if (loading) {
     return (

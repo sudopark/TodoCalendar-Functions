@@ -107,6 +107,6 @@ describe('DayEventList — 편집 메뉴', () => {
     mockCalendarEventsStore(new Map([['2024-03-15', [{ type: 'todo' as const, event: todo }]]]))
     renderComponent(new Date(2024, 2, 15))
     await userEvent.click(screen.getByRole('button', { name: '메뉴' }))
-    expect(screen.getByText('수정')).toBeInTheDocument()
+    expect(screen.getByText('편집')).toBeInTheDocument()
   })
 })

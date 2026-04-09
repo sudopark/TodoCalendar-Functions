@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useCalendarEventsStore } from '../stores/calendarEventsStore'
 import { useEventTagStore } from '../stores/eventTagStore'
 import { useTagFilterStore } from '../stores/tagFilterStore'
@@ -10,6 +11,7 @@ import type { CalendarEvent } from '../utils/eventTimeUtils'
 function EventItem({ calEvent, onNavigate }: { calEvent: CalendarEvent; onNavigate: () => void }) {
   const navigate = useNavigate()
   const location = useLocation()
+  const { t } = useTranslation()
   const getColorForTagId = useEventTagStore(s => s.getColorForTagId)
   const [menuOpen, setMenuOpen] = useState(false)
 
@@ -37,7 +39,7 @@ function EventItem({ calEvent, onNavigate }: { calEvent: CalendarEvent; onNaviga
         </div>
       </button>
       <button
-        aria-label="메뉴"
+        aria-label={t('common.menu')}
         className="shrink-0 rounded p-1 text-gray-400 hover:bg-gray-100"
         onClick={e => { e.stopPropagation(); setMenuOpen(o => !o) }}
       >
@@ -51,7 +53,7 @@ function EventItem({ calEvent, onNavigate }: { calEvent: CalendarEvent; onNaviga
               className="block w-full px-4 py-2 text-left text-sm hover:bg-gray-50"
               onClick={() => { setMenuOpen(false); navigate(editPath, { state: { background: location } }) }}
             >
-              수정
+              {t('common.edit')}
             </button>
           </div>
         </>
@@ -65,6 +67,7 @@ interface DayEventListProps {
 }
 
 export function DayEventList({ selectedDate }: DayEventListProps) {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const location = useLocation()
   const eventsByDate = useCalendarEventsStore(s => s.eventsByDate)
@@ -82,7 +85,7 @@ export function DayEventList({ selectedDate }: DayEventListProps) {
   if (sorted.length === 0) {
     return (
       <div className="flex items-center justify-center py-8 text-sm text-gray-400">
-        이벤트가 없습니다
+        {t('event.no_events')}
       </div>
     )
   }

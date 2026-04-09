@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next'
+
 interface ConfirmDialogProps {
   title?: string
   message: string
@@ -7,7 +9,10 @@ interface ConfirmDialogProps {
   danger?: boolean
 }
 
-export function ConfirmDialog({ title, message, confirmLabel = '확인', onConfirm, onCancel, danger = true }: ConfirmDialogProps) {
+export function ConfirmDialog({ title, message, confirmLabel, onConfirm, onCancel, danger = true }: ConfirmDialogProps) {
+  const { t } = useTranslation()
+  const resolvedConfirmLabel = confirmLabel ?? t('common.confirm')
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="mx-4 w-full max-w-sm rounded-xl bg-white dark:bg-gray-800 p-6 shadow-lg">
@@ -18,7 +23,7 @@ export function ConfirmDialog({ title, message, confirmLabel = '확인', onConfi
             className="rounded-lg px-4 py-2 text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
             onClick={onCancel}
           >
-            취소
+            {t('common.cancel')}
           </button>
           <button
             className={`rounded-lg px-4 py-2 text-sm font-medium text-white ${
@@ -26,7 +31,7 @@ export function ConfirmDialog({ title, message, confirmLabel = '확인', onConfi
             }`}
             onClick={onConfirm}
           >
-            {confirmLabel}
+            {resolvedConfirmLabel}
           </button>
         </div>
       </div>
