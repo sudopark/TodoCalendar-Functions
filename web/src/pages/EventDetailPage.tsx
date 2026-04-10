@@ -23,7 +23,7 @@ function repeatingLabel(repeating: Repeating, t: TFunction): string {
     case 'every_week': return t('repeat.every_week', { n: option.interval })
     case 'every_month': return t('repeat.every_month', { n: option.interval })
     case 'every_year': return t('repeat.every_year', { n: option.interval })
-    case 'every_year_some_day': return t('repeat.every_year', { n: option.interval })
+    case 'every_year_some_day': return t('repeat.every_year_some_day')
     case 'lunar_calendar_every_year': return `${t('repeat.every_year', { n: 1 })} (${t('repeat.lunar')})`
   }
 }

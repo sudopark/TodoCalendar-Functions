@@ -85,6 +85,7 @@ export function SettingsPage() {
   const handleDeleteAccount = async () => {
     try {
       await accountApi.deleteAccount()
+      useToastStore.getState().show(t('settings.account_deleted'), 'success')
       await signOut()
     } catch (e) {
       console.warn('계정 삭제 실패:', e)

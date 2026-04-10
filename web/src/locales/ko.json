@@ -109,6 +109,7 @@
   "repeat.every_week": "매 {{n}}주",
   "repeat.every_month": "매 {{n}}개월",
   "repeat.every_year": "매 {{n}}년",
+  "repeat.every_year_some_day": "매년 특정일",
   "repeat.lunar": "음력",
   "todo.done_empty": "완료된 할 일이 없습니다",
   "todo.all_shown": "모두 표시됨",

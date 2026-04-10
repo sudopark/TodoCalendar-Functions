@@ -109,6 +109,7 @@
   "repeat.every_week": "Every {{n}} week(s)",
   "repeat.every_month": "Every {{n}} month(s)",
   "repeat.every_year": "Every {{n}} year(s)",
+  "repeat.every_year_some_day": "Yearly on specific day",
   "repeat.lunar": "Lunar",
   "todo.done_empty": "No completed todos",
   "todo.all_shown": "All shown",
