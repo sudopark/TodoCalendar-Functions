@@ -21,5 +21,5 @@ export async function refreshAllTodoStores(): Promise<void> {
     useUncompletedTodosStore.getState().fetch(),
     useCurrentTodosStore.getState().fetch(),
     useCalendarEventsStore.getState().refreshCurrentRange(),
-  ]).catch(() => {})
+  ]).catch(e => console.warn('Todo stores refresh failed:', e))
 }

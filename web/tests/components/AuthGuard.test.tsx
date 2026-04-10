@@ -71,8 +71,8 @@ describe('AuthGuard', () => {
     expect(screen.queryByText('로그인 페이지')).toBeNull()
   })
 
-  it('로그인 후 데이터 로드에 실패하면 에러 토스트가 표시된다', async () => {
-    // given: API가 실패하도록 설정
+  it('로그인 후 일부 데이터 로드에 실패해도 앱은 계속 표시된다', async () => {
+    // given: 태그 API가 실패하도록 설정 (부분 실패)
     const { eventTagApi } = await import('../../src/api/eventTagApi')
     vi.mocked(eventTagApi.getAllTags).mockRejectedValue(new Error('network'))
 
@@ -83,10 +83,11 @@ describe('AuthGuard', () => {
     } as any)
     renderWithRouter(<AuthGuard><div>보호된 페이지</div></AuthGuard>)
 
-    // then: 에러 토스트가 표시된다
+    // then: 부분 실패해도 앱은 계속 표시되고, 에러 토스트는 없다
     await waitFor(() => {
-      const toasts = useToastStore.getState().toasts
-      expect(toasts.some(t => t.type === 'error')).toBe(true)
+      expect(screen.getByText('보호된 페이지')).toBeInTheDocument()
     })
+    const toasts = useToastStore.getState().toasts
+    expect(toasts.some(t => t.type === 'error')).toBe(false)
   })
 })

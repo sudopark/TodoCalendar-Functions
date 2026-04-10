@@ -1,34 +1,37 @@
 import { useEffect } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/authStore'
 import { useEventTagStore } from '../stores/eventTagStore'
 import { useCurrentTodosStore } from '../stores/currentTodosStore'
 import { useForemostEventStore } from '../stores/foremostEventStore'
 import { useUncompletedTodosStore } from '../stores/uncompletedTodosStore'
-import { useToastStore } from '../stores/toastStore'
 
 interface AuthGuardProps {
   children: React.ReactNode
 }
 
 export function AuthGuard({ children }: AuthGuardProps) {
-  const { t } = useTranslation()
   const { account, loading } = useAuthStore()
   const location = useLocation()
 
   useEffect(() => {
     if (account) {
-      Promise.all([
+      Promise.allSettled([
         useEventTagStore.getState().fetchAll(),
         useCurrentTodosStore.getState().fetch(),
         useForemostEventStore.getState().fetch(),
         useUncompletedTodosStore.getState().fetch(),
-      ]).catch(() => {
-        useToastStore.getState().show(t('error.data_load_failed'), 'error')
+      ]).then(results => {
+        const failed = results
+          .map((r, i) => r.status === 'rejected' ? ['tags', 'todos', 'foremost', 'uncompleted'][i] : null)
+          .filter(Boolean)
+        if (failed.length > 0) {
+          console.warn('Failed to load:', failed.join(', '))
+          // Still show the app — partial data is better than blocking
+        }
       })
     }
-  }, [account, t])
+  }, [account])
 
   if (loading) {
     return (

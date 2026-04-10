@@ -17,7 +17,8 @@ export const useUncompletedTodosStore = create<UncompletedTodosState>((set, get)
       const todos = await todoApi.getUncompletedTodos()
       set({ todos })
     } catch (e) {
-      console.warn('미완료 할일 로드 실패:', e)
+      console.warn('미완료 Todo 로드 실패:', e)
+      throw e  // let caller decide how to handle
     }
   },
 
