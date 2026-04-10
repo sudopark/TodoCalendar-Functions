@@ -183,7 +183,9 @@ export function EventTimePicker({ value, onChange, required = false }: EventTime
               onChange={e => {
                 const ts = dateInputToTs(e.target.value)
                 if (ts === null) return
-                handleValueChange({ ...internal, period_end: ts - internal.seconds_from_gmt })
+                const newEnd = ts - internal.seconds_from_gmt
+                if (newEnd < internal.period_start) return
+                handleValueChange({ ...internal, period_end: newEnd })
               }}
             />
           </div>

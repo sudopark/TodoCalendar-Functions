@@ -27,17 +27,17 @@ export const useCalendarEventsStore = create<CalendarEventsState>((set, get) => 
     if (lastRange && lastRange.lower === lower && lastRange.upper === upper) {
       return
     }
-    set({ loading: true, lastRange: { lower, upper } })
+    set({ loading: true })
     try {
       const [todos, schedules] = await Promise.all([
         todoApi.getTodos(lower, upper),
         scheduleApi.getSchedules(lower, upper),
       ])
       const eventsByDate = groupEventsByDate(todos, schedules, lower, upper)
-      set({ eventsByDate, loading: false })
+      set({ eventsByDate, loading: false, lastRange: { lower, upper } })
     } catch (e) {
       console.warn('이벤트 로드 실패:', e)
-      set({ loading: false })
+      set({ loading: false, lastRange: null })
     }
   },
 
