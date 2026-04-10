@@ -22,6 +22,9 @@ export function TagSelector({ value, onChange }: TagSelectorProps) {
         >
           {t('settings.none')}
         </button>
+        {tags.size === 0 && (
+          <span className="text-xs text-gray-400">{t('common.loading') ?? '...'}</span>
+        )}
         {Array.from(tags.values()).map(tag => (
           <button
             key={tag.uuid}

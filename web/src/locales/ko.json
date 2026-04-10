@@ -119,6 +119,7 @@
   "todo.revert_failed": "되돌리기에 실패했습니다",
   "todo.delete_failed": "삭제에 실패했습니다",
   "todo.no_date": "날짜 없음",
+  "common.loading": "로딩 중...",
   "common.close": "닫기",
   "tag.delete_message": "\"{{name}}\" 태그를 어떻게 삭제할까요?",
   "tag.create_failed": "태그 생성에 실패했습니다",

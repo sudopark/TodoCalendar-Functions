@@ -8,6 +8,8 @@ interface TimezoneState {
   setTimezone: (tz: string | null) => void
 }
 
+// Note: systemTz is computed at module load time. If the user changes their OS timezone
+// while the app is open, this value will be stale until page refresh.
 const systemTz = Intl.DateTimeFormat().resolvedOptions().timeZone
 
 function loadTimezone(): { timezone: string; isCustom: boolean } {

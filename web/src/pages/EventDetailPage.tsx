@@ -107,7 +107,7 @@ export function EventDetailPage() {
   const tagColor = event.event_tag_id ? (getColorForTagId(event.event_tag_id) ?? '#9ca3af') : null
   const eventTime = 'event_time' in event ? event.event_time : undefined
   const repeating = event.repeating
-  const isTodo = 'is_current' in event
+  const isTodo = eventType === 'todo'
 
   const isForemost = foremostEvent?.event_id === id
 
@@ -243,6 +243,8 @@ export function EventDetailPage() {
               <div>
                 <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">{t('event.url')}</p>
                 <input
+                  type="url"
+                  placeholder="https://..."
                   className="mt-1 w-full rounded border border-gray-300 px-2 py-1 text-sm text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-400"
                   value={editForm.url ?? ''}
                   onChange={e => setEditForm(f => ({ ...f, url: e.target.value }))}

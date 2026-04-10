@@ -119,6 +119,7 @@
   "todo.revert_failed": "Failed to revert",
   "todo.delete_failed": "Failed to delete",
   "todo.no_date": "No date",
+  "common.loading": "Loading...",
   "common.close": "Close",
   "tag.delete_message": "How would you like to delete the \"{{name}}\" tag?",
   "tag.create_failed": "Failed to create tag",
