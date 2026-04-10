@@ -122,5 +122,7 @@
   "tag.create_failed": "Failed to create tag",
   "tag.update_failed": "Failed to update tag",
   "tag.delete_failed": "Failed to delete tag",
-  "tag.delete_events_failed": "Failed to delete tag and events"
+  "tag.delete_events_failed": "Failed to delete tag and events",
+  "error.page_not_found": "Page not found",
+  "error.go_home": "Go to Home"
 }
