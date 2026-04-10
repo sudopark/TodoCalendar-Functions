@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { todoApi } from '../api/todoApi'
 import { useCurrentTodosStore } from '../stores/currentTodosStore'
 import { useCalendarEventsStore } from '../stores/calendarEventsStore'
@@ -11,6 +12,7 @@ import { skipRepeatingTodo, refreshAllTodoStores } from '../utils/todoActions'
 import type { Todo } from '../models'
 
 export function CurrentTodoList() {
+  const { t } = useTranslation()
   const todos = useCurrentTodosStore(s => s.todos)
   const getColorForTagId = useEventTagStore(s => s.getColorForTagId)
   const { isTagHidden } = useTagFilterStore()
@@ -106,7 +108,7 @@ export function CurrentTodoList() {
                   onClick={() => handleSkip(todo)}
                   className="shrink-0 text-xs text-gray-400 hover:text-gray-600"
                 >
-                  건너뛰기
+                  {t('todo.skip')}
                 </button>
               )}
             </li>

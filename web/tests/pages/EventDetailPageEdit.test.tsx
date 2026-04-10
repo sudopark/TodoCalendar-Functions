@@ -63,17 +63,17 @@ describe('EventDetailPage — 인라인 편집', () => {
     renderPage()
 
     // then
-    await waitFor(() => expect(screen.getByRole('button', { name: '편집' })).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByTestId('detail-edit-btn')).toBeInTheDocument())
   })
 
   it('편집 버튼 클릭 시 저장/취소 버튼과 입력 필드가 나타난다', async () => {
     // given
     vi.mocked(eventDetailApi.getEventDetail).mockResolvedValue({ place: '서울', url: '', memo: '' })
     renderPage()
-    await waitFor(() => screen.getByRole('button', { name: '편집' }))
+    await waitFor(() => screen.getByTestId('detail-edit-btn'))
 
     // when
-    await userEvent.click(screen.getByRole('button', { name: '편집' }))
+    await userEvent.click(screen.getByTestId('detail-edit-btn'))
 
     // then
     expect(screen.getByRole('button', { name: '저장' })).toBeInTheDocument()
@@ -86,8 +86,8 @@ describe('EventDetailPage — 인라인 편집', () => {
     vi.mocked(eventDetailApi.getEventDetail).mockResolvedValue({ place: '서울', url: '', memo: '' })
     vi.mocked(eventDetailApi.updateEventDetail).mockResolvedValue({ place: '부산', url: '', memo: '' })
     renderPage()
-    await waitFor(() => screen.getByRole('button', { name: '편집' }))
-    await userEvent.click(screen.getByRole('button', { name: '편집' }))
+    await waitFor(() => screen.getByTestId('detail-edit-btn'))
+    await userEvent.click(screen.getByTestId('detail-edit-btn'))
 
     const input = screen.getByDisplayValue('서울')
     await userEvent.clear(input)
@@ -109,8 +109,8 @@ describe('EventDetailPage — 인라인 편집', () => {
     vi.mocked(eventDetailApi.updateEventDetail).mockRejectedValue(new Error('save fail'))
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     renderPage()
-    await waitFor(() => screen.getByRole('button', { name: '편집' }))
-    await userEvent.click(screen.getByRole('button', { name: '편집' }))
+    await waitFor(() => screen.getByTestId('detail-edit-btn'))
+    await userEvent.click(screen.getByTestId('detail-edit-btn'))
 
     // when
     await userEvent.click(screen.getByRole('button', { name: '저장' }))
@@ -127,8 +127,8 @@ describe('EventDetailPage — 인라인 편집', () => {
     // given
     vi.mocked(eventDetailApi.getEventDetail).mockResolvedValue({ place: '서울', url: '', memo: '' })
     renderPage()
-    await waitFor(() => screen.getByRole('button', { name: '편집' }))
-    await userEvent.click(screen.getByRole('button', { name: '편집' }))
+    await waitFor(() => screen.getByTestId('detail-edit-btn'))
+    await userEvent.click(screen.getByTestId('detail-edit-btn'))
     await userEvent.type(screen.getByDisplayValue('서울'), 'xxx')
 
     // when

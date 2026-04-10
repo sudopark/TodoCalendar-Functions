@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { todoApi } from '../api/todoApi'
 import { useUncompletedTodosStore } from '../stores/uncompletedTodosStore'
 import { useCalendarEventsStore } from '../stores/calendarEventsStore'
@@ -11,6 +12,7 @@ import { skipRepeatingTodo, refreshAllTodoStores } from '../utils/todoActions'
 import type { Todo } from '../models'
 
 export function UncompletedTodoList() {
+  const { t } = useTranslation()
   const todos = useUncompletedTodosStore(s => s.todos)
   const getColorForTagId = useEventTagStore(s => s.getColorForTagId)
   const { isTagHidden } = useTagFilterStore()
@@ -74,7 +76,7 @@ export function UncompletedTodoList() {
   return (
     <section>
       <h3 className="px-3 py-2 text-xs font-semibold uppercase tracking-wide text-red-400">
-        미완료
+        {t('todo.uncompleted')}
       </h3>
       <ul className="divide-y divide-gray-100">
         {visibleTodos.map(todo => {
@@ -103,7 +105,7 @@ export function UncompletedTodoList() {
                   onClick={() => handleSkip(todo)}
                   className="shrink-0 text-xs text-gray-400 hover:text-gray-600"
                 >
-                  건너뛰기
+                  {t('todo.skip')}
                 </button>
               )}
             </li>

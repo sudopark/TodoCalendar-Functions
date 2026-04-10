@@ -1,4 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useForemostEventStore } from '../stores/foremostEventStore'
 import { useEventTagStore } from '../stores/eventTagStore'
 import { EventTimeDisplay } from './EventTimeDisplay'
@@ -10,6 +11,7 @@ export function ForemostEventBanner() {
   const getColorForTagId = useEventTagStore(s => s.getColorForTagId)
   const navigate = useNavigate()
   const location = useLocation()
+  const { t } = useTranslation()
 
   if (!foremostEvent?.event) return null
 
@@ -41,7 +43,7 @@ export function ForemostEventBanner() {
           </p>
         )}
       </div>
-      <span className="text-xs text-blue-400">고정</span>
+      <span className="text-xs text-blue-400">{t('event.pinned')}</span>
     </button>
   )
 }

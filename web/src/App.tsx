@@ -15,6 +15,7 @@ const ScheduleFormPage = React.lazy(() => import('./pages/ScheduleFormPage').the
 const TagManagementPage = React.lazy(() => import('./pages/TagManagementPage').then(m => ({ default: m.TagManagementPage })))
 const DoneTodosPage = React.lazy(() => import('./pages/DoneTodosPage').then(m => ({ default: m.DoneTodosPage })))
 const SettingsPage = React.lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })))
+const NotFoundPage = React.lazy(() => import('./pages/NotFoundPage').then(m => ({ default: m.NotFoundPage })))
 
 function AppRoutes() {
   const location = useLocation()
@@ -40,6 +41,7 @@ function AppRoutes() {
                   <Route path="/tags" element={<TagManagementPage />} />
                   <Route path="/done" element={<DoneTodosPage />} />
                   <Route path="/settings" element={<SettingsPage />} />
+                  <Route path="*" element={<Suspense fallback={null}><NotFoundPage /></Suspense>} />
                 </Routes>
               </AuthGuard>
             }

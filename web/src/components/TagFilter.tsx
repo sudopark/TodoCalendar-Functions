@@ -1,7 +1,9 @@
+import { useTranslation } from 'react-i18next'
 import { useEventTagStore } from '../stores/eventTagStore'
 import { useTagFilterStore } from '../stores/tagFilterStore'
 
 export function TagFilter() {
+  const { t } = useTranslation()
   const tags = useEventTagStore(s => s.tags)
   const hiddenTagIds = useTagFilterStore(s => s.hiddenTagIds)
   const toggleTag = useTagFilterStore(s => s.toggleTag)
@@ -10,7 +12,7 @@ export function TagFilter() {
 
   return (
     <div className="px-3 py-2 border-t border-gray-100">
-      <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">태그 필터</p>
+      <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">{t('tag.filter')}</p>
       <div className="flex flex-wrap gap-2">
         {Array.from(tags.values()).map(tag => {
           const isHidden = hiddenTagIds.has(tag.uuid)

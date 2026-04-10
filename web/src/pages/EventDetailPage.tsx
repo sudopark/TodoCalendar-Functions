@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
 import { todoApi } from '../api/todoApi'
 import { scheduleApi } from '../api/scheduleApi'
 import { eventDetailApi } from '../api/eventDetailApi'
@@ -14,19 +16,20 @@ import type { Repeating } from '../models/Repeating'
 
 type EventItem = Todo | Schedule
 
-function repeatingLabel(repeating: Repeating): string {
+function repeatingLabel(repeating: Repeating, t: TFunction): string {
   const { option } = repeating
   switch (option.optionType) {
-    case 'every_day': return `매 ${option.interval}일`
-    case 'every_week': return `매 ${option.interval}주`
-    case 'every_month': return `매 ${option.interval}개월`
-    case 'every_year': return `매 ${option.interval}년`
-    case 'every_year_some_day': return `매년`
-    case 'lunar_calendar_every_year': return `매년 (음력)`
+    case 'every_day': return t('repeat.every_day', { n: option.interval })
+    case 'every_week': return t('repeat.every_week', { n: option.interval })
+    case 'every_month': return t('repeat.every_month', { n: option.interval })
+    case 'every_year': return t('repeat.every_year', { n: option.interval })
+    case 'every_year_some_day': return t('repeat.every_year_some_day')
+    case 'lunar_calendar_every_year': return `${t('repeat.every_year', { n: 1 })} (${t('repeat.lunar')})`
   }
 }
 
 export function EventDetailPage() {
+  const { t } = useTranslation()
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const location = useLocation()
@@ -95,8 +98,8 @@ export function EventDetailPage() {
   if (error || !event) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-4">
-        <p className="text-gray-500">이벤트를 찾을 수 없습니다</p>
-        <button className="text-blue-500 text-sm" onClick={() => navigate(-1)}>돌아가기</button>
+        <p className="text-gray-500">{t('event.not_found')}</p>
+        <button className="text-blue-500 text-sm" onClick={() => navigate(-1)}>{t('event.go_back')}</button>
       </div>
     )
   }
@@ -126,7 +129,7 @@ export function EventDetailPage() {
       setIsEditing(false)
     } catch (e) {
       console.warn('이벤트 상세 저장 실패:', e)
-      useToastStore.getState().show('이벤트 상세 저장에 실패했습니다', 'error')
+      useToastStore.getState().show(t('event.save_failed'), 'error')
     }
   }
 
@@ -145,7 +148,7 @@ export function EventDetailPage() {
           className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
           onClick={() => navigate(-1)}
         >
-          ← 뒤로
+          {t('common.back')}
         </button>
         {event && (
           <button
@@ -155,7 +158,7 @@ export function EventDetailPage() {
               navigate(path, { state: { background: location } })
             }}
           >
-            수정
+            {t('common.edit')}
           </button>
         )}
       </div>
@@ -175,7 +178,7 @@ export function EventDetailPage() {
         {/* Time */}
         {eventTime && (
           <div className="mt-4">
-            <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">시간</p>
+            <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">{t('event.time')}</p>
             <p className="mt-1 text-sm text-gray-700">
               <EventTimeDisplay eventTime={eventTime} />
             </p>
@@ -185,8 +188,8 @@ export function EventDetailPage() {
         {/* Repeating */}
         {repeating && (
           <div className="mt-4">
-            <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">반복</p>
-            <p className="mt-1 text-sm text-gray-700">{repeatingLabel(repeating)}</p>
+            <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">{t('event.repeat')}</p>
+            <p className="mt-1 text-sm text-gray-700">{repeatingLabel(repeating, t)}</p>
           </div>
         )}
 
@@ -200,21 +203,22 @@ export function EventDetailPage() {
                   className="text-sm text-blue-500 hover:text-blue-700"
                   onClick={handleEditSave}
                 >
-                  저장
+                  {t('common.save')}
                 </button>
                 <button
                   className="text-sm text-gray-500 hover:text-gray-700"
                   onClick={handleEditCancel}
                 >
-                  취소
+                  {t('common.cancel')}
                 </button>
               </>
             ) : (
               <button
+                data-testid="detail-edit-btn"
                 className="text-sm text-gray-500 hover:text-gray-700"
                 onClick={handleEditStart}
               >
-                {detail ? '편집' : '상세 추가'}
+                {detail ? t('common.edit') : t('event.detail_add')}
               </button>
             )}
           </div>
@@ -223,7 +227,7 @@ export function EventDetailPage() {
             <>
               {/* Place */}
               <div>
-                <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">장소</p>
+                <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">{t('event.place')}</p>
                 <input
                   className="mt-1 w-full rounded border border-gray-300 px-2 py-1 text-sm text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-400"
                   value={editForm.place ?? ''}
@@ -233,7 +237,7 @@ export function EventDetailPage() {
 
               {/* URL */}
               <div>
-                <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">URL</p>
+                <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">{t('event.url')}</p>
                 <input
                   className="mt-1 w-full rounded border border-gray-300 px-2 py-1 text-sm text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-400"
                   value={editForm.url ?? ''}
@@ -243,7 +247,7 @@ export function EventDetailPage() {
 
               {/* Memo */}
               <div>
-                <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">메모</p>
+                <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">{t('event.memo')}</p>
                 <textarea
                   className="mt-1 w-full rounded border border-gray-300 px-2 py-1 text-sm text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-400"
                   rows={4}
@@ -256,13 +260,13 @@ export function EventDetailPage() {
             <>
               {detail.place && (
                 <div>
-                  <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">장소</p>
+                  <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">{t('event.place')}</p>
                   <p className="mt-1 text-sm text-gray-700">{detail.place}</p>
                 </div>
               )}
               {detail.url && (
                 <div>
-                  <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">URL</p>
+                  <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">{t('event.url')}</p>
                   <a
                     href={detail.url}
                     target="_blank"
@@ -275,13 +279,13 @@ export function EventDetailPage() {
               )}
               {detail.memo && (
                 <div>
-                  <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">메모</p>
+                  <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">{t('event.memo')}</p>
                   <p className="mt-1 whitespace-pre-wrap text-sm text-gray-700">{detail.memo}</p>
                 </div>
               )}
             </>
           ) : (
-            <p className="text-sm text-gray-400">장소, URL, 메모를 추가하세요</p>
+            <p className="text-sm text-gray-400">{t('event.detail_placeholder')}</p>
           )}
         </div>
       </div>
@@ -296,7 +300,7 @@ export function EventDetailPage() {
           }`}
           onClick={handleForemostToggle}
         >
-          {isForemost ? '고정 해제' : '고정 설정'}
+          {isForemost ? t('event.unpin') : t('event.pin')}
         </button>
       </div>
     </div>
