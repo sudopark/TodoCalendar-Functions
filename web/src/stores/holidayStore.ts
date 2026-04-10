@@ -31,9 +31,7 @@ export const useHolidayStore = create<HolidayState>((set, get) => ({
   setCountry: (country: HolidayCountry) => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(country))
     set({ country, holidays: new Map(), loadedYears: new Set() })
-    // 현재 연도 공휴일 자동 fetch
-    const currentYear = new Date().getFullYear()
-    get().fetchHolidays(currentYear)
+    // 즉시 fetch하지 않음 — MonthCalendar의 useEffect가 현재 보고 있는 연도로 fetch 위임
   },
 
   fetchHolidays: async (year: number) => {

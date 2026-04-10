@@ -15,7 +15,7 @@ const MARCH31_KEY = '2025-03-31'
 
 describe('calendarEventsStore', () => {
   beforeEach(() => {
-    useCalendarEventsStore.setState({ eventsByDate: new Map(), loading: false })
+    useCalendarEventsStore.setState({ eventsByDate: new Map(), loading: false, lastRange: null })
     vi.clearAllMocks()
   })
 

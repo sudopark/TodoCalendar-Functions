@@ -9,8 +9,10 @@ function tsToDatetimeLocal(ts: number): string {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`
 }
 
-function datetimeLocalToTs(v: string): number {
-  return Math.floor(new Date(v).getTime() / 1000)
+function datetimeLocalToTs(v: string): number | null {
+  const ts = new Date(v).getTime()
+  if (isNaN(ts)) return null
+  return Math.floor(ts / 1000)
 }
 
 function tsToDateInput(ts: number): string {
@@ -19,8 +21,11 @@ function tsToDateInput(ts: number): string {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
 }
 
-function dateInputToTs(v: string): number {
-  return Math.floor(new Date(v + 'T00:00:00').getTime() / 1000)
+function dateInputToTs(v: string): number | null {
+  if (!v) return null
+  const ts = new Date(v + 'T00:00:00').getTime()
+  if (isNaN(ts)) return null
+  return Math.floor(ts / 1000)
 }
 
 function localSecondsFromGmt(): number {
@@ -102,7 +107,11 @@ export function EventTimePicker({ value, onChange, required = false }: EventTime
             type="datetime-local"
             className="mt-1 rounded border border-gray-300 px-2 py-1 text-sm"
             value={tsToDatetimeLocal(internal.timestamp)}
-            onChange={e => handleValueChange({ time_type: 'at', timestamp: datetimeLocalToTs(e.target.value) })}
+            onChange={e => {
+              const ts = datetimeLocalToTs(e.target.value)
+              if (ts === null) return
+              handleValueChange({ time_type: 'at', timestamp: ts })
+            }}
           />
         </div>
       )}
@@ -118,7 +127,12 @@ export function EventTimePicker({ value, onChange, required = false }: EventTime
                 type="datetime-local"
                 className="mt-1 rounded border border-gray-300 px-2 py-1 text-sm"
                 value={tsToDatetimeLocal(internal.period_start)}
-                onChange={e => handleValueChange({ ...internal, period_start: datetimeLocalToTs(e.target.value) })}
+                onChange={e => {
+                  const newStart = datetimeLocalToTs(e.target.value)
+                  if (newStart === null) return
+                  const newEnd = newStart > internal.period_end ? newStart : internal.period_end
+                  handleValueChange({ ...internal, period_start: newStart, period_end: newEnd })
+                }}
               />
             </div>
             <div>
@@ -129,13 +143,15 @@ export function EventTimePicker({ value, onChange, required = false }: EventTime
                 type="datetime-local"
                 className="mt-1 rounded border border-gray-300 px-2 py-1 text-sm"
                 value={tsToDatetimeLocal(internal.period_end)}
-                onChange={e => handleValueChange({ ...internal, period_end: datetimeLocalToTs(e.target.value) })}
+                onChange={e => {
+                  const newEnd = datetimeLocalToTs(e.target.value)
+                  if (newEnd === null) return
+                  if (newEnd < internal.period_start) return
+                  handleValueChange({ ...internal, period_end: newEnd })
+                }}
               />
             </div>
           </div>
-          {internal.period_end < internal.period_start && (
-            <p className="text-xs text-red-500">종료 시각이 시작 시각보다 앞에 있습니다.</p>
-          )}
         </div>
       )}
 
@@ -149,7 +165,11 @@ export function EventTimePicker({ value, onChange, required = false }: EventTime
               type="date"
               className="mt-1 rounded border border-gray-300 px-2 py-1 text-sm"
               value={tsToDateInput(internal.period_start + internal.seconds_from_gmt)}
-              onChange={e => handleValueChange({ ...internal, period_start: dateInputToTs(e.target.value) - internal.seconds_from_gmt })}
+              onChange={e => {
+                const ts = dateInputToTs(e.target.value)
+                if (ts === null) return
+                handleValueChange({ ...internal, period_start: ts - internal.seconds_from_gmt })
+              }}
             />
           </div>
           <div>
@@ -160,7 +180,11 @@ export function EventTimePicker({ value, onChange, required = false }: EventTime
               type="date"
               className="mt-1 rounded border border-gray-300 px-2 py-1 text-sm"
               value={tsToDateInput(internal.period_end + internal.seconds_from_gmt)}
-              onChange={e => handleValueChange({ ...internal, period_end: dateInputToTs(e.target.value) - internal.seconds_from_gmt })}
+              onChange={e => {
+                const ts = dateInputToTs(e.target.value)
+                if (ts === null) return
+                handleValueChange({ ...internal, period_end: ts - internal.seconds_from_gmt })
+              }}
             />
           </div>
         </div>

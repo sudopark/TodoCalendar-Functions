@@ -134,10 +134,14 @@ export function EventDetailPage() {
   }
 
   async function handleForemostToggle() {
-    if (isForemost) {
-      await removeForemost()
-    } else if (id) {
-      await setForemost(id, isTodo)
+    try {
+      if (isForemost) {
+        await removeForemost()
+      } else if (id) {
+        await setForemost(id, isTodo)
+      }
+    } catch {
+      useToastStore.getState().show(t('event.pin_failed'), 'error')
     }
   }
 

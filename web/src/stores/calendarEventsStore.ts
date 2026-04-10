@@ -22,9 +22,9 @@ export const useCalendarEventsStore = create<CalendarEventsState>((set, get) => 
   lastRange: null,
 
   fetchEventsForRange: async (lower: number, upper: number) => {
-    const { lastRange, eventsByDate } = get()
-    // 같은 범위 재요청 + 캐시 있음 → 스킵
-    if (lastRange && lastRange.lower === lower && lastRange.upper === upper && eventsByDate.size > 0) {
+    const { lastRange } = get()
+    // 같은 범위 재요청 → 스킵 (빈 달도 fetch 완료로 간주)
+    if (lastRange && lastRange.lower === lower && lastRange.upper === upper) {
       return
     }
     set({ loading: true, lastRange: { lower, upper } })
