@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Navigate, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/authStore'
 import { useEventTagStore } from '../stores/eventTagStore'
@@ -15,6 +15,7 @@ interface AuthGuardProps {
 export function AuthGuard({ children }: AuthGuardProps) {
   const { t } = useTranslation()
   const { account, loading } = useAuthStore()
+  const location = useLocation()
 
   useEffect(() => {
     if (account) {
@@ -38,7 +39,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
   }
 
   if (!account) {
-    return <Navigate to="/login" replace />
+    return <Navigate to="/login" state={{ from: location }} replace />
   }
 
   return <>{children}</>

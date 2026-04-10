@@ -2,6 +2,10 @@ import { tokenProvider } from './tokenProvider'
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
 
+export class AuthExpiredError extends Error {
+  constructor() { super('Session expired') }
+}
+
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
   const token = await tokenProvider.getToken()
   const response = await fetch(`${BASE_URL}${path}`, {
@@ -17,6 +21,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     if (response.status === 401) {
       const { useAuthStore } = await import('../stores/authStore')
       await useAuthStore.getState().signOut()
+      throw new AuthExpiredError()
     }
     throw new Error(`API error: ${response.status}`)
   }

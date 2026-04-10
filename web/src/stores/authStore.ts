@@ -25,9 +25,14 @@ interface AuthState {
   signOut: () => Promise<void>
 }
 
-export const useAuthStore = create<AuthState>((set) => {
+export const useAuthStore = create<AuthState>((set, get) => {
   onAuthStateChanged(auth, async (firebaseUser) => {
     if (firebaseUser) {
+      const current = get().account
+      if (current && current.uid === firebaseUser.uid) {
+        set({ account: current, loading: false })
+        return
+      }
       try {
         const account = await apiClient.put<Account>('/v1/accounts/info', {})
         set({ account, loading: false })

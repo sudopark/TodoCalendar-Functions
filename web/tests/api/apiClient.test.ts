@@ -54,15 +54,15 @@ describe('apiClient', () => {
     expect(result).toBeUndefined()
   })
 
-  it('401 응답 시 에러가 throw된다', async () => {
+  it('401 응답 시 AuthExpiredError가 throw된다', async () => {
     // given: fetch가 401 반환
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(null, { status: 401 })
     )
 
-    // when / then: 에러가 throw됨
-    const { apiClient } = await import('../../src/api/apiClient')
-    await expect(apiClient.get('/v1/test')).rejects.toThrow('API error: 401')
+    // when / then: AuthExpiredError가 throw됨
+    const { apiClient, AuthExpiredError } = await import('../../src/api/apiClient')
+    await expect(apiClient.get('/v1/test')).rejects.toThrow(AuthExpiredError)
   })
 
   it('서버가 4xx/5xx를 반환하면 에러를 던진다', async () => {
