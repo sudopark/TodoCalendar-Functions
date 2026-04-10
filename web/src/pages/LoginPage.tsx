@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Navigate, useLocation, Location } from 'react-router-dom'
+import { Navigate, useLocation } from 'react-router-dom'
+import type { Location } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/authStore'
 
