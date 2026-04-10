@@ -38,7 +38,7 @@ export function buildCalendarGrid(year: number, month: number, today: Date): Cal
   // 그리드 종료일: 마지막 주의 토요일
   // 마지막 날이 토요일이면 다음 달 첫 주를 추가로 보여줌
   const endOffset = lastDayOfWeek === 6 ? 7 : (6 - lastDayOfWeek)
-  const gridEnd = new Date(year, month + 1, lastOfMonth.getDate() - lastOfMonth.getDate() + endOffset)
+  const gridEnd = new Date(year, month + 1, endOffset)
 
   const totalDays = Math.round((gridEnd.getTime() - gridStart.getTime()) / (1000 * 60 * 60 * 24)) + 1
   const days: CalendarDay[] = []

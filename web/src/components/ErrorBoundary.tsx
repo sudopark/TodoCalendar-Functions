@@ -18,10 +18,10 @@ export class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-gray-50">
-          <p className="text-lg font-semibold text-gray-800">{i18n.t('error.something_wrong')}</p>
+        <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-gray-50 dark:bg-gray-900">
+          <p className="text-lg font-semibold text-gray-800 dark:text-gray-200">{i18n.t('error.something_wrong')}</p>
           <button
-            className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
+            className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
             onClick={() => window.location.reload()}
           >
             {i18n.t('error.refresh')}

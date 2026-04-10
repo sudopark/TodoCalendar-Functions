@@ -22,22 +22,22 @@ export const useCalendarEventsStore = create<CalendarEventsState>((set, get) => 
   lastRange: null,
 
   fetchEventsForRange: async (lower: number, upper: number) => {
-    const { lastRange, eventsByDate } = get()
-    // 같은 범위 재요청 + 캐시 있음 → 스킵
-    if (lastRange && lastRange.lower === lower && lastRange.upper === upper && eventsByDate.size > 0) {
+    const { lastRange } = get()
+    // 같은 범위 재요청 → 스킵 (빈 달도 fetch 완료로 간주)
+    if (lastRange && lastRange.lower === lower && lastRange.upper === upper) {
       return
     }
-    set({ loading: true, lastRange: { lower, upper } })
+    set({ loading: true })
     try {
       const [todos, schedules] = await Promise.all([
         todoApi.getTodos(lower, upper),
         scheduleApi.getSchedules(lower, upper),
       ])
       const eventsByDate = groupEventsByDate(todos, schedules, lower, upper)
-      set({ eventsByDate, loading: false })
+      set({ eventsByDate, loading: false, lastRange: { lower, upper } })
     } catch (e) {
       console.warn('이벤트 로드 실패:', e)
-      set({ loading: false })
+      set({ loading: false, lastRange: null })
     }
   },
 

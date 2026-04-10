@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import { eventTagApi } from '../api/eventTagApi'
 import { useCalendarEventsStore } from './calendarEventsStore'
+import { useCurrentTodosStore } from './currentTodosStore'
+import { useUncompletedTodosStore } from './uncompletedTodosStore'
 import type { EventTag } from '../models'
 
 interface EventTagState {
@@ -38,7 +40,12 @@ export const useEventTagStore = create<EventTagState>((set, get) => ({
   },
 
   updateTag: async (id: string, updates: { name?: string; color_hex?: string }) => {
-    const tag = await eventTagApi.updateTag(id, { name: updates.name ?? get().tags.get(id)?.name ?? '', color_hex: updates.color_hex })
+    const existing = get().tags.get(id)
+    if (!existing) throw new Error('Tag not found')
+    const tag = await eventTagApi.updateTag(id, {
+      name: updates.name ?? existing.name,
+      color_hex: updates.color_hex ?? existing.color_hex,
+    })
     set(s => { const tags = new Map(s.tags); tags.set(tag.uuid, tag); return { tags } })
     return tag
   },
@@ -52,6 +59,8 @@ export const useEventTagStore = create<EventTagState>((set, get) => ({
     await eventTagApi.deleteTagAndEvents(id)
     set(s => { const tags = new Map(s.tags); tags.delete(id); return { tags } })
     await useCalendarEventsStore.getState().refreshCurrentRange().catch(() => {})
+    useCurrentTodosStore.getState().fetch().catch(() => {})
+    useUncompletedTodosStore.getState().fetch().catch(() => {})
   },
 
   reset: () => set({ tags: new Map() }),

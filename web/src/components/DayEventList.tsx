@@ -78,8 +78,17 @@ export function DayEventList({ selectedDate }: DayEventListProps) {
   const dateKey = formatDateKey(selectedDate)
   const allEvents = (eventsByDate.get(dateKey) ?? []).filter(ev => !isTagHidden(ev.event.event_tag_id))
 
+  const getTimestamp = (ev: CalendarEvent): number => {
+    const et = ev.type === 'todo' ? ev.event.event_time : ev.event.event_time
+    if (!et) return Infinity
+    if (et.time_type === 'at') return et.timestamp
+    return et.period_start
+  }
+
   const todos = allEvents.filter(e => e.type === 'todo')
   const schedules = allEvents.filter(e => e.type === 'schedule')
+  todos.sort((a, b) => getTimestamp(a) - getTimestamp(b))
+  schedules.sort((a, b) => getTimestamp(a) - getTimestamp(b))
   const sorted = [...todos, ...schedules]
 
   if (sorted.length === 0) {
@@ -92,8 +101,8 @@ export function DayEventList({ selectedDate }: DayEventListProps) {
 
   return (
     <ul className="divide-y divide-gray-100">
-      {sorted.map(calEvent => (
-        <li key={calEvent.event.uuid}>
+      {sorted.map((calEvent, i) => (
+        <li key={`${calEvent.event.uuid}-${i}`}>
           <EventItem
             calEvent={calEvent}
             onNavigate={() => navigate(`/events/${calEvent.event.uuid}?type=${calEvent.type}`, {

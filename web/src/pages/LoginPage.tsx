@@ -1,16 +1,18 @@
 import { useState } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Navigate, useLocation, Location } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/authStore'
 
 export function LoginPage() {
   const { t } = useTranslation()
   const { account, signInWithGoogle, signInWithApple } = useAuthStore()
+  const location = useLocation()
+  const from = (location.state as { from?: Location })?.from?.pathname || '/'
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   if (account) {
-    return <Navigate to="/" replace />
+    return <Navigate to={from} replace />
   }
 
   async function handleSignIn(action: () => Promise<void>) {
@@ -18,7 +20,11 @@ export function LoginPage() {
     setError(null)
     try {
       await action()
-    } catch {
+    } catch (e: unknown) {
+      if (e instanceof Error && 'code' in e && (e as { code: string }).code === 'auth/popup-closed-by-user') {
+        setLoading(false)
+        return
+      }
       setError(t('login.error'))
     } finally {
       setLoading(false)

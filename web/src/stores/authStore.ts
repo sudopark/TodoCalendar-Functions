@@ -25,12 +25,19 @@ interface AuthState {
   signOut: () => Promise<void>
 }
 
-export const useAuthStore = create<AuthState>((set) => {
+export const useAuthStore = create<AuthState>((set, get) => {
+  let initialAuthDone = false
   onAuthStateChanged(auth, async (firebaseUser) => {
     if (firebaseUser) {
+      // 초기 인증 이후 동일 uid의 token refresh는 skip
+      if (initialAuthDone && get().account?.uid === firebaseUser.uid) {
+        set({ loading: false })
+        return
+      }
       try {
         const account = await apiClient.put<Account>('/v1/accounts/info', {})
         set({ account, loading: false })
+        initialAuthDone = true
       } catch (e) {
         console.warn('계정 등록 실패:', e)
         set({ account: null, loading: false })

@@ -62,6 +62,7 @@ export function SettingsPage() {
   const [_colors, setColors] = useState<DefaultTagColors | null>(null)
   const [editColors, setEditColors] = useState<DefaultTagColors | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     settingApi.getDefaultTagColors()
@@ -83,6 +84,7 @@ export function SettingsPage() {
   }
 
   const handleDeleteAccount = async () => {
+    setDeleting(true)
     try {
       await accountApi.deleteAccount()
       useToastStore.getState().show(t('settings.account_deleted'), 'success')
@@ -90,6 +92,8 @@ export function SettingsPage() {
     } catch (e) {
       console.warn('계정 삭제 실패:', e)
       useToastStore.getState().show(t('settings.account_delete_failed'), 'error')
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -314,8 +318,9 @@ export function SettingsPage() {
       <section className="rounded-xl border border-red-100 dark:border-red-900 bg-white dark:bg-gray-800 p-5 shadow-sm">
         <h2 className="mb-3 text-sm font-semibold text-red-500">{t('settings.danger')}</h2>
         <button
-          className="rounded-lg border border-red-200 dark:border-red-800 px-4 py-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30"
+          className="rounded-lg border border-red-200 dark:border-red-800 px-4 py-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 disabled:opacity-50 disabled:cursor-not-allowed"
           onClick={() => setShowDeleteConfirm(true)}
+          disabled={deleting}
         >
           {t('settings.delete_account')}
         </button>

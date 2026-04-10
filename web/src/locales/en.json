@@ -105,6 +105,7 @@
   "event.go_back": "Go Back",
   "event.detail_placeholder": "Add place, URL, or memo",
   "event.save_failed": "Failed to save event details",
+  "event.pin_failed": "Failed to pin event",
   "repeat.every_day": "Every {{n}} day(s)",
   "repeat.every_week": "Every {{n}} week(s)",
   "repeat.every_month": "Every {{n}} month(s)",

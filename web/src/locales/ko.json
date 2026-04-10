@@ -105,6 +105,7 @@
   "event.go_back": "돌아가기",
   "event.detail_placeholder": "장소, URL, 메모를 추가하세요",
   "event.save_failed": "이벤트 상세 저장에 실패했습니다",
+  "event.pin_failed": "고정 설정에 실패했습니다",
   "repeat.every_day": "매 {{n}}일",
   "repeat.every_week": "매 {{n}}주",
   "repeat.every_month": "매 {{n}}개월",
