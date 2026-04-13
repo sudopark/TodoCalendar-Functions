@@ -132,5 +132,8 @@ dist
 #firebase
 .firebaserc
 
+# macOS
+.DS_Store
+
 # AI-generated docs
 docs/superpowers/
