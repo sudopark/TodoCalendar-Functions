@@ -37,6 +37,8 @@ const holidayRouter = require('./routes/holidayRoutes');
 const syncRouter = require('./routes/dataSyncRoutes.js');
 const testRouter = require('./routes/testRoutes');
 
+const logger = require("firebase-functions/logger");
+
 const app = express();
 // app use middleware
 app.use(bodyParser.json());
@@ -71,13 +73,38 @@ app.use('/v1/setting', authValidator, setVersion('v1'), settingRouter);
 app.use('/v1/holiday', setVersion('v1'), holidayRouter);
 app.use('/v1/sync', authValidator, setVersion('v1'), syncRouter);
 // app.use('/v1/tests', v1TestRouter);
+
+// request logging
+const requestLogger = (gen) => (req, res, next) => {
+    req.functionsGen = gen;
+    const start = Date.now();
+    res.on('finish', () => {
+        const duration = Date.now() - start;
+        const log = `[${gen}] ${req.method} ${req.path} ${res.statusCode} ${duration}ms`;
+        if (res.statusCode >= 500) {
+            logger.error(log);
+        } else if (res.statusCode >= 400) {
+            logger.warn(log);
+        } else {
+            logger.info(log);
+        }
+    });
+    next();
+};
+
 app.use((err, req, res, next) => {
     res.status(err?.status ?? 500)
         .send(err)
 });
 
 // 1st Gen (기존 클라이언트 유지)
-exports.api = functions.https.onRequest(app);
+const appV1 = express();
+appV1.use(requestLogger('v1-gen'));
+appV1.use(app);
+exports.api = functions.https.onRequest(appV1);
 
 // 2nd Gen (신규 클라이언트용)
-exports.apiV2 = onRequest(app);
+const appV2 = express();
+appV2.use(requestLogger('v2-gen'));
+appV2.use(app);
+exports.apiV2 = onRequest(appV2);
