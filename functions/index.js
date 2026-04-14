@@ -1,5 +1,6 @@
-// The cloud functions fore Firebase SDK to create Cloud functions and trigger
+// The cloud functions for Firebase SDK to create Cloud functions and trigger
 const functions = require("firebase-functions/v1");
+const { onRequest } = require("firebase-functions/v2/https");
 const express = require("express");
 require('express-async-errors');
 
@@ -75,13 +76,8 @@ app.use((err, req, res, next) => {
         .send(err)
 });
 
+// 1st Gen (기존 클라이언트 유지)
 exports.api = functions.https.onRequest(app);
 
-
-// // Create and Deploy Your First Cloud Functions
-// // https://firebase.google.com/docs/functions/write-firebase-functions
-//
-// exports.helloWorld = functions.https.onRequest((request, response) => {
-//   functions.logger.info("Hello logs!", {structuredData: true});
-//   response.send("Hello from Firebase!");
-// });
+// 2nd Gen (신규 클라이언트용)
+exports.apiV2 = onRequest(app);
