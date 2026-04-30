@@ -230,6 +230,29 @@ describe("DoneTodoService", () => {
             assert.deepEqual(spyDoneRepository.didRemovedDoneEventId, 'some')
         })
 
+        it('makeTodo payload event_time is plain object, not EventTime instance', async () => {
+            await service.revertDoneTodoV2('owner', 'some')
+            const eventTime = spyTodoRepository.lastMakeTodoPayload?.event_time
+            assert.notStrictEqual(eventTime, undefined, 'event_time should be present')
+            assert.notStrictEqual(eventTime, null, 'event_time should be non-null')
+            assert.strictEqual(
+                eventTime.constructor?.name,
+                'Object',
+                'event_time must be plain object so firestore can serialize it'
+            )
+        })
+
+        it('makeTodo rejection propagates without unhandled rejection', async () => {
+            spyTodoRepository.shouldFailMakeTodo = true
+
+            const caught = await service.revertDoneTodoV2('owner', 'some').then(
+                () => ({ ok: true }),
+                err => ({ ok: false, err })
+            )
+            assert.strictEqual(caught.ok, false, 'rejection should reach the caller')
+            assert.strictEqual(caught.err?.message, 'failed')
+        })
+
         // revert done todo fail
         it('failed', async () => {
             spyTodoRepository.shouldFailMakeTodo = true

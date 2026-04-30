@@ -61,6 +61,7 @@ class StubTodoRepository {
     }
 
     async makeNewTodo(payload) {
+        this.lastMakeTodoPayload = payload
         let params = JSON.parse(JSON.stringify(payload))
         if (this.shouldFailMakeTodo) {
             throw { message: 'failed' }

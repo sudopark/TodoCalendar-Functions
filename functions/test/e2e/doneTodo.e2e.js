@@ -83,8 +83,40 @@ describe('DoneTodo API', function () {
                 const doneRes = await authedClient().post(`/v2/todos/todo/${todoRes.data.uuid}/complete`, {
                     origin: todoRes.data
                 });
-                const res = await authedClient().post(`/v2/todos/dones/${doneRes.data.uuid}/revert`);
+                const res = await authedClient().post(`/v2/todos/dones/${doneRes.data.done.uuid}/revert`);
                 assert.strictEqual(res.status, 201);
+            });
+
+            it('preserves name and event_time when reverting a done todo with time info', async function () {
+                const todoRes = await authedClient().post('/v2/todos/todo', {
+                    name: 'V2 Revert with time',
+                    event_time: { time_type: 'at', timestamp: 1776351600 }
+                });
+                const todoId = todoRes.data.uuid;
+
+                const { uuid, ...originWithoutUuid } = todoRes.data;
+                const doneRes = await authedClient().post(`/v2/todos/todo/${todoId}/complete`, {
+                    origin: originWithoutUuid
+                });
+                const doneId = doneRes.data.done.uuid;
+
+                const revertRes = await authedClient().post(`/v2/todos/dones/${doneId}/revert`);
+
+                assert.strictEqual(
+                    revertRes.status,
+                    201,
+                    `revert should succeed, got status=${revertRes.status} data=${JSON.stringify(revertRes.data)}`
+                );
+                assert.strictEqual(revertRes.data.todo?.name, 'V2 Revert with time');
+                assert.deepStrictEqual(revertRes.data.todo?.event_time, {
+                    time_type: 'at',
+                    timestamp: 1776351600
+                });
+                assert.notStrictEqual(
+                    revertRes.data.todo?.is_current,
+                    true,
+                    'is_current should not be true when event_time is present'
+                );
             });
         });
 
