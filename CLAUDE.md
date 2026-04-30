@@ -33,7 +33,7 @@ npm run test:e2e:run      # One-command: start emulators → run E2E tests → s
 
 ## Architecture Overview
 
-This is a **Firebase Cloud Functions** backend (Node.js 20) serving a Todo/Calendar app. The single exported function `exports.api` in `functions/index.js` is an Express app mounted as an HTTPS handler.
+This is a **Firebase Cloud Functions** backend (Node.js 22) serving a Todo/Calendar app. The single exported function `exports.api` in `functions/index.js` is an Express app mounted as an HTTPS handler.
 
 ### Layer Structure
 
