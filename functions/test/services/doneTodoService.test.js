@@ -170,8 +170,16 @@ describe("DoneTodoService", () => {
             await service.removeDoneTodo('id:3')
             const all = await service.loadDoneTodos('owner', 10)
             assert.deepEqual(
-                all.map(d => d.uuid), 
+                all.map(d => d.uuid),
                 ['id:9', 'id:8', 'id:7', 'id:6', 'id:5', 'id:4', 'id:2', 'id:1', 'id:0']
+            )
+        })
+
+        it('removes associated done detail too', async () => {
+            await service.removeDoneTodo('id:3')
+            assert.deepEqual(
+                stubDoneTodoDetailRepository.didRemoveDoneTodoDetailIds,
+                ['id:3']
             )
         })
 
