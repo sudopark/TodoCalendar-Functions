@@ -28,7 +28,8 @@ class DoneTodoService {
     }
 
     async removeDoneTodo(doneEventId) {
-        return this.doneTodoRepository.removeDoneTodo(doneEventId)
+        await this.doneTodoRepository.removeDoneTodo(doneEventId)
+        await this.eventDetailService.removeDoneTodoDetails([doneEventId])
     }
 
     async revertDoneTodo(userId, doneEventId) {
@@ -48,7 +49,7 @@ class DoneTodoService {
     async #runRevertDoneTodo(userId, doneEventId) {
         const doneTodo = await this.doneTodoRepository.loadDoneTodo(doneEventId)
         const payload = this.#revertTodoPayload(doneTodo, userId)
-        const revertTodo = this.todoService.makeTodo(userId, payload)
+        const revertTodo = await this.todoService.makeTodo(userId, payload)
         await this.doneTodoRepository.removeDoneTodo(doneEventId)
         return revertTodo
     }
@@ -71,10 +72,10 @@ class DoneTodoService {
 
     #revertTodoPayload(done, userId) {
         return {
-            userId: userId, 
-            name: done.name, 
-            event_tag_id: done.event_tag_id, 
-            event_time: done.event_time, 
+            userId: userId,
+            name: done.name,
+            event_tag_id: done.event_tag_id,
+            event_time: done.event_time ? done.event_time.toJSON() : null,
             notification_options: done.notification_options
         }
     }

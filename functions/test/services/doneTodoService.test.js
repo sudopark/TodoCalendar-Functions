@@ -170,8 +170,16 @@ describe("DoneTodoService", () => {
             await service.removeDoneTodo('id:3')
             const all = await service.loadDoneTodos('owner', 10)
             assert.deepEqual(
-                all.map(d => d.uuid), 
+                all.map(d => d.uuid),
                 ['id:9', 'id:8', 'id:7', 'id:6', 'id:5', 'id:4', 'id:2', 'id:1', 'id:0']
+            )
+        })
+
+        it('removes associated done detail too', async () => {
+            await service.removeDoneTodo('id:3')
+            assert.deepEqual(
+                stubDoneTodoDetailRepository.didRemoveDoneTodoDetailIds,
+                ['id:3']
             )
         })
 
@@ -220,6 +228,29 @@ describe("DoneTodoService", () => {
             assert.deepEqual(result.todo.uuid, 'new')
             assert.deepEqual(result.detail.eventId, 'new')
             assert.deepEqual(spyDoneRepository.didRemovedDoneEventId, 'some')
+        })
+
+        it('makeTodo payload event_time is plain object, not EventTime instance', async () => {
+            await service.revertDoneTodoV2('owner', 'some')
+            const eventTime = spyTodoRepository.lastMakeTodoPayload?.event_time
+            assert.notStrictEqual(eventTime, undefined, 'event_time should be present')
+            assert.notStrictEqual(eventTime, null, 'event_time should be non-null')
+            assert.strictEqual(
+                eventTime.constructor?.name,
+                'Object',
+                'event_time must be plain object so firestore can serialize it'
+            )
+        })
+
+        it('makeTodo rejection propagates without unhandled rejection', async () => {
+            spyTodoRepository.shouldFailMakeTodo = true
+
+            const caught = await service.revertDoneTodoV2('owner', 'some').then(
+                () => ({ ok: true }),
+                err => ({ ok: false, err })
+            )
+            assert.strictEqual(caught.ok, false, 'rejection should reach the caller')
+            assert.strictEqual(caught.err?.message, 'failed')
         })
 
         // revert done todo fail

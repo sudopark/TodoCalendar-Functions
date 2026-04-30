@@ -6,7 +6,7 @@ TodoCalendar 앱의 Firebase Cloud Functions 백엔드 (REST API).
 
 ## Tech Stack
 
-- **Runtime:** Node.js 20 (Firebase Cloud Functions)
+- **Runtime:** Node.js 22 (Firebase Cloud Functions)
 - **Framework:** Express.js
 - **Database:** Cloud Firestore
 - **Auth:** Firebase Authentication
@@ -49,7 +49,7 @@ functions/
 
 ### 사전 요구사항
 
-- Node.js 20+
+- Node.js 22+
 - Firebase CLI (`npm install -g firebase-tools`)
 - `functions/secrets/` 디렉토리에 서비스 계정 키 및 `.env` 파일 (에뮬레이터 모드에서는 불필요)
 
