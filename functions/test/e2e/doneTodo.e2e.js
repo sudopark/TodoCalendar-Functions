@@ -87,5 +87,35 @@ describe('DoneTodo API', function () {
                 assert.strictEqual(res.status, 201);
             });
         });
+
+        describe('DELETE /v2/todos/dones/:id', function () {
+            it('should delete done todo and its associated detail', async function () {
+                const todoRes = await authedClient().post('/v2/todos/todo', {
+                    name: 'V2 Delete Done Todo with Detail'
+                });
+                const todoId = todoRes.data.uuid;
+
+                await authedClient().put(`/v1/event_details/${todoId}`, {
+                    memo: 'detail memo',
+                    place: { place_name: 'home' }
+                });
+
+                const doneRes = await authedClient().post(`/v2/todos/todo/${todoId}/complete`, {
+                    origin: todoRes.data
+                });
+                const doneId = doneRes.data.done.uuid;
+
+                const beforeDelete = await authedClient().get(`/v1/event_details/done/${doneId}`);
+                assert.strictEqual(beforeDelete.data.memo, 'detail memo', 'precondition: done detail should exist');
+
+                const deleteRes = await authedClient().delete(`/v2/todos/dones/${doneId}`);
+                assert.strictEqual(deleteRes.status, 200);
+                assert.strictEqual(deleteRes.data.status, 'ok');
+
+                const afterDelete = await authedClient().get(`/v1/event_details/done/${doneId}`);
+                assert.strictEqual(afterDelete.data.memo, undefined, 'done detail should be removed');
+                assert.strictEqual(afterDelete.data.place, undefined, 'done detail should be removed');
+            });
+        });
     });
 });

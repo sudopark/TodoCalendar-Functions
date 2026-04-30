@@ -28,7 +28,8 @@ class DoneTodoService {
     }
 
     async removeDoneTodo(doneEventId) {
-        return this.doneTodoRepository.removeDoneTodo(doneEventId)
+        await this.doneTodoRepository.removeDoneTodo(doneEventId)
+        await this.eventDetailService.removeDoneTodoDetails([doneEventId])
     }
 
     async revertDoneTodo(userId, doneEventId) {
