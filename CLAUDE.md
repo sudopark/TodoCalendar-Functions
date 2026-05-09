@@ -134,5 +134,5 @@ test/e2e/
 `functions/secrets/` (gitignore 처리, `.env.test.example`만 예외 커밋):
 - `todocalendar-serviceAccountKey.json`: 프로덕션 Firebase Admin 인증서 (프로덕션에서만 필요)
 - `.env`: 프로덕션 환경변수 (`HOLIDAY_API_KEY`, `OPENAPI_PAT_MCP`, `SIGNING_SECRET` 등)
-- `.env.test`: 에뮬레이터/E2E 전용 환경변수. 프로덕션 `.env` 와 **값이 절대 같지 않게** dummy/random 으로 운용 (보안 분리). 에뮬레이터 모드에서 `index.js` 가 자동 로드. 누락 시 dotenv silent fail (CI 등은 직접 `process.env` 주입 가능)
-- `.env.test.example`: `.env.test` 템플릿. 새 시크릿 키 추가 시 같이 갱신.
+- `.env.test`: 에뮬레이터/E2E 전용 환경변수 (gitignored). 프로덕션 `.env` 와 **값이 절대 같지 않게** dummy/random 으로 운용 (보안 분리). 에뮬레이터 모드에서 `index.js` 가 자동 로드. 가장 빠른 셋업: `cp secrets/.env.test.example secrets/.env.test` 한 번이면 동작 (template 에 dummy 값이 박혀 있음). 값을 바꾸고 싶을 때만 직접 수정.
+- `.env.test.example`: `.env.test` 템플릿 (커밋 대상). 알려진 dummy hex pattern (`deadbeef.../cafebabe...`) 이 박혀 있어 그대로 복사만 해도 동작 가능. 새 시크릿 키 추가 시 함께 갱신 + dummy 값까지 같이 박을 것.
