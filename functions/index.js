@@ -38,6 +38,14 @@ const holidayRouter = require('./routes/holidayRoutes');
 const syncRouter = require('./routes/dataSyncRoutes.js');
 const testRouter = require('./routes/testRoutes');
 
+const todoOpenRouter = require('./routes/openapi/todoOpenRoutes');
+const doneTodoOpenRouter = require('./routes/openapi/doneTodoOpenRoutes');
+const scheduleOpenRouter = require('./routes/openapi/scheduleOpenRoutes');
+const tagOpenRouter = require('./routes/openapi/tagOpenRoutes');
+const eventDetailOpenRouter = require('./routes/openapi/eventDetailOpenRoutes');
+const patAuth = require('./middlewares/openapi/patAuth');
+const signedUserAuth = require('./middlewares/openapi/signedUserAuth');
+
 const logger = require("firebase-functions/logger");
 
 const app = express();
@@ -74,6 +82,15 @@ app.use('/v1/setting', authValidator, setVersion('v1'), settingRouter);
 app.use('/v1/holiday', setVersion('v1'), holidayRouter);
 app.use('/v1/sync', authValidator, setVersion('v1'), syncRouter);
 // app.use('/v1/tests', v1TestRouter);
+
+// openAPI (/v2/open/*) — PAT (서비스 식별) + signed user JWT (사용자 식별) + scope 인가
+// dones 가 todos 보다 먼저 mount: '/v2/open/todos/dones/...' 가 '/v2/open/todos' 의 prefix 매칭으로 흡수되지 않게.
+const openApiAuth = [patAuth, signedUserAuth, setVersion('v2')];
+app.use('/v2/open/todos/dones', openApiAuth, doneTodoOpenRouter);
+app.use('/v2/open/todos', openApiAuth, todoOpenRouter);
+app.use('/v2/open/schedules', openApiAuth, scheduleOpenRouter);
+app.use('/v2/open/tags', openApiAuth, tagOpenRouter);
+app.use('/v2/open/event_details', openApiAuth, eventDetailOpenRouter);
 
 // request logging
 const requestLogger = (gen) => (req, res, next) => {
