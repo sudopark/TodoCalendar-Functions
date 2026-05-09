@@ -2216,6 +2216,499 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
+  # ──────────────── OpenAPI Todos (/v2/open/todos) ────────────────
+  /v2/open/todos/:
+    get:
+      tags: [OpenAPI Todos]
+      summary: "[openAPI] Get todos by time range or current todos"
+      description: "If both lower and upper provided, returns todos in range. Otherwise current todos."
+      security:
+        - OpenApiPat: []
+          OpenApiUserToken: []
+      parameters:
+        - name: lower
+          in: query
+          schema: { type: number }
+        - name: upper
+          in: query
+          schema: { type: number }
+      responses:
+        '200':
+          description: List of todos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Todo'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      tags: [OpenAPI Todos]
+      summary: "[openAPI] Create a new todo"
+      security:
+        - OpenApiPat: []
+          OpenApiUserToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TodoInput'
+      responses:
+        '201':
+          description: Todo created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Todo'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /v2/open/todos/uncompleted:
+    get:
+      tags: [OpenAPI Todos]
+      summary: "[openAPI] Get uncompleted todos"
+      security:
+        - OpenApiPat: []
+          OpenApiUserToken: []
+      parameters:
+        - name: refTime
+          in: query
+          required: true
+          schema: { type: number }
+          description: Reference timestamp for filtering
+      responses:
+        '200':
+          description: List of uncompleted todos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Todo'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /v2/open/todos/{id}:
+    get:
+      tags: [OpenAPI Todos]
+      summary: "[openAPI] Get a specific todo"
+      security:
+        - OpenApiPat: []
+          OpenApiUserToken: []
+      parameters:
+        - $ref: '#/components/parameters/TodoId'
+      responses:
+        '200':
+          description: Todo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Todo'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [OpenAPI Todos]
+      summary: "[openAPI] Replace a todo (full update)"
+      security:
+        - OpenApiPat: []
+          OpenApiUserToken: []
+      parameters:
+        - $ref: '#/components/parameters/TodoId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TodoInput'
+      responses:
+        '201':
+          description: Todo updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Todo'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    patch:
+      tags: [OpenAPI Todos]
+      summary: "[openAPI] Partial update a todo"
+      security:
+        - OpenApiPat: []
+          OpenApiUserToken: []
+      parameters:
+        - $ref: '#/components/parameters/TodoId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TodoPatchInput'
+      responses:
+        '201':
+          description: Todo updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Todo'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    delete:
+      tags: [OpenAPI Todos]
+      summary: "[openAPI] Delete a todo (200)"
+      security:
+        - OpenApiPat: []
+          OpenApiUserToken: []
+      parameters:
+        - $ref: '#/components/parameters/TodoId'
+      responses:
+        '200':
+          description: Todo deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusOk'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /v2/open/todos/{id}/complete:
+    post:
+      tags: [OpenAPI Todos]
+      summary: "[openAPI] Complete a todo"
+      description: "Optionally moves the next repeating occurrence to next_event_time."
+      security:
+        - OpenApiPat: []
+          OpenApiUserToken: []
+      parameters:
+        - $ref: '#/components/parameters/TodoId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [origin]
+              properties:
+                origin:
+                  $ref: '#/components/schemas/Todo'
+                next_event_time:
+                  $ref: '#/components/schemas/EventTime'
+                next_repeating_turn:
+                  type: string
+      responses:
+        '201':
+          description: Todo completed
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [done]
+                properties:
+                  done:
+                    $ref: '#/components/schemas/DoneTodo'
+                  next_repeating:
+                    $ref: '#/components/schemas/Todo'
+                  done_detail:
+                    $ref: '#/components/schemas/EventDetail'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /v2/open/todos/{id}/replace:
+    post:
+      tags: [OpenAPI Todos]
+      summary: "[openAPI] Replace a repeating todo"
+      description: |
+        새 todo 를 만들고, `origin_next_event_time` 이 있으면 origin 을 그 시각으로 업데이트,
+        없으면 origin 을 삭제.
+      security:
+        - OpenApiPat: []
+          OpenApiUserToken: []
+      parameters:
+        - $ref: '#/components/parameters/TodoId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [new]
+              properties:
+                new:
+                  $ref: '#/components/schemas/TodoInput'
+                origin_next_event_time:
+                  $ref: '#/components/schemas/EventTime'
+      responses:
+        '201':
+          description: Todo replaced
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [new_todo]
+                properties:
+                  new_todo:
+                    $ref: '#/components/schemas/Todo'
+                  next_repeating:
+                    $ref: '#/components/schemas/Todo'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  # ──────────────── OpenAPI Schedules (/v2/open/schedules) ────────────────
+  /v2/open/schedules/:
+    get:
+      tags: [OpenAPI Schedules]
+      summary: "[openAPI] Get schedules by time range"
+      security:
+        - OpenApiPat: []
+          OpenApiUserToken: []
+      parameters:
+        - name: lower
+          in: query
+          required: true
+          schema: { type: number }
+        - name: upper
+          in: query
+          required: true
+          schema: { type: number }
+      responses:
+        '200':
+          description: List of schedules
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Schedule'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      tags: [OpenAPI Schedules]
+      summary: "[openAPI] Create a schedule"
+      security:
+        - OpenApiPat: []
+          OpenApiUserToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScheduleInput'
+      responses:
+        '201':
+          description: Schedule created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Schedule'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /v2/open/schedules/{id}:
+    get:
+      tags: [OpenAPI Schedules]
+      summary: "[openAPI] Get a schedule"
+      security:
+        - OpenApiPat: []
+          OpenApiUserToken: []
+      parameters:
+        - $ref: '#/components/parameters/ScheduleId'
+      responses:
+        '200':
+          description: Schedule
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Schedule'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [OpenAPI Schedules]
+      summary: "[openAPI] Replace a schedule (full update)"
+      security:
+        - OpenApiPat: []
+          OpenApiUserToken: []
+      parameters:
+        - $ref: '#/components/parameters/ScheduleId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScheduleInput'
+      responses:
+        '201':
+          description: Schedule updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Schedule'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    patch:
+      tags: [OpenAPI Schedules]
+      summary: "[openAPI] Partial update a schedule"
+      security:
+        - OpenApiPat: []
+          OpenApiUserToken: []
+      parameters:
+        - $ref: '#/components/parameters/ScheduleId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SchedulePatchInput'
+      responses:
+        '201':
+          description: Schedule updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Schedule'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    delete:
+      tags: [OpenAPI Schedules]
+      summary: "[openAPI] Delete a schedule (201)"
+      description: "schedules.DELETE 는 201 — 다른 DELETE 들과 다름 (v1/v2 schedule 동작 일치)."
+      security:
+        - OpenApiPat: []
+          OpenApiUserToken: []
+      parameters:
+        - $ref: '#/components/parameters/ScheduleId'
+      responses:
+        '201':
+          description: Schedule deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusOk'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /v2/open/schedules/{id}/exclude:
+    patch:
+      tags: [OpenAPI Schedules]
+      summary: "[openAPI] Exclude a single repeating occurrence (200)"
+      security:
+        - OpenApiPat: []
+          OpenApiUserToken: []
+      parameters:
+        - $ref: '#/components/parameters/ScheduleId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [exclude_repeatings]
+              properties:
+                exclude_repeatings:
+                  type: number
+                  description: Timestamp to exclude
+      responses:
+        '200':
+          description: Schedule updated with new exclude
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Schedule'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      tags: [OpenAPI Schedules]
+      summary: "[openAPI] Make new schedule + exclude original repeating time (201)"
+      security:
+        - OpenApiPat: []
+          OpenApiUserToken: []
+      parameters:
+        - $ref: '#/components/parameters/ScheduleId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [new, exclude_repeatings]
+              properties:
+                new:
+                  $ref: '#/components/schemas/ScheduleInput'
+                exclude_repeatings:
+                  type: number
+      responses:
+        '201':
+          description: New schedule created + origin updated
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [updated_origin, new_schedule]
+                properties:
+                  updated_origin:
+                    $ref: '#/components/schemas/Schedule'
+                  new_schedule:
+                    $ref: '#/components/schemas/Schedule'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /v2/open/schedules/{id}/branch_repeating:
+    post:
+      tags: [OpenAPI Schedules]
+      summary: "[openAPI] Branch a repeating schedule (201)"
+      description: |
+        origin schedule 의 repeating 을 `end_time` 까지로 자르고, 그 이후를 새 schedule 로 분기.
+        **알려진 이슈 #178**: service 가 모델 인스턴스를 putEvent 에 그대로 전달해 Firestore
+        가 reject — 현재 500 반환. 수정 후 본 스펙대로 동작 예정.
+      security:
+        - OpenApiPat: []
+          OpenApiUserToken: []
+      parameters:
+        - $ref: '#/components/parameters/ScheduleId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [new, end_time]
+              properties:
+                new:
+                  $ref: '#/components/schemas/ScheduleInput'
+                end_time:
+                  type: number
+                  description: End timestamp for the original repeating
+      responses:
+        '201':
+          description: Branch created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [new, origin]
+                properties:
+                  new:
+                    $ref: '#/components/schemas/Schedule'
+                  origin:
+                    $ref: '#/components/schemas/Schedule'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
 components:
   securitySchemes:
     BearerAuth:
