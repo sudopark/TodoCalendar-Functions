@@ -4,6 +4,11 @@
 process.env.FIRESTORE_EMULATOR_HOST = '127.0.0.1:8080';
 process.env.FIREBASE_AUTH_EMULATOR_HOST = '127.0.0.1:9099';
 
+// openAPI E2E 는 PAT(OPENAPI_PAT_*) / JWT 서명키(SIGNING_SECRET) 를 테스트 프로세스에서
+// 직접 읽어 클라이언트 토큰을 만든다. functions 프로세스(에뮬레이터)와 같은 .env.test 를
+// 읽어 양쪽이 동일한 값으로 동기화되게 한다.
+require('dotenv').config({ path: './secrets/.env.test' });
+
 const admin = require('firebase-admin');
 const axios = require('axios');
 const { setAuthToken } = require('./helpers/request');
