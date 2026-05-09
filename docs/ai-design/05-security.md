@@ -34,6 +34,11 @@
 - [ ] aiFrontAPI는 lib 정확한 버전 핀 (semver major bump 시 호환 통합 테스트)
 - [ ] 알고리즘 confusion 방어 — `algorithms: ['HS256']` 명시 (HS256 토큰을 RS256으로 위조 시도 차단)
 
+### openAPI 발급자(issuer) 무관 검증 정책
+- [ ] openAPI 의 JWT 미들웨어 (`signedUserAuth`) 는 `iss` claim 검증하지 않는다. 신뢰 근거는 **공유 비밀키 (`SIGNING_SECRET`) 로 만든 HS256 서명** 자체. 토큰을 누가 발급했는지 (aiFrontAPI / MCP 가 외부 OAuth 브릿지 역할로 재서명) openAPI 는 알 필요/권한 없음
+- [ ] 외부 OAuth 통합 (3단계) 시에도 모든 토큰이 **같은 입구로** 들어오게 — 외부 RS256 access_token 은 MCP 가 자체 비밀키로 HS256 으로 re-sign 해 forward. openAPI 코드는 발급자 추가/변경에 영향 없음
+- [ ] 발급자별 차단/라우팅이 필요하면 그 책임은 토큰을 **발급·재서명하는 상위 계층** (MCP / aiFrontAPI) 의 것 — openAPI 안에 분기 두지 말 것 (algorithm confusion 위험·코드 단순성 양면에서 손해)
+
 ## 우선순위: 중간 (출시 전)
 
 ### PAT 관리

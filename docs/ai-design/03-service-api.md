@@ -51,6 +51,7 @@ functions/
 - [ ] PAT 검증 미들웨어 (MCP Server → openAPI 호출 인증)
 - [ ] 서명된 userId 토큰 검증 (어떤 유저의 데이터인지)
 - [ ] PAT 권한 스코프 정의 (계정 삭제 등 민감 작업 제외)
+- [ ] **JWT 검증은 SIGNING_SECRET 기반 HS256 서명 검증만 — 발급자(`iss` claim) 검증 안 함.** 들어오는 토큰이 aiFrontAPI 가 발급한 것이든 MCP 가 외부 OAuth 브릿지 역할로 재서명한 것이든 같은 입구로 받아 처리한다. 발급자별 분기/라우팅은 토큰을 발급·재서명하는 상위 계층(MCP/aiFrontAPI) 책임. openAPI 코드는 발급자 추가/변경에 영향 없음.
 
 #### 3.1.3 보안
 - [ ] PAT를 환경변수로 관리, 코드 노출 금지
