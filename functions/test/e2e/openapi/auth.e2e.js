@@ -31,6 +31,9 @@ describe('openAPI auth/scope 실패', function () {
         });
 
         it('시크릿 불일치 (정상 prefix, 잘못된 secret) → 401', async function () {
+            // secret 부분(`wrongsecret...xxxxxxx`)을 64자로 맞춘다 — 정상 secret(`deadbeef...`) 길이와 동일.
+            // crypto.timingSafeEqual 은 length 가 다르면 미리 false 반환하므로, 실제 timing-safe
+            // 비교 단계에 도달해 "내용만 다름" 케이스를 검증하려면 길이를 일치시켜야 한다.
             const client = openClient({
                 pat: 'mcp_wrongsecretwrongsecretwrongsecretwrongsecretwrongsecretxxxxxxx',
                 userToken: fullScopeUserToken()
