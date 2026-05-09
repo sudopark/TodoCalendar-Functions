@@ -124,8 +124,8 @@ test/e2e/
 - `index.js`는 `FUNCTIONS_EMULATOR` 환경변수로 에뮬레이터/프로덕션 초기화를 분기
 
 **환경 분기 (`index.js`):**
-- 에뮬레이터 모드(`FUNCTIONS_EMULATOR=true`): `initializeApp()` — secrets 파일 불필요
-- 프로덕션 모드: 기존 서비스 계정 키 기반 초기화
+- 에뮬레이터 모드(`FUNCTIONS_EMULATOR=true`): `initializeApp()` (서비스 계정 키 불필요) + `secrets/.env.test` 로드
+- 프로덕션 모드: 서비스 계정 키 기반 초기화 + `secrets/.env` 로드
 
 **포트:** Auth(9099), Functions(5001), Firestore(8080)
 
@@ -135,4 +135,8 @@ test/e2e/
 
 ### Secrets
 
-`functions/secrets/` contains `todocalendar-serviceAccountKey.json` and `.env`. These files are not committed and must be present locally to run the app (not needed for emulator mode).
+`functions/secrets/` (gitignore 처리, `.env.test.example`만 예외 커밋):
+- `todocalendar-serviceAccountKey.json`: 프로덕션 Firebase Admin 인증서 (프로덕션에서만 필요)
+- `.env`: 프로덕션 환경변수 (`HOLIDAY_API_KEY`, `OPENAPI_PAT_MCP`, `SIGNING_SECRET` 등)
+- `.env.test`: 에뮬레이터/E2E 전용 환경변수. 프로덕션 `.env` 와 **값이 절대 같지 않게** dummy/random 으로 운용 (보안 분리). 에뮬레이터 모드에서 `index.js` 가 자동 로드. 누락 시 dotenv silent fail (CI 등은 직접 `process.env` 주입 가능)
+- `.env.test.example`: `.env.test` 템플릿. 새 시크릿 키 추가 시 같이 갱신.

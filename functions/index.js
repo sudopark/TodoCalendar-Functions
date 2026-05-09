@@ -14,6 +14,7 @@ const { getFirestore } = require('firebase-admin/firestore');
 
 const isEmulator = process.env.FUNCTIONS_EMULATOR === 'true';
 if (isEmulator) {
+    require('dotenv').config({ path: './secrets/.env.test' });
     initializeApp();
 } else {
     const serviceAccount = require('./secrets/todocalendar-serviceAccountKey.json');
