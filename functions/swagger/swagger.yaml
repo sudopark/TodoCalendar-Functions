@@ -1869,6 +1869,353 @@ paths:
               schema:
                 $ref: '#/components/schemas/SyncResponse'
 
+  # ──────────────── OpenAPI EventTags (/v2/open/tags) ────────────────
+  /v2/open/tags/:
+    get:
+      tags: [OpenAPI EventTags]
+      summary: "[openAPI] List all event tags for the signed user"
+      security:
+        - OpenApiPat: []
+          OpenApiUserToken: []
+      responses:
+        '200':
+          description: List of event tags
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EventTag'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      tags: [OpenAPI EventTags]
+      summary: "[openAPI] Create event tag"
+      security:
+        - OpenApiPat: []
+          OpenApiUserToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+                color_hex: { type: string }
+      responses:
+        '201':
+          description: Tag created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventTag'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /v2/open/tags/{id}:
+    put:
+      tags: [OpenAPI EventTags]
+      summary: "[openAPI] Update event tag"
+      security:
+        - OpenApiPat: []
+          OpenApiUserToken: []
+      parameters:
+        - $ref: '#/components/parameters/TagId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+                color_hex: { type: string }
+                skipCheckDuplicationName: { type: boolean }
+      responses:
+        '201':
+          description: Tag updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventTag'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    delete:
+      tags: [OpenAPI EventTags]
+      summary: "[openAPI] Delete event tag (single)"
+      description: |
+        openAPI 는 단건 삭제만 노출. v1/v2 의 `tag_and_events`/`tag_with_events` 같은
+        bulk 삭제는 없음.
+      security:
+        - OpenApiPat: []
+          OpenApiUserToken: []
+      parameters:
+        - $ref: '#/components/parameters/TagId'
+      responses:
+        '200':
+          description: Tag deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusOk'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  # ──────────────── OpenAPI DoneTodos (/v2/open/todos/dones) ────────────────
+  /v2/open/todos/dones/:
+    get:
+      tags: [OpenAPI DoneTodos]
+      summary: "[openAPI] List done todos (paged by done_at desc)"
+      security:
+        - OpenApiPat: []
+          OpenApiUserToken: []
+      parameters:
+        - name: size
+          in: query
+          required: true
+          schema: { type: integer }
+          description: Page size
+        - name: cursor
+          in: query
+          schema: { type: number }
+          description: done_at cursor for pagination (excluding)
+      responses:
+        '200':
+          description: List of done todos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DoneTodo'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /v2/open/todos/dones/{id}:
+    get:
+      tags: [OpenAPI DoneTodos]
+      summary: "[openAPI] Get a done todo"
+      security:
+        - OpenApiPat: []
+          OpenApiUserToken: []
+      parameters:
+        - $ref: '#/components/parameters/DoneTodoId'
+      responses:
+        '200':
+          description: Done todo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DoneTodo'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [OpenAPI DoneTodos]
+      summary: "[openAPI] Update a done todo (200, not 201)"
+      security:
+        - OpenApiPat: []
+          OpenApiUserToken: []
+      parameters:
+        - $ref: '#/components/parameters/DoneTodoId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DoneTodoPatchInput'
+      responses:
+        '200':
+          description: Done todo updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DoneTodo'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    delete:
+      tags: [OpenAPI DoneTodos]
+      summary: "[openAPI] Delete a done todo"
+      security:
+        - OpenApiPat: []
+          OpenApiUserToken: []
+      parameters:
+        - $ref: '#/components/parameters/DoneTodoId'
+      responses:
+        '200':
+          description: Done todo deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusOk'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /v2/open/todos/dones/{id}/revert:
+    post:
+      tags: [OpenAPI DoneTodos]
+      summary: "[openAPI] Revert done todo back to active todo"
+      description: |
+        `revertDoneTodoV2` 사용. 응답에 새로 활성화된 todo 와 함께 옮겨진 detail 도 포함.
+      security:
+        - OpenApiPat: []
+          OpenApiUserToken: []
+      parameters:
+        - $ref: '#/components/parameters/DoneTodoId'
+      responses:
+        '201':
+          description: Reverted
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [todo]
+                properties:
+                  todo:
+                    $ref: '#/components/schemas/Todo'
+                  detail:
+                    allOf:
+                      - $ref: '#/components/schemas/EventDetail'
+                    nullable: true
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  # ──────────────── OpenAPI EventDetails (/v2/open/event_details) ────────────────
+  /v2/open/event_details/{id}:
+    get:
+      tags: [OpenAPI EventDetails]
+      summary: "[openAPI] Get event detail (active)"
+      security:
+        - OpenApiPat: []
+          OpenApiUserToken: []
+      parameters:
+        - $ref: '#/components/parameters/EventId'
+      responses:
+        '200':
+          description: Event detail (active)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventDetail'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [OpenAPI EventDetails]
+      summary: "[openAPI] Upsert event detail (active)"
+      security:
+        - OpenApiPat: []
+          OpenApiUserToken: []
+      parameters:
+        - $ref: '#/components/parameters/EventId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventDetailInput'
+      responses:
+        '201':
+          description: Event detail saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventDetail'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    delete:
+      tags: [OpenAPI EventDetails]
+      summary: "[openAPI] Delete event detail (active)"
+      security:
+        - OpenApiPat: []
+          OpenApiUserToken: []
+      parameters:
+        - $ref: '#/components/parameters/EventId'
+      responses:
+        '200':
+          description: Event detail deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusOk'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /v2/open/event_details/done/{id}:
+    get:
+      tags: [OpenAPI EventDetails]
+      summary: "[openAPI] Get event detail (done)"
+      description: "active 와 별도 컬렉션. 라우트 자체로 isDone=true 분기."
+      security:
+        - OpenApiPat: []
+          OpenApiUserToken: []
+      parameters:
+        - $ref: '#/components/parameters/EventId'
+      responses:
+        '200':
+          description: Event detail (done)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventDetail'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [OpenAPI EventDetails]
+      summary: "[openAPI] Upsert event detail (done)"
+      security:
+        - OpenApiPat: []
+          OpenApiUserToken: []
+      parameters:
+        - $ref: '#/components/parameters/EventId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventDetailInput'
+      responses:
+        '201':
+          description: Event detail saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventDetail'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    delete:
+      tags: [OpenAPI EventDetails]
+      summary: "[openAPI] Delete event detail (done)"
+      security:
+        - OpenApiPat: []
+          OpenApiUserToken: []
+      parameters:
+        - $ref: '#/components/parameters/EventId'
+      responses:
+        '200':
+          description: Event detail deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusOk'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
 components:
   securitySchemes:
     BearerAuth:
