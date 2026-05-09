@@ -65,4 +65,23 @@ describe('openAPI /v2/open/todos', function () {
         assert.strictEqual(res.status, 200);
         assert.deepStrictEqual(res.data, { status: 'ok' });
     });
+
+    it('POST /:id/replace — 반복 todo 교체 (201, origin 은 origin_next_event_time 으로 업데이트)', async function () {
+        const created = await client.post('/v2/open/todos/', {
+            name: 'openAPI E2E Todo (origin)',
+            event_time: { time_type: 'at', timestamp: Math.floor(Date.now() / 1000) + 3600 }
+        });
+        assert.strictEqual(created.status, 201);
+        const originId = created.data.uuid;
+        const res = await client.post(`/v2/open/todos/${originId}/replace`, {
+            new: {
+                name: 'openAPI E2E Todo (replacement)',
+                event_time: { time_type: 'at', timestamp: Math.floor(Date.now() / 1000) + 10800 }
+            },
+            origin_next_event_time: { time_type: 'at', timestamp: Math.floor(Date.now() / 1000) + 7200 }
+        });
+        assert.strictEqual(res.status, 201);
+        assert.ok(res.data.new_todo);
+        assert.ok(res.data.next_repeating);
+    });
 });
