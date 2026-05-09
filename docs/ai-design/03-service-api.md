@@ -58,6 +58,12 @@ functions/
 - [ ] userId 위변조 방지 (서명 검증 필수)
 - [ ] Rate Limit (PAT별, userId별)
 
+#### 3.1.4 알려진 한계 (MVP) — 후속 과제 #173
+- 일부 단건 조회/수정/삭제 엔드포인트가 자원 owner 검증을 하지 않음. 기존 v1/v2 controller 를 그대로 옮긴 결과로, 호출자가 다른 사용자의 식별자(todoId/eventId/doneId/event_detail eventId)만 알면 그 자원에 접근 가능. 내부 클라이언트(앱)는 자기 데이터만 다루니 무방했지만 외부 호출자 환경에서는 닫아야 함.
+- 영향 메서드: `findTodo`, `getEvent`, `loadDoneTodo`, `removeDoneTodo`, `excludeRepeating`, `eventDetail.{findData/putData/removeData}`. 특히 `removeDoneTodo`·event_detail 계열은 service 시그니처 자체가 userId 를 안 받아서 가장 위험.
+- MVP 단계는 호출자(MCP, aiFrontAPI) 가 신뢰 가능한 내부 컴포넌트라 외부 노출 전까지 허용. 사용자 PAT 같은 외부 발급 자격증명이 도입되기 전에 반드시 닫는다.
+- 후속 과제는 #173 — service 응답 모양 전수조사 → owner 검증 정책 정해서 일괄 적용 + E2E 케이스 추가.
+
 ### 3.2 aiFrontAPI 추가
 
 #### 3.2.1 엔드포인트
