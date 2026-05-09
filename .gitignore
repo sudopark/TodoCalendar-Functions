@@ -137,3 +137,6 @@ dist
 
 # AI-generated docs
 docs/superpowers/
+
+# Claude Code worktrees
+.claude/worktrees/
