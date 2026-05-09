@@ -41,6 +41,16 @@ tags:
     description: Public holiday lookup (no auth required)
   - name: DataSync
     description: Incremental data synchronization
+  - name: OpenAPI Todos
+    description: "openAPI todos for external callers (MCP, aiFrontAPI). Auth: PAT + signed user JWT + scope."
+  - name: OpenAPI Schedules
+    description: "openAPI schedules for external callers. Auth: PAT + signed user JWT + scope."
+  - name: OpenAPI EventTags
+    description: "openAPI event tags for external callers. Auth: PAT + signed user JWT + scope."
+  - name: OpenAPI DoneTodos
+    description: "openAPI done todos for external callers. Auth: PAT + signed user JWT + scope."
+  - name: OpenAPI EventDetails
+    description: "openAPI event details for external callers. Auth: PAT + signed user JWT + scope."
 
 security:
   - BearerAuth: []
@@ -1867,6 +1877,25 @@ components:
       bearerFormat: Firebase ID Token
       description: Firebase Authentication ID token
 
+    OpenApiPat:
+      type: http
+      scheme: bearer
+      bearerFormat: "<service>_<secret>"
+      description: |
+        openAPI 호출 서비스 식별 토큰. 형식 `Bearer <prefix>_<secret>`.
+        MVP 화이트리스트는 `mcp` 한 종류. secret 부분이 운영 환경변수 `OPENAPI_PAT_<SERVICE>` (env 에는 prefix 없이 secret 만) 와 timing-safe 비교된다.
+        검증: middlewares/openapi/patAuth.js.
+
+    OpenApiUserToken:
+      type: apiKey
+      in: header
+      name: x-open-user-token
+      description: |
+        openAPI 사용자 식별 JWT (HS256). aiFrontAPI 가 발급, openAPI 가 검증.
+        payload: `{ sub: <userId>, scope: ['read:calendar' | 'write:calendar', ...] }`.
+        issuer-agnostic 정책으로 `iss` 는 검증하지 않음.
+        검증: middlewares/openapi/signedUserAuth.js.
+
   parameters:
     TodoId:
       name: id
@@ -2315,3 +2344,13 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
+    Forbidden:
+      description: 권한(스코프) 부족 — openAPI 라우트에서만 발생
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            status: 403
+            code: InsufficientScope
+            message: "Insufficient scope"
