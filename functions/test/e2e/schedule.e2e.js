@@ -112,7 +112,7 @@ describe('Schedule API', function () {
                 originId = created.data.uuid;
             });
 
-            it('origin의 repeating.end를 갱신하고 새 분기 schedule 생성 (issue #178 회귀)', async function () {
+            it('should update origin repeating.end and create branched schedule (issue #178 regression)', async function () {
                 const endTime = futureTimestamp + 3600;
                 const res = await authedClient().post(`/v2/schedules/schedule/${originId}/branch_repeating`, {
                     end_time: endTime,
