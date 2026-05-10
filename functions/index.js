@@ -57,7 +57,9 @@ const setVersion = (version) => {
 };
 
 app.use("/v1/accounts", setVersion('v1'), accountRouter);
+app.use("/v2/accounts", setVersion('v2'), accountRouter);
 app.use('/v1/user', authValidator, setVersion('v1'), userRouter);
+app.use('/v2/user', authValidator, setVersion('v2'), userRouter);
 app.use("/v1/todos", authValidator, setVersion('v1'), todoRouter);
 app.use("/v2/todos", authValidator, setVersion('v2'), todoRouter);
 app.use('/v1/todos/dones', authValidator, setVersion('v1'), doneTodoRouter);
@@ -65,13 +67,19 @@ app.use('/v2/todos/dones', authValidator, setVersion('v2'), doneTodoRouter);
 app.use("/v1/schedules", authValidator, setVersion('v1'), scheduleRouter);
 app.use("/v2/schedules", authValidator, setVersion('v2'), scheduleRouter);
 app.use("/v1/foremost", authValidator, setVersion('v1'), foremostEventRouter);
+app.use("/v2/foremost", authValidator, setVersion('v2'), foremostEventRouter);
 app.use('/v1/tags', authValidator, setVersion('v1'), eventTagRouter);
 app.use('/v2/tags', authValidator, setVersion('v2'), eventTagRouter);
 app.use('/v1/event_details', authValidator, setVersion('v1'), eventDetailRouter);
+app.use('/v2/event_details', authValidator, setVersion('v2'), eventDetailRouter);
 app.use('/v1/migration', authValidator, setVersion('v1'), migrationRouter);
+app.use('/v2/migration', authValidator, setVersion('v2'), migrationRouter);
 app.use('/v1/setting', authValidator, setVersion('v1'), settingRouter);
+app.use('/v2/setting', authValidator, setVersion('v2'), settingRouter);
 app.use('/v1/holiday', setVersion('v1'), holidayRouter);
+app.use('/v2/holiday', setVersion('v2'), holidayRouter);
 app.use('/v1/sync', authValidator, setVersion('v1'), syncRouter);
+app.use('/v2/sync', authValidator, setVersion('v2'), syncRouter);
 // app.use('/v1/tests', v1TestRouter);
 
 // request logging
