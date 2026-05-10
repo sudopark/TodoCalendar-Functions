@@ -41,7 +41,7 @@ This is a **Firebase Cloud Functions** backend (Node.js 22) serving a Todo/Calen
 routes/ → controllers/ → services/ → repositories/
 ```
 
-- **Routes** (`routes/`): Express routers that also act as **composition roots** — they instantiate and wire together all dependencies (repositories, services, controllers) via constructor injection. There is no DI container.
+- **Routes** (`routes/`): Express routers that also act as **composition roots** — they instantiate and wire together all dependencies (repositories, services, controllers) via constructor injection. There is no DI container. **환경/구성 분기도 여기서만**: `process.env.FUNCTIONS_EMULATOR === 'true'` 같은 emulator/production 분기는 routes(또는 `index.js` 부트스트랩)에서 처리하고, 도메인 레이어(repository/service)는 환경에 무지하게 유지. 환경별 대체 구현은 `repositories/fakes/` 같은 격리된 디렉토리에 두고 routes에서 주입. 예: `routes/holidayRoutes.js`가 emulator일 때 `FakeHolidayRepository`를 주입해 외부 Google Calendar 호출 차단 (PR #187, issue #183).
 - **Controllers** (`controllers/`): Handle HTTP request/response, validate required params, and wrap errors in `Errors.Application`. Use `express-async-errors` so async throws are caught automatically.
 - **Services** (`services/`): Business logic. Services receive their dependencies injected; never instantiate repositories themselves.
 - **Repositories** (`repositories/`): Firestore read/write. Return domain model instances (e.g., `Todo.fromData(snapshot.id, snapshot.data())`). Firebase Admin SDK is initialized once in `index.js`.
@@ -101,6 +101,8 @@ Tests use **Mocha + assert** (Node.js built-in). Test doubles live in `test/doub
 
 **Test double policy — recorders, not validators**: stubs/spies record raw inputs (e.g., `lastPutPayload`) so test cases can assert on them directly. Never bake validation/throw logic into the stub itself — that turns it into a mock and scatters test intent into the double. To catch a regression, expose what the production code actually passes and let the test case verify it. Example: PR #184 (issue #178) — `StubScheduleEventRepository.lastPutPayload` records the raw payload so the test can assert `Object.getPrototypeOf(payload) === Object.prototype`, instead of having the stub throw on custom-prototype inputs.
 
+**Fake/대체 구현 위치 — `repositories/fakes/`로 격리**: emulator runtime이 require해야 하는 fake(예: 외부 API 호출 차단용)는 `test/`에 둘 수 없음 — e2e가 mocha 프로세스에서 firebase emulator가 띄운 함수 프로세스를 외부 호출하는 구조라, fake가 함수 프로세스의 require 경로 안(=production-tree)에 있어야 함. 이때는 `repositories/fakes/` 같은 격리된 디렉토리에 두어 production-tree 안이지만 fake임이 한눈에 드러나게 함. 테스트 코드에서만 쓰는 stub/spy(`test/doubles/`)와 emulator runtime용 fake(`repositories/fakes/`)는 위치/역할이 다름. 예: `repositories/fakes/holidayRepository.js` (PR #187, issue #183).
+
 Tests are organized in `test/services/`, `test/controllers/`, and `test/models/`. Service tests pass stubs via constructor injection. Controller tests use `stubServices.js` (plain objects, independent of repository model changes).
 
 ### Emulator E2E Testing
@@ -128,7 +130,7 @@ test/e2e/
 **포트:** Auth(9099), Functions(5001), Firestore(8080)
 
 **참고:**
-- Holiday API는 외부 Google Calendar API를 호출하므로 `HOLIDAY_API_KEY` 없으면 500 반환 (E2E 테스트에서 허용 처리)
+- Holiday API는 emulator runtime일 때 `routes/holidayRoutes.js`가 `FakeHolidayRepository`를 주입해 외부 Google Calendar 호출 차단. e2e는 빈 `items: []` 응답을 결정적으로 검증
 - `npm run emulator`/`test:e2e:run` 스크립트는 내부에서 `cd ..`으로 프로젝트 루트 이동 후 firebase CLI 실행 (firebase.json이 루트에 있으므로)
 
 ### Secrets
