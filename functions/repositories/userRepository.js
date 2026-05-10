@@ -8,9 +8,9 @@ const UserDevice = require('../models/UserDevice');
 class UserRepository {
 
     async loadUserDevice(deviceId) {
-        const snapShot = await collectionRef.doc(device).get();
-        const device = new UserDevice.fromData({ deviceId: deviceId, ...snapShot.data() })
-        return device
+        const snapShot = await collectionRef.doc(deviceId).get();
+        if (!snapShot.exists) return null;
+        return UserDevice.fromData({ deviceId, ...snapShot.data() });
     }
 
     async updateUserDevice(device) {
