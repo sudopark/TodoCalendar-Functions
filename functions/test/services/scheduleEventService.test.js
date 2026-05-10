@@ -366,6 +366,17 @@ describe('ScheduleEventService', () => {
             assert.equal(newRange.upper, constants.eventTimeMaxUpperBound);
             assert.equal(newRange.isTodo, false);
         })
+
+        it('origin은 plain object로 변환되어 putEvent에 전달 (Firestore 직렬화 보장)', async () => {
+            await scheduleService.branchNewRepeatingEvent(
+                'owner', 'origin', 200, newPayload
+            )
+            const payload = stubScheduleReopository.lastPutPayload
+            assert.equal(Object.getPrototypeOf(payload), Object.prototype)
+            assert.equal(Object.getPrototypeOf(payload.event_time), Object.prototype)
+            assert.equal(Object.getPrototypeOf(payload.repeating), Object.prototype)
+            assert.equal(payload.repeating.end, 200)
+        })
     })
 
     describe('remove event', () => {

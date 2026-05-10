@@ -95,5 +95,42 @@ describe('Schedule API', function () {
             assert.strictEqual(res.status, 201);
             assert.ok(res.data.uuid);
         });
+
+        describe('POST /v2/schedules/schedule/:id/branch_repeating', function () {
+            let originId;
+
+            beforeEach(async function () {
+                const created = await authedClient().post('/v2/schedules/schedule', {
+                    name: 'Repeating origin',
+                    event_time: { time_type: 'at', timestamp: futureTimestamp },
+                    repeating: {
+                        start: futureTimestamp,
+                        option: { optionType: 'every_day', interval: 1 }
+                    }
+                });
+                assert.strictEqual(created.status, 201);
+                originId = created.data.uuid;
+            });
+
+            it('origin의 repeating.end를 갱신하고 새 분기 schedule 생성 (issue #178 회귀)', async function () {
+                const endTime = futureTimestamp + 3600;
+                const res = await authedClient().post(`/v2/schedules/schedule/${originId}/branch_repeating`, {
+                    end_time: endTime,
+                    new: {
+                        name: 'Branched',
+                        event_time: { time_type: 'at', timestamp: futureTimestamp + 86400 },
+                        repeating: {
+                            start: futureTimestamp + 86400,
+                            option: { optionType: 'every_day', interval: 1 }
+                        }
+                    }
+                });
+                assert.strictEqual(res.status, 201);
+                assert.strictEqual(res.data.origin.uuid, originId);
+                assert.strictEqual(res.data.origin.repeating.end, endTime);
+                assert.strictEqual(res.data.new.name, 'Branched');
+                assert.ok(res.data.new.uuid);
+            });
+        });
     });
 });
