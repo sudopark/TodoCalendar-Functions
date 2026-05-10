@@ -3,7 +3,7 @@ const { publicClient, authedClient } = require('./helpers/request');
 
 describe('Holiday API', function () {
     describe('GET /v1/holiday/', function () {
-        it('should return empty holiday payload without auth in emulator', async function () {
+        it('returns empty payload when emulator stubs Google Calendar (public)', async function () {
             const res = await publicClient().get('/v1/holiday/', {
                 params: { year: 2026, locale: 'ko_KR', code: 'KR' }
             });
@@ -16,7 +16,7 @@ describe('Holiday API', function () {
             assert.ok(res.status >= 400);
         });
 
-        it('should also work with auth header in emulator', async function () {
+        it('returns empty payload when emulator stubs Google Calendar (authed)', async function () {
             const res = await authedClient().get('/v1/holiday/', {
                 params: { year: 2026, locale: 'en_US', code: 'US' }
             });
