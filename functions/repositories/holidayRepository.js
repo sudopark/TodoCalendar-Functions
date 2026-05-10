@@ -5,6 +5,10 @@ class HolidayRepository {
 
     async getHoliday(calendarId, timeMin, timeMax) {
 
+        if (process.env.FUNCTIONS_EMULATOR === 'true') {
+            return { kind: 'calendar#events', items: [] };
+        }
+
         const apiKey = process.env.HOLIDAY_API_KEY
         if(!apiKey) {
             throw { status: 500, message: 'unavail to load calendar'};
