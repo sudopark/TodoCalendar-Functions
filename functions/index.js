@@ -47,6 +47,7 @@ const patAuth = require('./middlewares/openapi/patAuth');
 const signedUserAuth = require('./middlewares/openapi/signedUserAuth');
 
 const oauthWellKnownRouter = require('./routes/oauth/wellKnownRoutes');
+const oauthRegisterRouter = require('./routes/oauth/registerRoutes');
 
 const logger = require("firebase-functions/logger");
 
@@ -102,8 +103,9 @@ app.use('/v2/open/schedules', openApiAuth, scheduleOpenRouter);
 app.use('/v2/open/tags', openApiAuth, tagOpenRouter);
 app.use('/v2/open/event_details', openApiAuth, eventDetailOpenRouter);
 
-// OAuth 2.1 Authorization Server (#189) — RFC 8414 metadata + JWKS
+// OAuth 2.1 Authorization Server (#189) — RFC 8414 metadata + JWKS + endpoints
 app.use('/.well-known', oauthWellKnownRouter);
+app.use('/v1/oauth/register', oauthRegisterRouter);
 
 // request logging
 const requestLogger = (gen) => (req, res, next) => {
