@@ -171,8 +171,32 @@ class StubAuthorizationCodeRepository {
     }
 }
 
+// MARK: - RateLimit
+
+class StubRateLimitRepository {
+
+    constructor() {
+        this.store = new Map();  // key: `${ip}:${windowSeconds}` → { windowStartMs, count }
+        this.shouldFail = false;
+    }
+
+    async incrementWithinWindow(ip, windowSeconds, now = Date.now()) {
+        if (this.shouldFail) throw { status: 500, message: 'failed' };
+        const key = `${ip}:${windowSeconds}`;
+        const windowStartMs = Math.floor(now / (windowSeconds * 1000)) * (windowSeconds * 1000);
+        const existing = this.store.get(key);
+        if (!existing || existing.windowStartMs !== windowStartMs) {
+            this.store.set(key, { windowStartMs, count: 1 });
+            return 1;
+        }
+        existing.count += 1;
+        return existing.count;
+    }
+}
+
 module.exports = {
     StubOAuthClientRepository,
     StubConsentChallengeRepository,
-    StubAuthorizationCodeRepository
+    StubAuthorizationCodeRepository,
+    StubRateLimitRepository
 };
