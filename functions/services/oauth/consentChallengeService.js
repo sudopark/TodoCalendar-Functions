@@ -85,6 +85,22 @@ class ConsentChallengeService {
         }
         return ch;
     }
+
+    async getConsentInfo(id) {
+        const challenge = await this.getValid(id);
+        const client = await this.clientRepository.findById(challenge.clientId);
+        if (!client) {
+            throw new Errors.Base(500, 'InconsistentState', 'Challenge references unknown client');
+        }
+        return { challenge, client };
+    }
+
+    async markUsed(id) {
+        const transitioned = await this.repository.markUsed(id);
+        if (!transitioned) {
+            throw new Errors.Base(400, 'InvalidChallenge', 'used');
+        }
+    }
 }
 
 module.exports = ConsentChallengeService;

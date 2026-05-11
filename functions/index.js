@@ -55,6 +55,7 @@ const logger = require("firebase-functions/logger");
 const app = express();
 // app use middleware
 app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: false }));
 
 // swagger
 const swagger = require('./swagger');
@@ -105,9 +106,10 @@ app.use('/v2/open/tags', openApiAuth, tagOpenRouter);
 app.use('/v2/open/event_details', openApiAuth, eventDetailOpenRouter);
 
 // OAuth 2.1 Authorization Server (#189) — RFC 8414 metadata + JWKS + endpoints
+// register 가 먼저 mount (path 우선순위). authorize/consent 는 /v1/oauth 아래 묶음.
 app.use('/.well-known', oauthWellKnownRouter);
 app.use('/v1/oauth/register', oauthRegisterRouter);
-app.use('/v1/oauth/authorize', oauthAuthorizeRouter);
+app.use('/v1/oauth', oauthAuthorizeRouter);
 
 // request logging
 const requestLogger = (gen) => (req, res, next) => {
