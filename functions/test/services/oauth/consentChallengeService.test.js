@@ -202,4 +202,50 @@ describe('services/oauth/ConsentChallengeService', () => {
             );
         });
     });
+
+    describe('getConsentInfo', () => {
+
+        it('정상 → { challenge, client } 반환', async () => {
+            const issued = await svc.issue(VALID_INPUT);
+            const { challenge, client } = await svc.getConsentInfo(issued.id);
+            assert.strictEqual(challenge.id, issued.id);
+            assert.strictEqual(client.id, 'client-1');
+            assert.strictEqual(client.clientName, 'Claude');
+        });
+
+        it('challenge invalid → throw (getValid 위임)', async () => {
+            await assert.rejects(
+                () => svc.getConsentInfo('does-not-exist'),
+                e => e.code === 'InvalidChallenge'
+            );
+        });
+
+        it('challenge 정상인데 client 삭제됨 → 500 InconsistentState', async () => {
+            const issued = await svc.issue(VALID_INPUT);
+            clientRepo.store.delete('client-1');
+            await assert.rejects(
+                () => svc.getConsentInfo(issued.id),
+                e => e.status === 500 && e.code === 'InconsistentState'
+            );
+        });
+    });
+
+    describe('markUsed', () => {
+
+        it('정상 → repo.markUsed 호출 (이후 isValid=false)', async () => {
+            const issued = await svc.issue(VALID_INPUT);
+            await svc.markUsed(issued.id);
+            const found = await challengeRepo.findById(issued.id);
+            assert.strictEqual(found.used, true);
+        });
+
+        it('이미 used → 400 InvalidChallenge used', async () => {
+            const issued = await svc.issue(VALID_INPUT);
+            await svc.markUsed(issued.id);
+            await assert.rejects(
+                () => svc.markUsed(issued.id),
+                e => e.status === 400 && e.code === 'InvalidChallenge' && e.message === 'used'
+            );
+        });
+    });
 });
