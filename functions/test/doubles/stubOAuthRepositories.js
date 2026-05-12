@@ -19,14 +19,10 @@ class StubOAuthClientRepository {
         if (this.shouldFailCreate) throw { status: 500, message: 'failed' };
         const id = this.nextId ?? `client-${this.store.size + 1}`;
         this.nextId = null;
-        const docData = {
-            ...plainData,
-            createdAt: plainData.createdAt ?? Date.now(),
-            lastUsedAt: plainData.lastUsedAt ?? null
-        };
+        const docData = { ...plainData };
         this.store.set(id, docData);
         this.lastCreatedPayload = { id, ...docData };
-        return id;
+        return OAuthClient.fromData(id, docData);
     }
 
     async findById(id) {
@@ -96,10 +92,10 @@ class StubConsentChallengeRepository {
         if (this.shouldFailCreate) throw { status: 500, message: 'failed' };
         const id = this.nextId ?? `challenge-${this.store.size + 1}`;
         this.nextId = null;
-        const docData = { ...plainData, used: plainData.used ?? false };
+        const docData = { ...plainData };
         this.store.set(id, docData);
         this.lastCreatedPayload = { id, ...docData };
-        return id;
+        return ConsentChallenge.fromData(id, docData);
     }
 
     async findById(id) {
@@ -141,10 +137,10 @@ class StubAuthorizationCodeRepository {
         if (this.shouldFailCreate) throw { status: 500, message: 'failed' };
         const id = this.nextId ?? `code-${this.store.size + 1}`;
         this.nextId = null;
-        const docData = { ...plainData, used: plainData.used ?? false };
+        const docData = { ...plainData };
         this.store.set(id, docData);
         this.lastCreatedPayload = { id, ...docData };
-        return id;
+        return AuthorizationCode.fromData(id, docData);
     }
 
     async findById(id) {

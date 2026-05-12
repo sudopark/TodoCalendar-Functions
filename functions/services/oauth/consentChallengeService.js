@@ -67,7 +67,7 @@ class ConsentChallengeService {
         }
 
         const now = Date.now();
-        const id = await this.repository.create({
+        const challenge = await this.repository.create({
             clientId,
             redirectUri,
             codeChallenge,
@@ -82,7 +82,7 @@ class ConsentChallengeService {
 
         await this.clientRepository.markUsed(clientId, now);
 
-        return await this.repository.findById(id);
+        return challenge;
     }
 
     async getValid(id) {

@@ -35,7 +35,7 @@ class OAuthClientService {
             return existing;
         }
 
-        const id = await this.repository.create({
+        return await this.repository.create({
             clientName,
             redirectUris,
             scope: scopeArr,
@@ -46,7 +46,6 @@ class OAuthClientService {
             lastUsedAt: null,
             dedupHash
         });
-        return await this.repository.findById(id);
     }
 
     _validateClientName(name) {

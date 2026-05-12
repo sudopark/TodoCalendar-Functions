@@ -27,7 +27,7 @@ class AuthorizationCodeService {
         }
 
         const now = Date.now();
-        const id = await this.repository.create({
+        return await this.repository.create({
             userId,
             clientId,
             redirectUri,
@@ -39,7 +39,6 @@ class AuthorizationCodeService {
             expiresAt: now + this.ttlSeconds * 1000,
             used: false
         });
-        return await this.repository.findById(id);
     }
 
     async exchange({ code, codeVerifier, redirectUri, clientId, resource }) {
