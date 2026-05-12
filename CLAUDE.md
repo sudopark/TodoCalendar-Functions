@@ -61,6 +61,8 @@ Routes are registered under `/v1/` and `/v2/` prefixes. A `setVersion` middlewar
 
 `middlewares/authMiddleware.js` verifies Firebase ID tokens from the `Authorization: Bearer <token>` header and attaches the decoded token to `req.auth`. Applied to all routes except `/v1/accounts` and `/v1/holiday`.
 
+**OAuth 2.1 Authorization Server** (`/v1/oauth/*` + `/.well-known/*`) 는 별도 라우트 그룹으로 격리 (Firebase Auth 인증 미들웨어 미적용). 외부 OAuth client (LLM 호스트 등) 에게 access_token 발급. 운영 정책은 아래 "OAuth 2.1 Authorization Server 운영 정책" 섹션 참조.
+
 ### Models
 
 Domain model classes live in `models/`. Each has `toJSON()` for serialization (Express auto-calls via `JSON.stringify`) and `fromData(id, data)` for construction from Firestore snapshots. Repositories return model instances, not plain objects.
@@ -140,7 +142,7 @@ test/e2e/
 
 `functions/secrets/` (gitignore 처리, `.env.test.example`만 예외 커밋):
 - `todocalendar-serviceAccountKey.json`: 프로덕션 Firebase Admin 인증서 (프로덕션에서만 필요)
-- `.env`: 프로덕션 환경변수 (`HOLIDAY_API_KEY`, `OPENAPI_PAT_MCP`, `SIGNING_SECRET` 등)
+- `.env`: 프로덕션 환경변수 (`HOLIDAY_API_KEY`, `OPENAPI_PAT_MCP`, `SIGNING_SECRET`, `OAUTH_ISSUER`, `OAUTH_SIGNING_PRIVATE_KEY`, `OAUTH_SIGNING_PUBLIC_KEY`, `OAUTH_CALENDAR_RESOURCE_URI`, `OAUTH_CONSENT_URL` 등)
 - `.env.test`: 에뮬레이터/E2E 전용 환경변수 (gitignored). 프로덕션 `.env` 와 **값이 절대 같지 않게** dummy/random 으로 운용 (보안 분리). 에뮬레이터 모드에서 `index.js` 가 자동 로드. 가장 빠른 셋업: `cp secrets/.env.test.example secrets/.env.test` 한 번이면 동작 (template 에 dummy 값이 박혀 있음). 값을 바꾸고 싶을 때만 직접 수정.
 - `.env.test.example`: `.env.test` 템플릿 (커밋 대상). 알려진 dummy hex pattern (`deadbeef.../cafebabe...`) 이 박혀 있어 그대로 복사만 해도 동작 가능. 새 시크릿 키 추가 시 함께 갱신 + dummy 값까지 같이 박을 것.
 
@@ -168,3 +170,37 @@ test/e2e/
 **로테이션 / 변경**
 - 운영에서 PAT 또는 SIGNING_SECRET 을 바꾸면 호출자(MCP, aiFrontAPI) 도 동시에 갱신해야 함 — 무중단 교체가 필요하면 화이트리스트에 임시로 두 secret 을 모두 허용하는 단계가 필요(현 MVP 미지원, 단기 다운타임 감수).
 - `.env.test.example` dummy 값(`deadbeef...`/`cafebabe...`) 은 절대 운영 secret 으로 쓰지 말 것.
+
+#### OAuth 2.1 Authorization Server 운영 정책 (`/v1/oauth/*`)
+
+별도 라우트 그룹으로 격리 (Firebase Auth 미들웨어 미적용). 첫 RS = MCP server (`sudopark/TodoCalendar-mcp#23`), Web consent UI = `sudopark/TodoCalendar-Web#171`. 상세 spec / 합의 사항은 이슈 #189.
+
+**production `.env` 등록 (배포 직전 필수)** — emulator dummy 절대 재사용 금지
+
+5개 env 등록 (옵션 2개 별도):
+```
+OAUTH_ISSUER=https://api.todocalendar.com          # production custom domain
+OAUTH_CALENDAR_RESOURCE_URI=<MCP canonical URI>     # MCP 배포 후 확정
+OAUTH_CONSENT_URL=<Web consent UI base URL>         # Web prod 도메인
+OAUTH_SIGNING_PRIVATE_KEY="..."                     # RSA keypair, 운영용 새로 생성
+OAUTH_SIGNING_PUBLIC_KEY="..."
+```
+
+RSA keypair 생성 (운영용):
+```bash
+openssl genrsa 2048 > oauth_priv.pem
+openssl rsa -in oauth_priv.pem -pubout > oauth_pub.pem
+```
+결과를 `\n` escape single-line 으로 박음 (`.env.test.example` 형식 참고).
+
+**Firestore TTL policy 활성화 (배포 후 한 번 필수)**
+
+```bash
+gcloud firestore fields ttls update expireAt --collection-group=oauth_consent_challenges --enable-ttl
+gcloud firestore fields ttls update expireAt --collection-group=oauth_codes --enable-ttl
+gcloud firestore fields ttls update expireAt --collection-group=oauth_rate_limit --enable-ttl
+```
+
+`oauth_clients` 는 조건부 정리 (lastUsedAt=null) 라 TTL policy 안 됨 — `oauthClientCleanup` scheduled function 이 매 24시간 처리 (`OAUTH_CLIENT_CLEANUP_AGE_DAYS` 기본 30일).
+
+**옵션 env** (기본값으로 충분): `OAUTH_RATE_LIMIT_REGISTER_MAX_PER_{MINUTE,HOUR}` (5/30), `OAUTH_CLIENT_CLEANUP_AGE_DAYS` (30).
