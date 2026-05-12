@@ -223,5 +223,20 @@ describe('services/oauth/AuthorizationCodeService', () => {
                 e => e.status === 400 && e.code === 'InvalidGrant'
             );
         });
+
+        it('code_verifier 에 unreserved 외 char 포함 → 400 InvalidGrant (RFC 7636 §4.1)', async () => {
+            // 공백 / 한글 / control / 특수문자 등
+            for (const bad of ['a'.repeat(50) + ' ', 'a'.repeat(50) + '!', 'a'.repeat(50) + '한', 'a'.repeat(50) + '\x00']) {
+                await assert.rejects(
+                    () => svc.exchange({ code, codeVerifier: bad, redirectUri: VALID.redirectUri, clientId: VALID.clientId, resource: VALID.resource }),
+                    e => e.status === 400 && e.code === 'InvalidGrant',
+                    `Expected rejection for verifier: ${JSON.stringify(bad)}`
+                );
+                // 한 번 호출하면 code burned — 다음 케이스 위해 새 code 발급 안 함, repo 직접 재생성
+                await repo.markUsed(code);  // ensure used (idempotent)
+                const newIssued = await svc.issue({ ...VALID, codeChallenge: c });
+                code = newIssued.id;
+            }
+        });
     });
 });
