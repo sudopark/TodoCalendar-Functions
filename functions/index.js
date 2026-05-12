@@ -49,6 +49,7 @@ const signedUserAuth = require('./middlewares/openapi/signedUserAuth');
 const oauthWellKnownRouter = require('./routes/oauth/wellKnownRoutes');
 const oauthRegisterRouter = require('./routes/oauth/registerRoutes');
 const oauthAuthorizeRouter = require('./routes/oauth/authorizeRoutes');
+const oauthTokenRouter = require('./routes/oauth/tokenRoutes');
 
 const logger = require("firebase-functions/logger");
 
@@ -106,9 +107,10 @@ app.use('/v2/open/tags', openApiAuth, tagOpenRouter);
 app.use('/v2/open/event_details', openApiAuth, eventDetailOpenRouter);
 
 // OAuth 2.1 Authorization Server (#189) — RFC 8414 metadata + JWKS + endpoints
-// register 가 먼저 mount (path 우선순위). authorize/consent 는 /v1/oauth 아래 묶음.
+// register/token 가 먼저 mount (path 우선순위). authorize/consent 는 /v1/oauth 아래 묶음.
 app.use('/.well-known', oauthWellKnownRouter);
 app.use('/v1/oauth/register', oauthRegisterRouter);
+app.use('/v1/oauth/token', oauthTokenRouter);
 app.use('/v1/oauth', oauthAuthorizeRouter);
 
 // request logging
