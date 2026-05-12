@@ -21,25 +21,13 @@ class AuthorizationCode {
         return new AuthorizationCode({ id, ...data });
     }
 
-    isValid(now = Date.now()) {
+    isExpired(now = Date.now()) {
         const expMs = this.expiresAt instanceof Date ? this.expiresAt.getTime() : this.expiresAt;
-        return !this.used && now < expMs;
+        return now >= expMs;
     }
 
-    toJSON() {
-        return {
-            id: this.id,
-            userId: this.userId,
-            clientId: this.clientId,
-            redirectUri: this.redirectUri,
-            codeChallenge: this.codeChallenge,
-            codeChallengeMethod: this.codeChallengeMethod,
-            resource: this.resource,
-            scope: this.scope,
-            createdAt: this.createdAt,
-            expiresAt: this.expiresAt,
-            used: this.used
-        };
+    isValid(now = Date.now()) {
+        return !this.used && !this.isExpired(now);
     }
 }
 

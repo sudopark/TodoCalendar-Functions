@@ -28,6 +28,9 @@ class OAuthClientService {
 
         const dedupHash = this._computeDedupHash(ip, clientName, redirectUris);
         const existing = await this.repository.findByDedupHash(dedupHash);
+        // L3 dedup: 같은 (ip, clientName, redirect_uris) 1시간 내 재요청은 기존 client 반환.
+        // 새 입력의 scope / grant_types 등은 무시 — 정상 흐름에선 동일 입력이라 영향 없음.
+        // 봇이 의도적으로 다른 scope 로 재시도해도 dedup window 안엔 기존 client_id 유지.
         if (existing && this._isDedupWindow(existing, Date.now())) {
             return existing;
         }

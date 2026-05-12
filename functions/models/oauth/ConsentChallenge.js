@@ -29,22 +29,6 @@ class ConsentChallenge {
     isValid(now = Date.now()) {
         return !this.used && !this.isExpired(now);
     }
-
-    toJSON() {
-        return {
-            id: this.id,
-            clientId: this.clientId,
-            redirectUri: this.redirectUri,
-            codeChallenge: this.codeChallenge,
-            codeChallengeMethod: this.codeChallengeMethod,
-            resource: this.resource,
-            scope: this.scope,
-            state: this.state,
-            createdAt: this.createdAt,
-            expiresAt: this.expiresAt,
-            used: this.used
-        };
-    }
 }
 
 module.exports = ConsentChallenge;

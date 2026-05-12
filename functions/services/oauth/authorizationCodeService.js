@@ -17,6 +17,11 @@ class AuthorizationCodeService {
                 throw new Errors.Base(400, 'InvalidRequest', `${k} required`);
             }
         }
+        // sanity — caller (consent callback) 가 challenge 에서 검증된 값을 전달하지만
+        // 본 service 가 단독 호출되어도 alg confusion 차단되도록 한 번 더.
+        if (codeChallengeMethod !== 'S256') {
+            throw new Errors.Base(400, 'InvalidRequest', 'codeChallengeMethod must be "S256"');
+        }
         if (!Array.isArray(scope) || scope.length === 0) {
             throw new Errors.Base(400, 'InvalidRequest', 'scope required (non-empty array)');
         }

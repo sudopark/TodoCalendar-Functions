@@ -31,6 +31,24 @@ describe('AuthorizationCode', () => {
         });
     });
 
+    describe('isExpired', () => {
+
+        it('expiresAt 이전 → false', () => {
+            const c = AuthorizationCode.fromData('code-1', baseData);
+            assert.strictEqual(c.isExpired(200000), false);
+        });
+
+        it('expiresAt 시점 → true (≥)', () => {
+            const c = AuthorizationCode.fromData('code-1', baseData);
+            assert.strictEqual(c.isExpired(301000), true);
+        });
+
+        it('expiresAt 이후 → true', () => {
+            const c = AuthorizationCode.fromData('code-1', baseData);
+            assert.strictEqual(c.isExpired(400000), true);
+        });
+    });
+
     describe('isValid', () => {
 
         it('used=false + not-expired → true', () => {
@@ -46,23 +64,6 @@ describe('AuthorizationCode', () => {
         it('expired → false', () => {
             const c = AuthorizationCode.fromData('code-1', baseData);
             assert.strictEqual(c.isValid(400000), false);
-        });
-
-        it('expiresAt 시점 정확히 = expired (now >= exp 아님 — now < exp 가 valid)', () => {
-            const c = AuthorizationCode.fromData('code-1', baseData);
-            assert.strictEqual(c.isValid(301000), false);
-        });
-    });
-
-    describe('toJSON', () => {
-
-        it('모든 필드 직렬화', () => {
-            const c = AuthorizationCode.fromData('code-1', baseData);
-            const json = c.toJSON();
-            assert.strictEqual(json.id, 'code-1');
-            assert.strictEqual(json.userId, 'user-1');
-            assert.deepStrictEqual(json.scope, ['read:calendar', 'write:calendar']);
-            assert.strictEqual(json.used, false);
         });
     });
 });
