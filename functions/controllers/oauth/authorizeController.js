@@ -82,17 +82,19 @@ class AuthorizeController {
             throw new Errors.Application(error);
         }
 
+        // burn-before-verify: challenge 는 1회용 정책. invalid input / verify 실패 케이스도 challenge 소진해 hijack/replay 차단
+        try {
+            await this.svc.markUsed(challengeId);
+        } catch (error) {
+            if (error?.code === 'InvalidChallenge') {
+                return res.redirect(302, this._buildErrorUrl(error.message ?? 'used'));
+            }
+            throw new Errors.Application(error);
+        }
+
         const isAllow = allow === 'true' || allow === true;
 
         if (!isAllow) {
-            try {
-                await this.svc.markUsed(challengeId);
-            } catch (error) {
-                if (error?.code === 'InvalidChallenge') {
-                    return res.redirect(302, this._buildErrorUrl(error.message ?? 'used'));
-                }
-                throw new Errors.Application(error);
-            }
             return res.redirect(303, this._buildClientRedirect(challenge.redirectUri, {
                 error: 'access_denied',
                 state: challenge.state
@@ -109,15 +111,6 @@ class AuthorizeController {
             if (!userId) throw new Error('id_token has no uid');
         } catch (error) {
             throw new Errors.Base(401, 'InvalidCredentials', 'id_token verification failed');
-        }
-
-        try {
-            await this.svc.markUsed(challengeId);
-        } catch (error) {
-            if (error?.code === 'InvalidChallenge') {
-                return res.redirect(302, this._buildErrorUrl(error.message ?? 'used'));
-            }
-            throw new Errors.Application(error);
         }
 
         let code;
