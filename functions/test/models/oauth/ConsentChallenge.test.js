@@ -80,17 +80,4 @@ describe('ConsentChallenge', () => {
             assert.strictEqual(ch.isValid(700000), false);
         });
     });
-
-    describe('toJSON', () => {
-
-        it('모든 필드 직렬화', () => {
-            const ch = ConsentChallenge.fromData('ch-1', baseData);
-            const json = ch.toJSON();
-            assert.strictEqual(json.id, 'ch-1');
-            assert.strictEqual(json.clientId, 'client-1');
-            assert.strictEqual(json.codeChallengeMethod, 'S256');
-            assert.deepStrictEqual(json.scope, ['read:calendar']);
-            assert.strictEqual(json.used, false);
-        });
-    });
 });

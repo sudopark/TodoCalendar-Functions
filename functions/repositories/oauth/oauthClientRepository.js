@@ -34,7 +34,12 @@ class OAuthClientRepository {
 
     async findByDedupHash(hash) {
         try {
-            const query = collectionRef.where('dedupHash', '==', hash).limit(1);
+            // orderBy createdAt desc — 같은 hash 가 누적되면 가장 최근 record 반환 (결정적 동작).
+            // Firestore composite index 필요 (firestore.indexes.json 참조).
+            const query = collectionRef
+                .where('dedupHash', '==', hash)
+                .orderBy('createdAt', 'desc')
+                .limit(1);
             const snap = await query.get();
             if (snap.empty) return null;
             const doc = snap.docs[0];

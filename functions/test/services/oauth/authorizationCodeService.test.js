@@ -77,6 +77,13 @@ describe('services/oauth/AuthorizationCodeService', () => {
                 e => e.status === 400
             );
         });
+
+        it('codeChallengeMethod=plain → 400 InvalidRequest (sanity)', async () => {
+            await assert.rejects(
+                () => svc.issue({ ...VALID, codeChallengeMethod: 'plain' }),
+                e => e.status === 400 && e.code === 'InvalidRequest'
+            );
+        });
     });
 
     describe('exchange', () => {

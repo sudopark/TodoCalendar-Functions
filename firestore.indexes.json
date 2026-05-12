@@ -1,4 +1,21 @@
 {
-  "indexes": [],
+  "indexes": [
+    {
+      "collectionGroup": "oauth_clients",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "dedupHash", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "oauth_clients",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "lastUsedAt", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "ASCENDING" }
+      ]
+    }
+  ],
   "fieldOverrides": []
 }
