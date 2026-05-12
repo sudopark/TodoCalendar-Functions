@@ -5,7 +5,7 @@
     "serve": "firebase emulators:start --only functions",
     "shell": "firebase functions:shell",
     "start": "npm run shell",
-    "deploy": "firebase deploy --only functions",
+    "deploy": "firebase deploy --only functions,hosting:api",
     "logs": "firebase functions:log",
     "test": "mocha",
     "test:e2e": "mocha --config .mocharc.e2e.yml",

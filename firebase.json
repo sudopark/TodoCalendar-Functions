@@ -27,5 +27,19 @@
         "*.local"
       ]
     }
-  ]
+  ],
+  "hosting": {
+    "target": "api",
+    "public": "public",
+    "rewrites": [
+      {
+        "source": "**",
+        "function": {
+          "functionId": "apiV2",
+          "region": "us-central1",
+          "pinTag": true
+        }
+      }
+    ]
+  }
 }
