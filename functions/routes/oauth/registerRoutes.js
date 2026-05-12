@@ -6,6 +6,9 @@ const RateLimitRepository = require('../../repositories/oauth/rateLimitRepositor
 const OAuthClientService = require('../../services/oauth/oauthClientService');
 const RegisterController = require('../../controllers/oauth/registerController');
 const ipRateLimit = require('../../middlewares/oauth/ipRateLimit');
+const noCache = require('../../middlewares/oauth/noCache');
+
+router.use(noCache);
 
 const clientRepo = new OAuthClientRepository();
 const rateLimitRepo = new RateLimitRepository();

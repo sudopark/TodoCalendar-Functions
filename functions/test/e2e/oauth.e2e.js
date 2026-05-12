@@ -173,6 +173,9 @@ describe('OAuth AS — happy path (한 바퀴)', () => {
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
         });
         assert.strictEqual(res.status, 200);
+        // RFC 6749 §5.1 — token 응답은 캐싱 차단
+        assert.strictEqual(res.headers['cache-control'], 'no-store');
+        assert.strictEqual(res.headers['pragma'], 'no-cache');
         assert.ok(res.data.access_token);
         assert.strictEqual(res.data.token_type, 'Bearer');
         assert.strictEqual(res.data.expires_in, 1800);
