@@ -109,6 +109,18 @@ describe('OAuth AS — register', () => {
         }, NO_REDIRECT);
         assert.strictEqual(res.status, 400);
     });
+
+    it('redirect_uri 에 userinfo 포함 (`https://victim@evil.com/cb`) → 400', async () => {
+        const res = await axios.post(`${BASE_URL}/v1/oauth/register`, {
+            client_name: 'X',
+            redirect_uris: ['https://victim@evil.com/cb'],
+            scope: 'read:calendar',
+            token_endpoint_auth_method: 'none',
+            grant_types: ['authorization_code'],
+            response_types: ['code']
+        }, NO_REDIRECT);
+        assert.strictEqual(res.status, 400);
+    });
 });
 
 describe('OAuth AS — happy path (한 바퀴)', () => {

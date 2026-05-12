@@ -82,6 +82,10 @@ class OAuthClientService {
         if (url.hash) {
             throw new Errors.Base(400, 'InvalidRequest', 'redirect_uri must not contain fragment');
         }
+        // userinfo (`user@host` / `user:pass@host`) 차단 — `https://victim@evil.com/cb` 같은 social-engineering vector
+        if (url.username || url.password) {
+            throw new Errors.Base(400, 'InvalidRequest', 'redirect_uri must not contain userinfo');
+        }
         const isHttps = url.protocol === 'https:';
         const isLoopback = url.protocol === 'http:'
             && (url.hostname === '127.0.0.1' || url.hostname === 'localhost');
