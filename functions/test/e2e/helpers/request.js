@@ -10,6 +10,10 @@ function setAuthToken(token) {
     authToken = token;
 }
 
+function getAuthToken() {
+    return authToken;
+}
+
 function createClient(useAuth = true, baseURL = BASE_URL) {
     const headers = {};
     if (useAuth && authToken) {
@@ -40,6 +44,7 @@ function publicClientV2() {
 
 module.exports = {
     setAuthToken,
+    getAuthToken,
     authedClient,
     publicClient,
     authedClientV2,
