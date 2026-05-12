@@ -202,5 +202,19 @@ describe('services/oauth/AuthorizationCodeService', () => {
                 e => e.status === 400 && e.code === 'InvalidGrant'
             );
         });
+
+        it('code_verifier 43자 미만 → 400 InvalidGrant (RFC 7636 §4.1)', async () => {
+            await assert.rejects(
+                () => svc.exchange({ code, codeVerifier: 'a'.repeat(42), redirectUri: VALID.redirectUri, clientId: VALID.clientId, resource: VALID.resource }),
+                e => e.status === 400 && e.code === 'InvalidGrant'
+            );
+        });
+
+        it('code_verifier 128자 초과 → 400 InvalidGrant', async () => {
+            await assert.rejects(
+                () => svc.exchange({ code, codeVerifier: 'a'.repeat(129), redirectUri: VALID.redirectUri, clientId: VALID.clientId, resource: VALID.resource }),
+                e => e.status === 400 && e.code === 'InvalidGrant'
+            );
+        });
     });
 });

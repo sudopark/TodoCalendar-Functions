@@ -16,9 +16,7 @@ class ConsentChallengeService {
         clientId, redirectUri, codeChallenge, codeChallengeMethod,
         resource, scope, state, responseType
     }) {
-        if (responseType !== 'code') {
-            throw new Errors.Base(400, 'UnsupportedResponseType', 'response_type must be "code"');
-        }
+        // 1단계: client / redirect_uri 검증 — 실패 시 직접 400 (redirect 못 함, attacker injection 위험)
         if (typeof clientId !== 'string' || clientId.length === 0) {
             throw new Errors.Base(400, 'InvalidClient', 'client_id required');
         }
@@ -32,21 +30,39 @@ class ConsentChallengeService {
         if (!Array.isArray(client.redirectUris) || !client.redirectUris.includes(redirectUri)) {
             throw new Errors.Base(400, 'InvalidRedirectUri', 'redirect_uri does not match registered value');
         }
+
+        // 2단계: 그 외 검증 실패는 redirect_uri 로 error redirect (RFC 6749 §4.1.2.1)
+        const fail = (code, message, oauthErrorCode) => {
+            const e = new Errors.Base(400, code, message);
+            e.redirectableTo = redirectUri;
+            e.state = state ?? null;
+            e.oauthErrorCode = oauthErrorCode;
+            return e;
+        };
+
+        if (responseType !== 'code') {
+            throw fail('UnsupportedResponseType', 'response_type must be "code"', 'unsupported_response_type');
+        }
         if (codeChallengeMethod !== 'S256') {
-            throw new Errors.Base(400, 'InvalidRequest', 'code_challenge_method must be "S256"');
+            throw fail('InvalidRequest', 'code_challenge_method must be "S256"', 'invalid_request');
         }
         if (typeof codeChallenge !== 'string' || codeChallenge.length === 0) {
-            throw new Errors.Base(400, 'InvalidRequest', 'code_challenge required');
+            throw fail('InvalidRequest', 'code_challenge required', 'invalid_request');
         }
         if (!this.resourceWhitelist.includes(resource)) {
-            throw new Errors.Base(400, 'InvalidRequest', 'resource not in whitelist');
+            throw fail('InvalidRequest', 'resource not in whitelist', 'invalid_request');
         }
 
-        const requestedScope = parseScopeString(scope);
+        let requestedScope;
+        try {
+            requestedScope = parseScopeString(scope);
+        } catch (e) {
+            throw fail(e.code ?? 'InvalidScope', 'scope invalid', 'invalid_scope');
+        }
         const clientScope = Array.isArray(client.scope) ? client.scope : [];
         for (const s of requestedScope) {
             if (!clientScope.includes(s)) {
-                throw new Errors.Base(400, 'InvalidScope', `scope not granted to client: ${s}`);
+                throw fail('InvalidScope', 'scope not granted to client', 'invalid_scope');
             }
         }
 

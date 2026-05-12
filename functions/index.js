@@ -54,6 +54,9 @@ const oauthTokenRouter = require('./routes/oauth/tokenRoutes');
 const logger = require("firebase-functions/logger");
 
 const app = express();
+// Cloud Functions 는 GFE / Cloud Run proxy 뒤에서 동작. X-Forwarded-For 의 real client IP 가
+// req.ip 로 추출돼야 IP 기반 rate limit (oauth ipRateLimit) 와 dedup hash 가 정상 동작.
+app.set('trust proxy', true);
 // app use middleware
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));

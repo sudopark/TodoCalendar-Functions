@@ -31,6 +31,14 @@ class AuthorizeController {
             const location = `${this.consentBaseUrl}${sep}challenge=${encodeURIComponent(ch.id)}`;
             res.redirect(302, location);
         } catch (error) {
+            // RFC 6749 §4.1.2.1 — client/redirect_uri 검증 통과 후 발생한 error 는 redirect 로 전달
+            if (error?.redirectableTo) {
+                const url = new URL(error.redirectableTo);
+                url.searchParams.set('error', error.oauthErrorCode ?? 'invalid_request');
+                if (error.state) url.searchParams.set('state', error.state);
+                res.redirect(302, url.toString());
+                return;
+            }
             throw new Errors.Application(error);
         }
     }

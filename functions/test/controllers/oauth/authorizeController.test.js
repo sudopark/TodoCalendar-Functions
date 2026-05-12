@@ -102,12 +102,45 @@ describe('controllers/oauth/AuthorizeController', () => {
             assert.strictEqual(res._location, `${CONSENT_URL}?challenge=ch-abc`);
         });
 
-        it('service 400 → status 유지 throw', async () => {
+        it('client/redirect 검증 실패 (redirectableTo 없음) → status 유지 throw', async () => {
             svc.issue = async () => { const e = new Error('bad'); e.status = 400; e.code = 'InvalidClient'; throw e; };
             await assert.rejects(
                 () => controller.authorize(makeReq({}), res),
                 e => e.status === 400 && e.code === 'InvalidClient'
             );
+        });
+
+        it('redirectableTo 첨부된 error → 302 Location = redirect_uri?error=<code>&state=<state>', async () => {
+            svc.issue = async () => {
+                const e = new Error('bad');
+                e.status = 400;
+                e.code = 'InvalidRequest';
+                e.redirectableTo = 'http://127.0.0.1:54321/cb';
+                e.state = 'state-xyz';
+                e.oauthErrorCode = 'invalid_request';
+                throw e;
+            };
+            await controller.authorize(makeReq({}), res);
+            assert.strictEqual(res._status, 302);
+            const loc = new URL(res._location);
+            assert.strictEqual(loc.searchParams.get('error'), 'invalid_request');
+            assert.strictEqual(loc.searchParams.get('state'), 'state-xyz');
+        });
+
+        it('redirectableTo + state 없는 error → state 없이 redirect', async () => {
+            svc.issue = async () => {
+                const e = new Error('bad');
+                e.status = 400;
+                e.code = 'InvalidRequest';
+                e.redirectableTo = 'http://127.0.0.1:54321/cb';
+                e.oauthErrorCode = 'invalid_request';
+                throw e;
+            };
+            await controller.authorize(makeReq({}), res);
+            assert.strictEqual(res._status, 302);
+            const loc = new URL(res._location);
+            assert.strictEqual(loc.searchParams.get('error'), 'invalid_request');
+            assert.strictEqual(loc.searchParams.get('state'), null);
         });
     });
 
