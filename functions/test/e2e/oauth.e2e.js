@@ -222,7 +222,7 @@ describe('OAuth AS — negative', () => {
         assert.strictEqual(res.status, 400);
     });
 
-    it('authorize: code_challenge_method=plain → 400', async () => {
+    it('authorize: code_challenge_method=plain → 302 redirect with error=invalid_request (RFC 6749 §4.1.2.1)', async () => {
         const qs = new URLSearchParams({
             response_type: 'code',
             client_id: clientId,
@@ -234,10 +234,14 @@ describe('OAuth AS — negative', () => {
             scope: 'read:calendar'
         }).toString();
         const res = await axios.get(`${BASE_URL}/v1/oauth/authorize?${qs}`, NO_REDIRECT);
-        assert.strictEqual(res.status, 400);
+        assert.strictEqual(res.status, 302);
+        const loc = new URL(res.headers.location);
+        assert.strictEqual(`${loc.origin}${loc.pathname}`, redirectUri);
+        assert.strictEqual(loc.searchParams.get('error'), 'invalid_request');
+        assert.strictEqual(loc.searchParams.get('state'), 's');
     });
 
-    it('authorize: resource 화이트리스트 외 → 400', async () => {
+    it('authorize: resource 화이트리스트 외 → 302 redirect with error=invalid_request', async () => {
         const { challenge } = pkce();
         const qs = new URLSearchParams({
             response_type: 'code',
@@ -250,7 +254,9 @@ describe('OAuth AS — negative', () => {
             scope: 'read:calendar'
         }).toString();
         const res = await axios.get(`${BASE_URL}/v1/oauth/authorize?${qs}`, NO_REDIRECT);
-        assert.strictEqual(res.status, 400);
+        assert.strictEqual(res.status, 302);
+        const loc = new URL(res.headers.location);
+        assert.strictEqual(loc.searchParams.get('error'), 'invalid_request');
     });
 
     it('consent/callback: invalid challenge → 302 Web error', async () => {

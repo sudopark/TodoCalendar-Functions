@@ -158,6 +158,38 @@ describe('services/oauth/ConsentChallengeService', () => {
                 e => e.status === 400 && e.code === 'UnsupportedResponseType'
             );
         });
+
+        it('client/redirect_uri 검증 실패는 redirectableTo 없음 (직접 400)', async () => {
+            await assert.rejects(
+                () => svc.issue({ ...VALID_INPUT, clientId: 'unknown' }),
+                e => e.code === 'InvalidClient' && e.redirectableTo === undefined
+            );
+            await assert.rejects(
+                () => svc.issue({ ...VALID_INPUT, redirectUri: 'http://attacker.com/cb' }),
+                e => e.code === 'InvalidRedirectUri' && e.redirectableTo === undefined
+            );
+        });
+
+        it('redirect_uri 검증 통과 후 발생 검증 실패는 redirectableTo + oauthErrorCode 첨부 (RFC 6749 §4.1.2.1)', async () => {
+            await assert.rejects(
+                () => svc.issue({ ...VALID_INPUT, responseType: 'token' }),
+                e => e.redirectableTo === VALID_INPUT.redirectUri
+                    && e.oauthErrorCode === 'unsupported_response_type'
+                    && e.state === VALID_INPUT.state
+            );
+            await assert.rejects(
+                () => svc.issue({ ...VALID_INPUT, codeChallengeMethod: 'plain' }),
+                e => e.redirectableTo && e.oauthErrorCode === 'invalid_request'
+            );
+            await assert.rejects(
+                () => svc.issue({ ...VALID_INPUT, resource: 'http://other.com/mcp' }),
+                e => e.redirectableTo && e.oauthErrorCode === 'invalid_request'
+            );
+            await assert.rejects(
+                () => svc.issue({ ...VALID_INPUT, scope: 'unknown:scope' }),
+                e => e.redirectableTo && e.oauthErrorCode === 'invalid_scope'
+            );
+        });
     });
 
     describe('getValid', () => {
