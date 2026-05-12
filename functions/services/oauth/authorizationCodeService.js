@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const Errors = require('../../models/Errors');
 
 class AuthorizationCodeService {
@@ -34,6 +35,50 @@ class AuthorizationCodeService {
             used: false
         });
         return await this.repository.findById(id);
+    }
+
+    async exchange({ code, codeVerifier, redirectUri, clientId, resource }) {
+        if (typeof code !== 'string' || code.length === 0) {
+            throw new Errors.Base(400, 'InvalidGrant', 'code required');
+        }
+
+        const stored = await this.repository.findById(code);
+        if (!stored || !stored.isValid()) {
+            throw new Errors.Base(400, 'InvalidGrant', 'code not found or expired/used');
+        }
+
+        // markUsed 먼저 — 검증 실패 케이스도 마킹해 replay 차단
+        const transitioned = await this.repository.markUsed(code);
+        if (!transitioned) {
+            throw new Errors.Base(400, 'InvalidGrant', 'code already used');
+        }
+
+        if (!this._verifyPkce(codeVerifier, stored.codeChallenge, stored.codeChallengeMethod)) {
+            throw new Errors.Base(400, 'InvalidGrant', 'code_verifier mismatch');
+        }
+        if (stored.redirectUri !== redirectUri) {
+            throw new Errors.Base(400, 'InvalidGrant', 'redirect_uri mismatch');
+        }
+        if (stored.clientId !== clientId) {
+            throw new Errors.Base(400, 'InvalidGrant', 'client_id mismatch');
+        }
+        if (stored.resource !== resource) {
+            throw new Errors.Base(400, 'InvalidGrant', 'resource mismatch');
+        }
+
+        return {
+            userId: stored.userId,
+            clientId: stored.clientId,
+            resource: stored.resource,
+            scope: stored.scope
+        };
+    }
+
+    _verifyPkce(verifier, expectedChallenge, method) {
+        if (method !== 'S256') return false;
+        if (typeof verifier !== 'string' || verifier.length === 0) return false;
+        const computed = crypto.createHash('sha256').update(verifier).digest('base64url');
+        return computed === expectedChallenge;
     }
 }
 
