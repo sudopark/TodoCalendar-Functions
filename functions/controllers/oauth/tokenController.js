@@ -40,7 +40,7 @@ class TokenController {
                 access_token: accessToken,
                 token_type: 'Bearer',
                 expires_in: ACCESS_TOKEN_TTL_SECONDS,
-                scope: Array.isArray(scope) ? formatScopeArray(scope) : (scope ?? '')
+                scope: formatScopeArray(scope)
             });
         } catch (error) {
             throw new Errors.Application(error);

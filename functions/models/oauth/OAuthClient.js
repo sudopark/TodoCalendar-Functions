@@ -1,3 +1,5 @@
+const { formatScopeArray } = require('./scopes');
+
 class OAuthClient {
 
     constructor({
@@ -28,7 +30,7 @@ class OAuthClient {
             client_id_issued_at: Math.floor((createdMs ?? 0) / 1000),
             client_name: this.clientName,
             redirect_uris: this.redirectUris,
-            scope: Array.isArray(this.scope) ? this.scope.join(' ') : this.scope,
+            scope: formatScopeArray(this.scope),
             token_endpoint_auth_method: this.tokenEndpointAuthMethod,
             grant_types: this.grantTypes,
             response_types: this.responseTypes
