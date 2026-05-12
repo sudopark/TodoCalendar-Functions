@@ -81,8 +81,8 @@ class AuthorizationCodeService {
     _verifyPkce(verifier, expectedChallenge, method) {
         if (method !== 'S256') return false;
         if (typeof verifier !== 'string') return false;
-        // RFC 7636 §4.1 — code_verifier 는 43~128 unreserved chars
-        if (verifier.length < 43 || verifier.length > 128) return false;
+        // RFC 7636 §4.1 — code_verifier = 43*128unreserved (ALPHA / DIGIT / "-" / "." / "_" / "~")
+        if (!/^[A-Za-z0-9\-._~]{43,128}$/.test(verifier)) return false;
         if (typeof expectedChallenge !== 'string' || expectedChallenge.length === 0) return false;
         const computed = crypto.createHash('sha256').update(verifier).digest('base64url');
         const computedBuf = Buffer.from(computed);
