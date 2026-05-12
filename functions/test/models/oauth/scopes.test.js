@@ -38,10 +38,31 @@ describe('scopes', () => {
             );
         });
 
-        it('연속 공백 허용', () => {
+        it('연속 공백 허용 (mainstream OAuth lib 호환성)', () => {
             assert.deepStrictEqual(
                 parseScopeString('read:calendar   write:calendar'),
                 ['read:calendar', 'write:calendar']
+            );
+        });
+
+        it('tab separator 거부 — RFC 6749 §3.3 single SP 만 (token 안에 \\t 들어가 unknown 으로 거부)', () => {
+            assert.throws(
+                () => parseScopeString('read:calendar\twrite:calendar'),
+                e => e.status === 400 && e.code === 'InvalidScope'
+            );
+        });
+
+        it('newline separator 거부', () => {
+            assert.throws(
+                () => parseScopeString('read:calendar\nwrite:calendar'),
+                e => e.status === 400 && e.code === 'InvalidScope'
+            );
+        });
+
+        it('CR separator 거부', () => {
+            assert.throws(
+                () => parseScopeString('read:calendar\rwrite:calendar'),
+                e => e.status === 400 && e.code === 'InvalidScope'
             );
         });
 
