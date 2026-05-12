@@ -124,6 +124,27 @@ describe('services/oauth/OAuthClientService', () => {
                 e => e.status === 400
             );
         });
+
+        it('userinfo (`https://victim@evil.com/cb`) → 400 (social-engineering 차단)', async () => {
+            await assert.rejects(
+                () => svc.register({ ...VALID, redirectUris: ['https://victim@evil.com/cb'] }, { ip: '1.1.1.1' }),
+                e => e.status === 400 && e.code === 'InvalidRequest'
+            );
+        });
+
+        it('userinfo + 패스워드 (`https://user:pass@example.com/cb`) → 400', async () => {
+            await assert.rejects(
+                () => svc.register({ ...VALID, redirectUris: ['https://user:pass@example.com/cb'] }, { ip: '1.1.1.1' }),
+                e => e.status === 400 && e.code === 'InvalidRequest'
+            );
+        });
+
+        it('loopback userinfo (`http://127.0.0.1@evil.com/cb`) → 400 (loopback 외양 우회 차단)', async () => {
+            await assert.rejects(
+                () => svc.register({ ...VALID, redirectUris: ['http://127.0.0.1@evil.com/cb'] }, { ip: '1.1.1.1' }),
+                e => e.status === 400 && e.code === 'InvalidRequest'
+            );
+        });
     });
 
     describe('register — scope sanitize', () => {
