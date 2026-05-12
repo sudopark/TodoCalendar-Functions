@@ -131,6 +131,7 @@ dist
 
 #firebase
 .firebaserc
+.firebase/
 
 # macOS
 .DS_Store
