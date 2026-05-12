@@ -1,5 +1,5 @@
 const jose = require('jose');
-const { KNOWN_SCOPES } = require('../../models/oauth/scopes');
+const { KNOWN_SCOPES, formatScopeArray } = require('../../models/oauth/scopes');
 
 class TokenSigningService {
 
@@ -77,8 +77,7 @@ class TokenSigningService {
     async signAccessToken({ sub, aud, scope, clientId, ttlSeconds = 1800 }) {
         const priv = await this._loadPriv();
         const kid = await this.getKid();
-        const scopeStr = Array.isArray(scope) ? scope.join(' ') : (scope ?? '');
-        return await new jose.SignJWT({ scope: scopeStr, client_id: clientId })
+        return await new jose.SignJWT({ scope: formatScopeArray(scope), client_id: clientId })
             .setProtectedHeader({ alg: 'RS256', typ: 'JWT', kid })
             .setIssuer(this.issuer)
             .setSubject(sub)
