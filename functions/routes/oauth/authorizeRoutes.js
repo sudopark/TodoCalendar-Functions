@@ -8,6 +8,9 @@ const AuthorizationCodeRepository = require('../../repositories/oauth/authorizat
 const ConsentChallengeService = require('../../services/oauth/consentChallengeService');
 const AuthorizationCodeService = require('../../services/oauth/authorizationCodeService');
 const AuthorizeController = require('../../controllers/oauth/authorizeController');
+const noCache = require('../../middlewares/oauth/noCache');
+
+router.use(noCache);
 
 const clientRepo = new OAuthClientRepository();
 const challengeRepo = new ConsentChallengeRepository();
