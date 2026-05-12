@@ -234,29 +234,32 @@ describe('controllers/oauth/AuthorizeController', () => {
             assert.deepStrictEqual(svc.markUsedCalls, ['ch-abc']);
         });
 
-        it('id_token 누락 → 401', async () => {
+        it('id_token 누락 → 401 + challenge burned (replay 차단)', async () => {
             await assert.rejects(
                 () => controller.consentCallback(makeReq({ body: { challenge: 'ch-abc', allow: 'true' } }), res),
                 e => e.status === 401 && e.code === 'InvalidCredentials'
             );
+            assert.deepStrictEqual(svc.markUsedCalls, ['ch-abc']);
         });
 
-        it('id_token verify 실패 → 401', async () => {
+        it('id_token verify 실패 → 401 + challenge burned', async () => {
             idTokenVerifier = async () => { throw new Error('invalid token'); };
             controller = new AuthorizeController(svc, codeService, CONSENT_URL, idTokenVerifier);
             await assert.rejects(
                 () => controller.consentCallback(makeReq({ body: { challenge: 'ch-abc', allow: 'true', id_token: 'bad' } }), res),
                 e => e.status === 401
             );
+            assert.deepStrictEqual(svc.markUsedCalls, ['ch-abc']);
         });
 
-        it('verify 통과했는데 uid 없음 → 401', async () => {
+        it('verify 통과했는데 uid 없음 → 401 + challenge burned', async () => {
             idTokenVerifier = async () => ({ uid: undefined, sub: undefined });
             controller = new AuthorizeController(svc, codeService, CONSENT_URL, idTokenVerifier);
             await assert.rejects(
                 () => controller.consentCallback(makeReq({ body: { challenge: 'ch-abc', allow: 'true', id_token: 't' } }), res),
                 e => e.status === 401
             );
+            assert.deepStrictEqual(svc.markUsedCalls, ['ch-abc']);
         });
 
         it('challenge markUsed race (InvalidChallenge) → 302 Web error', async () => {
