@@ -171,36 +171,8 @@ test/e2e/
 - 운영에서 PAT 또는 SIGNING_SECRET 을 바꾸면 호출자(MCP, aiFrontAPI) 도 동시에 갱신해야 함 — 무중단 교체가 필요하면 화이트리스트에 임시로 두 secret 을 모두 허용하는 단계가 필요(현 MVP 미지원, 단기 다운타임 감수).
 - `.env.test.example` dummy 값(`deadbeef...`/`cafebabe...`) 은 절대 운영 secret 으로 쓰지 말 것.
 
-#### OAuth 2.1 Authorization Server 운영 정책 (`/v1/oauth/*`)
+#### OAuth 2.1 Authorization Server (`/v1/oauth/*`)
 
-별도 라우트 그룹으로 격리 (Firebase Auth 미들웨어 미적용). 첫 RS = MCP server (`sudopark/TodoCalendar-mcp#23`), Web consent UI = `sudopark/TodoCalendar-Web#171`. 상세 spec / 합의 사항은 이슈 #189.
+별도 라우트 그룹으로 격리 (Firebase Auth 미들웨어 미적용). 첫 RS = MCP server (`sudopark/TodoCalendar-mcp#23`), Web consent UI = `sudopark/TodoCalendar-Web#171`. 발급 JWT 는 RS256 + JWK thumbprint(RFC 7638) kid, `/.well-known/jwks.json` 로 public key 노출.
 
-**production `.env` 등록 (배포 직전 필수)** — emulator dummy 절대 재사용 금지
-
-5개 env 등록 (옵션 2개 별도):
-```
-OAUTH_ISSUER=https://api.todocalendar.com          # production custom domain
-OAUTH_CALENDAR_RESOURCE_URI=<MCP canonical URI>     # MCP 배포 후 확정
-OAUTH_CONSENT_URL=<Web consent UI base URL>         # Web prod 도메인
-OAUTH_SIGNING_PRIVATE_KEY="..."                     # RSA keypair, 운영용 새로 생성
-OAUTH_SIGNING_PUBLIC_KEY="..."
-```
-
-RSA keypair 생성 (운영용):
-```bash
-openssl genrsa 2048 > oauth_priv.pem
-openssl rsa -in oauth_priv.pem -pubout > oauth_pub.pem
-```
-결과를 `\n` escape single-line 으로 박음 (`.env.test.example` 형식 참고).
-
-**Firestore TTL policy 활성화 (배포 후 한 번 필수)**
-
-```bash
-gcloud firestore fields ttls update expireAt --collection-group=oauth_consent_challenges --enable-ttl
-gcloud firestore fields ttls update expireAt --collection-group=oauth_codes --enable-ttl
-gcloud firestore fields ttls update expireAt --collection-group=oauth_rate_limit --enable-ttl
-```
-
-`oauth_clients` 는 조건부 정리 (lastUsedAt=null) 라 TTL policy 안 됨 — `oauthClientCleanup` scheduled function 이 매 24시간 처리 (`OAUTH_CLIENT_CLEANUP_AGE_DAYS` 기본 30일).
-
-**옵션 env** (기본값으로 충분): `OAUTH_RATE_LIMIT_REGISTER_MAX_PER_{MINUTE,HOUR}` (5/30), `OAUTH_CLIENT_CLEANUP_AGE_DAYS` (30).
+5개 OAuth env (`OAUTH_ISSUER`, `OAUTH_SIGNING_PRIVATE_KEY`, `OAUTH_SIGNING_PUBLIC_KEY`, `OAUTH_CALENDAR_RESOURCE_URI`, `OAUTH_CONSENT_URL`) 는 emulator 와 production 분리 운용 (emulator dummy 절대 재사용 금지). spec / 운영 배포 절차는 이슈 #189 (특히 백로그 코멘트 #issuecomment-4426228666).
