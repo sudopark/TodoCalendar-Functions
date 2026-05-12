@@ -8,15 +8,13 @@ const collectionRef = db.collection('oauth_clients');
 class OAuthClientRepository {
 
     async create(plainData) {
+        // create 는 저장 + 다시 read → model 인스턴스 반환 (read-after-write).
+        // service 측이 별도 findById 호출 안 해도 stored 최종값 (Firestore admin SDK 의 타입 변환 / 향후 자동 필드 추가 포함) 반영된 model 을 받음.
         try {
             const id = randomUUID();
-            const docData = {
-                ...plainData,
-                createdAt: plainData.createdAt ?? Date.now(),
-                lastUsedAt: plainData.lastUsedAt ?? null
-            };
-            await collectionRef.doc(id).set(docData);
-            return id;
+            await collectionRef.doc(id).set({ ...plainData });
+            const snap = await collectionRef.doc(id).get();
+            return OAuthClient.fromData(snap.id, snap.data());
         } catch (error) {
             throw { status: 500, message: error?.message || error };
         }

@@ -8,14 +8,12 @@ const collectionRef = db.collection('oauth_codes');
 class AuthorizationCodeRepository {
 
     async create(plainData) {
+        // 저장 + read-after-write → AuthorizationCode model 반환 (oauthClientRepository.create 와 동일 contract)
         try {
             const id = randomBytes(32).toString('hex');
-            const docData = {
-                ...plainData,
-                used: plainData.used ?? false
-            };
-            await collectionRef.doc(id).set(docData);
-            return id;
+            await collectionRef.doc(id).set({ ...plainData });
+            const snap = await collectionRef.doc(id).get();
+            return AuthorizationCode.fromData(snap.id, snap.data());
         } catch (error) {
             throw { status: 500, message: error?.message || error };
         }
