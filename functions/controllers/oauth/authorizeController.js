@@ -142,8 +142,10 @@ class AuthorizeController {
     }
 
     _buildErrorUrl(reason) {
-        const base = this.consentBaseUrl.replace(/\/$/, '');
-        return `${base}/error?reason=${encodeURIComponent(reason)}`;
+        const url = new URL(this.consentBaseUrl);
+        url.pathname = url.pathname.replace(/\/+$/, '') + '/error';
+        url.searchParams.set('reason', reason);
+        return url.toString();
     }
 
     _buildClientRedirect(redirectUri, params) {

@@ -182,6 +182,26 @@ describe('controllers/oauth/AuthorizeController', () => {
             assert.strictEqual(res._location, `${CONSENT_URL}/error?reason=expired`);
         });
 
+        it('consentBaseUrl 이 query 포함이면 error URL 에 기존 query 유지 + reason append', async () => {
+            const ctrlWithQuery = new AuthorizeController(svc, codeService, 'http://web/oauth/consent?env=dev', idTokenVerifier);
+            svc.getValid = async () => { throw Object.assign(new Error('expired'), { status: 400, code: 'InvalidChallenge', message: 'expired' }); };
+            const r = makeRes();
+            await ctrlWithQuery.consentCallback(makeReq({ body: { challenge: 'x', allow: 'true', id_token: 't' } }), r);
+            const loc = new URL(r._location);
+            assert.strictEqual(`${loc.origin}${loc.pathname}`, 'http://web/oauth/consent/error');
+            assert.strictEqual(loc.searchParams.get('env'), 'dev');
+            assert.strictEqual(loc.searchParams.get('reason'), 'expired');
+        });
+
+        it('consentBaseUrl 이 trailing slash 면 정규화', async () => {
+            const ctrlSlash = new AuthorizeController(svc, codeService, 'http://web/oauth/consent/', idTokenVerifier);
+            svc.getValid = async () => { throw Object.assign(new Error('expired'), { status: 400, code: 'InvalidChallenge', message: 'expired' }); };
+            const r = makeRes();
+            await ctrlSlash.consentCallback(makeReq({ body: { challenge: 'x', allow: 'true' } }), r);
+            assert.ok(r._location.startsWith('http://web/oauth/consent/error'));
+            assert.ok(!r._location.includes('//error'));
+        });
+
         it('used challenge → 302 Web error page', async () => {
             svc.getValid = async () => { throw Object.assign(new Error('used'), { status: 400, code: 'InvalidChallenge', message: 'used' }); };
             await controller.consentCallback(makeReq({ body: { challenge: 'x', allow: 'true', id_token: 't' } }), res);
