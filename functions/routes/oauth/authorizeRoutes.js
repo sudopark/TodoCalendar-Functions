@@ -1,5 +1,6 @@
 const express = require('express');
 const { getAuth } = require('firebase-admin/auth');
+const { getFirestore } = require('firebase-admin/firestore');
 const router = express.Router();
 
 const OAuthClientRepository = require('../../repositories/oauth/oauthClientRepository');
@@ -12,7 +13,7 @@ const noCache = require('../../middlewares/oauth/noCache');
 
 router.use(noCache);
 
-const clientRepo = new OAuthClientRepository();
+const clientRepo = new OAuthClientRepository(getFirestore());
 const challengeRepo = new ConsentChallengeRepository();
 const codeRepo = new AuthorizationCodeRepository();
 

@@ -16,10 +16,14 @@ const isEmulator = process.env.FUNCTIONS_EMULATOR === 'true';
 if (isEmulator) {
     require('dotenv').config({ path: './secrets/.env.test' });
     initializeApp();
+    initializeApp(undefined, 'cleanup-app');
 } else {
     const serviceAccount = require('./secrets/todocalendar-serviceAccountKey.json');
     require('dotenv').config({ path: './secrets/.env' });
     initializeApp({ credential: cert(serviceAccount) });
+    // cleanup 함수 전용 named app — credentials 미지정 = ADC (runtime SA credentials).
+    // production 에선 oauth-cleanup SA 의 권한으로 Firestore 접근 (issue #194 IAM 격리).
+    initializeApp({ projectId: process.env.GCLOUD_PROJECT }, 'cleanup-app');
 }
 getFirestore().settings({ignoreUndefinedProperties: true});
 

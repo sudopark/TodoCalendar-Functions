@@ -6,7 +6,8 @@ const AuthorizationCode = require('../../models/oauth/AuthorizationCode');
 
 class StubOAuthClientRepository {
 
-    constructor() {
+    // production repo 와 시그니처 호환 — db 인자 받지만 in-memory 라 무시.
+    constructor(_db) {
         this.store = new Map();
         this.shouldFailCreate = false;
         this.shouldFailFindById = false;
