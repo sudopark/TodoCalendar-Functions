@@ -192,7 +192,7 @@ describe('OAuth AS — happy path (한 바퀴)', () => {
         assert.strictEqual(res.headers['pragma'], 'no-cache');
         assert.ok(res.data.access_token);
         assert.strictEqual(res.data.token_type, 'Bearer');
-        assert.strictEqual(res.data.expires_in, 1800);
+        assert.strictEqual(res.data.expires_in, 7200);
         assert.strictEqual(res.data.scope, 'read:calendar');
 
         // JWKS 로 verify

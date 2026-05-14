@@ -75,7 +75,7 @@ class TokenSigningService {
         };
     }
 
-    async signAccessToken({ sub, aud, scope, clientId, ttlSeconds = 1800 }) {
+    async signAccessToken({ sub, aud, scope, clientId, ttlSeconds = 7200 }) {
         const priv = await this._loadPriv();
         const kid = await this.getKid();
         return await new jose.SignJWT({ scope: formatScopeArray(scope), client_id: clientId })

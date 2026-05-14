@@ -1,7 +1,8 @@
 const Errors = require('../../models/Errors');
 const { formatScopeArray } = require('../../models/oauth/scopes');
 
-const ACCESS_TOKEN_TTL_SECONDS = 1800;
+// 30분 (1800) → 2시간 (7200) 연장. LLM tool 호출 한 세션 끊김 완화. 자세한 결정 배경: issue #202
+const ACCESS_TOKEN_TTL_SECONDS = 7200;
 
 class TokenController {
 
