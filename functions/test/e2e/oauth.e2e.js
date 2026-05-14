@@ -127,7 +127,7 @@ describe('OAuth AS — register', () => {
 
 describe('OAuth AS — happy path (한 바퀴)', () => {
 
-    let clientId, redirectUri, verifier, challengeId, code;
+    let clientId, redirectUri, verifier, challengeId, code, refreshToken;
 
     it('1. register → client_id 발급', async () => {
         const { res, redirectUri: r } = await registerClient('Flow Client');
@@ -194,6 +194,8 @@ describe('OAuth AS — happy path (한 바퀴)', () => {
         assert.strictEqual(res.data.token_type, 'Bearer');
         assert.strictEqual(res.data.expires_in, 7200);
         assert.strictEqual(res.data.scope, 'read:calendar');
+        assert.ok(res.data.refresh_token, 'refresh_token 동시 발급');
+        refreshToken = res.data.refresh_token;
 
         // JWKS 로 verify
         const jwksRes = await axios.get(`${BASE_URL}/.well-known/jwks.json`);
@@ -208,6 +210,87 @@ describe('OAuth AS — happy path (한 바퀴)', () => {
         assert.ok(payload.sub);
         assert.strictEqual(payload.scope, 'read:calendar');
         assert.strictEqual(payload.client_id, clientId);
+    });
+
+    it('6. POST /token (grant_type=refresh_token) → 200 + 새 access_token + 새 refresh_token (rotation)', async () => {
+        const body = new URLSearchParams({
+            grant_type: 'refresh_token',
+            refresh_token: refreshToken,
+            client_id: clientId,
+            resource: process.env.OAUTH_CALENDAR_RESOURCE_URI
+        });
+        const res = await axios.post(`${BASE_URL}/v1/oauth/token`, body.toString(), {
+            ...NO_REDIRECT,
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+        });
+        assert.strictEqual(res.status, 200);
+        assert.ok(res.data.access_token);
+        assert.strictEqual(res.data.token_type, 'Bearer');
+        assert.strictEqual(res.data.expires_in, 7200);
+        assert.strictEqual(res.data.scope, 'read:calendar');
+        assert.ok(res.data.refresh_token, 'rotated refresh_token');
+        assert.notStrictEqual(res.data.refresh_token, refreshToken, 'rotation 으로 새 refresh_token 발급');
+        // 새 access_token 도 JWKS 로 verify
+        const jwksRes = await axios.get(`${BASE_URL}/.well-known/jwks.json`);
+        const jwk = jwksRes.data.keys[0];
+        const publicKey = await jose.importJWK(jwk, 'RS256');
+        const { payload } = await jose.jwtVerify(
+            res.data.access_token, publicKey,
+            { issuer: process.env.OAUTH_ISSUER, audience: process.env.OAUTH_CALENDAR_RESOURCE_URI }
+        );
+        assert.ok(payload.sub);
+        assert.strictEqual(payload.client_id, clientId);
+        // 다음 케이스가 쓰도록 새 refresh_token 으로 갱신
+        refreshToken = res.data.refresh_token;
+    });
+
+    it('7. 옛 refresh_token 으로 재사용 시도 → 400 InvalidGrant (reuse detect)', async () => {
+        // 단계 6 에서 rotation 후 옛 토큰은 revoked 상태. 공격자가 가로챈 옛 토큰으로 시도하는 시나리오.
+        // 본 테스트는 단계 5 시점의 refreshToken (이미 단계 6 에서 revoked) 을 다시 박는 게 정확하지만,
+        // 변수 갱신으로 단계 6 의 새 토큰을 한 번 더 rotate 해 직전 토큰을 revoke 후 옛 거 시도해도 같은 효과.
+        // 여기선 단계 6 결과 (rotation 1회 이미 완료) 의 그 직전 (already revoked) 토큰 검증 흐름이 단순치 않아,
+        // 새 시나리오로 1) rotate 한 번 → 2) 옛 거 재사용 흐름을 다시 박음.
+
+        // 1) 현재 refreshToken (단계 6 결과) 로 rotate → 새 refresh_token2
+        const body1 = new URLSearchParams({
+            grant_type: 'refresh_token',
+            refresh_token: refreshToken,
+            client_id: clientId,
+            resource: process.env.OAUTH_CALENDAR_RESOURCE_URI
+        });
+        const res1 = await axios.post(`${BASE_URL}/v1/oauth/token`, body1.toString(), {
+            ...NO_REDIRECT,
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+        });
+        assert.strictEqual(res1.status, 200);
+        const refreshToken2 = res1.data.refresh_token;
+        assert.notStrictEqual(refreshToken2, refreshToken);
+
+        // 2) 이제 옛 refreshToken (방금 rotate 로 revoked 됨) 으로 다시 시도 → 400 InvalidGrant
+        const body2 = new URLSearchParams({
+            grant_type: 'refresh_token',
+            refresh_token: refreshToken,
+            client_id: clientId,
+            resource: process.env.OAUTH_CALENDAR_RESOURCE_URI
+        });
+        const res2 = await axios.post(`${BASE_URL}/v1/oauth/token`, body2.toString(), {
+            ...NO_REDIRECT,
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+        });
+        assert.strictEqual(res2.status, 400);
+
+        // 3) family 가 revoke 됐으므로 refreshToken2 도 무력화 → 정상 client 도 더 못 씀
+        const body3 = new URLSearchParams({
+            grant_type: 'refresh_token',
+            refresh_token: refreshToken2,
+            client_id: clientId,
+            resource: process.env.OAUTH_CALENDAR_RESOURCE_URI
+        });
+        const res3 = await axios.post(`${BASE_URL}/v1/oauth/token`, body3.toString(), {
+            ...NO_REDIRECT,
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+        });
+        assert.strictEqual(res3.status, 400);
     });
 });
 
