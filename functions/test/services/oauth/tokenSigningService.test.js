@@ -36,6 +36,15 @@ describe('services/oauth/TokenSigningService', () => {
         it('issuer 없으면 throw', () => {
             assert.throws(() => new TokenSigningService(privPem, pubPem, null), /ISSUER missing/);
         });
+
+        it('issuer trailing slash 제거', () => {
+            const s1 = new TokenSigningService(privPem, pubPem, 'https://x.example/');
+            assert.strictEqual(s1.issuer, 'https://x.example');
+            const s2 = new TokenSigningService(privPem, pubPem, 'https://x.example///');
+            assert.strictEqual(s2.issuer, 'https://x.example');
+            const s3 = new TokenSigningService(privPem, pubPem, 'https://x.example');
+            assert.strictEqual(s3.issuer, 'https://x.example');
+        });
     });
 
     describe('getMetadata', () => {
@@ -56,6 +65,16 @@ describe('services/oauth/TokenSigningService', () => {
         it('scopes_supported 가 KNOWN_SCOPES 와 일치', () => {
             const meta = svc.getMetadata();
             assert.deepStrictEqual(meta.scopes_supported.sort(), ['read:calendar', 'write:calendar']);
+        });
+
+        it('issuer trailing slash 박혀도 metadata URL double slash 없음', () => {
+            const slashSvc = new TokenSigningService(privPem, pubPem, 'https://x.example/');
+            const meta = slashSvc.getMetadata();
+            assert.strictEqual(meta.issuer, 'https://x.example');
+            assert.strictEqual(meta.authorization_endpoint, 'https://x.example/v1/oauth/authorize');
+            assert.strictEqual(meta.token_endpoint, 'https://x.example/v1/oauth/token');
+            assert.strictEqual(meta.registration_endpoint, 'https://x.example/v1/oauth/register');
+            assert.strictEqual(meta.jwks_uri, 'https://x.example/.well-known/jwks.json');
         });
     });
 

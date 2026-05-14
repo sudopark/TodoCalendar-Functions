@@ -9,7 +9,8 @@ class TokenSigningService {
         if (!issuer) throw new Error('OAUTH_ISSUER missing');
         this.privKeyPem = privKeyPem;
         this.pubKeyPem = pubKeyPem;
-        this.issuer = issuer;
+        // trailing slash 정규화 — metadata URL concat 시 double slash / JWT iss strict 비교 mismatch 방지. (issue #196)
+        this.issuer = issuer.replace(/\/+$/, '');
         this._privKey = null;
         this._pubKey = null;
         this._jwk = null;
