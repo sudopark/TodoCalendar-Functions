@@ -66,11 +66,13 @@ class TokenSigningService {
             authorization_endpoint: `${this.issuer}/v1/oauth/authorize`,
             token_endpoint: `${this.issuer}/v1/oauth/token`,
             registration_endpoint: `${this.issuer}/v1/oauth/register`,
+            revocation_endpoint: `${this.issuer}/v1/oauth/revoke`,
             jwks_uri: `${this.issuer}/.well-known/jwks.json`,
             response_types_supported: ['code'],
-            grant_types_supported: ['authorization_code'],
+            grant_types_supported: ['authorization_code', 'refresh_token'],
             code_challenge_methods_supported: ['S256'],
             token_endpoint_auth_methods_supported: ['none'],
+            revocation_endpoint_auth_methods_supported: ['none'],
             scopes_supported: Object.keys(KNOWN_SCOPES)
         };
     }

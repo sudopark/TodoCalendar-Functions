@@ -55,11 +55,13 @@ describe('services/oauth/TokenSigningService', () => {
             assert.strictEqual(meta.authorization_endpoint, `${ISSUER}/v1/oauth/authorize`);
             assert.strictEqual(meta.token_endpoint, `${ISSUER}/v1/oauth/token`);
             assert.strictEqual(meta.registration_endpoint, `${ISSUER}/v1/oauth/register`);
+            assert.strictEqual(meta.revocation_endpoint, `${ISSUER}/v1/oauth/revoke`);
             assert.strictEqual(meta.jwks_uri, `${ISSUER}/.well-known/jwks.json`);
             assert.deepStrictEqual(meta.response_types_supported, ['code']);
-            assert.deepStrictEqual(meta.grant_types_supported, ['authorization_code']);
+            assert.deepStrictEqual(meta.grant_types_supported, ['authorization_code', 'refresh_token']);
             assert.deepStrictEqual(meta.code_challenge_methods_supported, ['S256']);
             assert.deepStrictEqual(meta.token_endpoint_auth_methods_supported, ['none']);
+            assert.deepStrictEqual(meta.revocation_endpoint_auth_methods_supported, ['none']);
         });
 
         it('scopes_supported 가 KNOWN_SCOPES 와 일치', () => {
@@ -74,6 +76,7 @@ describe('services/oauth/TokenSigningService', () => {
             assert.strictEqual(meta.authorization_endpoint, 'https://x.example/v1/oauth/authorize');
             assert.strictEqual(meta.token_endpoint, 'https://x.example/v1/oauth/token');
             assert.strictEqual(meta.registration_endpoint, 'https://x.example/v1/oauth/register');
+            assert.strictEqual(meta.revocation_endpoint, 'https://x.example/v1/oauth/revoke');
             assert.strictEqual(meta.jwks_uri, 'https://x.example/.well-known/jwks.json');
         });
     });
