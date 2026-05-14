@@ -49,6 +49,7 @@ describe('OAuth AS — well-known', () => {
     it('GET /.well-known/oauth-authorization-server → RFC 8414 metadata', async () => {
         const res = await axios.get(`${BASE_URL}/.well-known/oauth-authorization-server`);
         assert.strictEqual(res.status, 200);
+        assert.strictEqual(res.headers['cache-control'], 'public, max-age=600');
         assert.strictEqual(res.data.issuer, process.env.OAUTH_ISSUER);
         assert.ok(res.data.authorization_endpoint.endsWith('/v1/oauth/authorize'));
         assert.ok(res.data.token_endpoint.endsWith('/v1/oauth/token'));
@@ -63,6 +64,7 @@ describe('OAuth AS — well-known', () => {
     it('GET /.well-known/jwks.json → RFC 7517 JWKS', async () => {
         const res = await axios.get(`${BASE_URL}/.well-known/jwks.json`);
         assert.strictEqual(res.status, 200);
+        assert.strictEqual(res.headers['cache-control'], 'public, max-age=600');
         assert.strictEqual(res.data.keys.length, 1);
         const k = res.data.keys[0];
         assert.strictEqual(k.kty, 'RSA');
