@@ -59,6 +59,27 @@ functions/
 
 구현: `services/oauth/oauthClientService.js` (`_computeDedupHash`, `_isDedupWindow`).
 
+**Token lifetime — access 2시간 / refresh 30일 + rotation + reuse detect**
+
+- `POST /v1/oauth/token` 응답은 access_token (JWT, RS256) + refresh_token (opaque) 동시 발급. `expires_in: 7200` (2시간).
+- access_token 만료 후 LLM 호스트가 `grant_type=refresh_token` 으로 새 token 받아옴 (사용자 consent 화면 다시 안 봄). 단 refresh 도 rotation 정책 → 매 사용마다 새 refresh 발급 + 옛 거 즉시 invalidate.
+- **Reuse detect (탈취 차단)** — 이미 revoked 된 refresh_token 으로 다시 요청 = 정상 client 면 발생 안 함 = 탈취 신호 → 해당 family 전체 revoke. 정상 client 도 더 못 쓰게 만들어 공격자의 토큰 chain 즉시 무력화.
+- refresh_token TTL 30일 absolute (sliding 미적용). 만료 후엔 처음부터 `/authorize` 재시작 필요.
+
+**Revocation (RFC 7009 — `POST /v1/oauth/revoke`)**
+
+- body `{ token, token_type_hint? }`. 인증 없음 (public client).
+- 응답은 항상 200 (RFC §2.2) — not-found / 이미 revoked / 잘못된 type 모두 silent.
+- MVP 는 refresh_token 만 실제 회수. access_token 은 JWT stateless 라 no-op (자연 만료 = 2시간 내).
+- 사용자 권한 철회 시 refresh 만 무력화 → access 도 2시간 내 자연 만료 = 같은 효과.
+
+**Cleanup**
+
+- `oauthClientCleanup` — 24시간 주기, `lastUsedAt=null` AND 30일 초과 client 정리.
+- `oauthRefreshTokenCleanup` — 24시간 주기, expired refresh_token 삭제 (`expiresAt < now`).
+
+구현: `services/oauth/refreshTokenService.js` (`issueForUser`, `rotate`, `revoke`).
+
 ## Getting Started
 
 ### 사전 요구사항
