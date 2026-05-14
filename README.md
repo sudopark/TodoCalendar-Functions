@@ -44,6 +44,20 @@ functions/
 | `/v1/holiday` | Holiday | 공휴일 조회 |
 | `/v1/migration` | Migration | 데이터 마이그레이션 |
 | `/v2/*` | v2 API | 태그 삭제, Todo/Schedule 생성 등 v2 변경분 |
+| `/v1/oauth/*` | OAuth 2.1 AS | dynamic client registration (RFC 7591), authorization code + PKCE, token 발급 |
+| `/.well-known/*` | OAuth metadata | `oauth-authorization-server` (RFC 8414), `jwks.json` (RFC 7517). 정적 public 데이터 — `Cache-Control: public, max-age=600` |
+
+### OAuth 운영 정책
+
+**Dynamic client registration dedup (`POST /v1/oauth/register`)** — 같은 `(ip, client_name, redirect_uris)` 조합으로 **1시간 이내** 재등록 요청이 들어오면 신규 client 를 발급하지 않고 **기존 client 를 그대로 반환**. 봇/실수 재시도로 인한 client 누적을 막기 위한 정책.
+
+호출자가 알아야 할 점:
+- 응답의 `client_id_issued_at` 은 **최초 등록 시각** (현재 시각 X) — dedup hit 시 과거 timestamp 로 보일 수 있음.
+- dedup key 는 metadata 일부 `(ip, client_name, redirect_uris)` 만 본다. 즉 `scope` / `grant_types` / `response_types` / `token_endpoint_auth_method` 만 다르게 박아 재요청해도 dedup hit 으로 흡수돼 신규 값 반영 X.
+- 신규 client 가 정말 필요하면 metadata 를 변경해야 함 (가장 간단한 건 `client_name` 다르게).
+- TTL 1시간 경과 후엔 같은 hash 라도 새 client 가 발급됨.
+
+구현: `services/oauth/oauthClientService.js` (`_computeDedupHash`, `_isDedupWindow`).
 
 ## Getting Started
 
