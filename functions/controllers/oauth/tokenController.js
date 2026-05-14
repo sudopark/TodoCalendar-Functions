@@ -67,6 +67,14 @@ class TokenController {
         const clientId = body.client_id;
         const resource = body.resource;
 
+        // body sanity — 누락 시 service 의 클레임 mismatch 메시지로 빠져 디버깅 혼란. controller 가 먼저 거름.
+        if (typeof refreshTokenId !== 'string' || refreshTokenId.length === 0) {
+            throw new Errors.Base(400, 'InvalidRequest', 'refresh_token required');
+        }
+        if (typeof clientId !== 'string' || clientId.length === 0) {
+            throw new Errors.Base(400, 'InvalidRequest', 'client_id required');
+        }
+
         try {
             const rotated = await this.refreshTokenService.rotate({
                 refreshTokenId, clientId, resource
