@@ -1,16 +1,13 @@
 const express = require('express');
 const router = express.Router();
 
-const RefreshTokenRepository = require('../../repositories/oauth/refreshTokenRepository');
-const RefreshTokenService = require('../../services/oauth/refreshTokenService');
+const refreshTokenService = require('../../services/oauth/refreshTokenServiceInstance');
 const RevocationController = require('../../controllers/oauth/revocationController');
 const noCache = require('../../middlewares/oauth/noCache');
 
 router.use(noCache);
 
-const refreshRepo = new RefreshTokenRepository();
-const refreshService = new RefreshTokenService(refreshRepo);
-const controller = new RevocationController(refreshService);
+const controller = new RevocationController(refreshTokenService);
 
 router.post('/', async (req, res) => {
     await controller.revoke(req, res);
