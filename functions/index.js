@@ -14,6 +14,7 @@ const { getFirestore } = require('firebase-admin/firestore');
 
 const isEmulator = process.env.FUNCTIONS_EMULATOR === 'true';
 if (isEmulator) {
+    require('dotenv').config({ path: './secrets/.env.test' });
     initializeApp();
 } else {
     const serviceAccount = require('./secrets/todocalendar-serviceAccountKey.json');
@@ -37,11 +38,28 @@ const holidayRouter = require('./routes/holidayRoutes');
 const syncRouter = require('./routes/dataSyncRoutes.js');
 const testRouter = require('./routes/testRoutes');
 
+const todoOpenRouter = require('./routes/openapi/todoOpenRoutes');
+const doneTodoOpenRouter = require('./routes/openapi/doneTodoOpenRoutes');
+const scheduleOpenRouter = require('./routes/openapi/scheduleOpenRoutes');
+const tagOpenRouter = require('./routes/openapi/tagOpenRoutes');
+const eventDetailOpenRouter = require('./routes/openapi/eventDetailOpenRoutes');
+const patAuth = require('./middlewares/openapi/patAuth');
+const signedUserAuth = require('./middlewares/openapi/signedUserAuth');
+
+const oauthWellKnownRouter = require('./routes/oauth/wellKnownRoutes');
+const oauthRegisterRouter = require('./routes/oauth/registerRoutes');
+const oauthAuthorizeRouter = require('./routes/oauth/authorizeRoutes');
+const oauthTokenRouter = require('./routes/oauth/tokenRoutes');
+
 const logger = require("firebase-functions/logger");
 
 const app = express();
+// Cloud Functions 는 GFE / Cloud Run proxy 뒤에서 동작. X-Forwarded-For 의 real client IP 가
+// req.ip 로 추출돼야 IP 기반 rate limit (oauth ipRateLimit) 와 dedup hash 가 정상 동작.
+app.set('trust proxy', true);
 // app use middleware
 app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: false }));
 
 // swagger
 const swagger = require('./swagger');
@@ -82,6 +100,22 @@ app.use('/v1/sync', authValidator, setVersion('v1'), syncRouter);
 app.use('/v2/sync', authValidator, setVersion('v2'), syncRouter);
 // app.use('/v1/tests', v1TestRouter);
 
+// openAPI (/v2/open/*) — PAT (서비스 식별) + signed user JWT (사용자 식별) + scope 인가
+// dones 가 todos 보다 먼저 mount: '/v2/open/todos/dones/...' 가 '/v2/open/todos' 의 prefix 매칭으로 흡수되지 않게.
+const openApiAuth = [patAuth, signedUserAuth, setVersion('v2')];
+app.use('/v2/open/todos/dones', openApiAuth, doneTodoOpenRouter);
+app.use('/v2/open/todos', openApiAuth, todoOpenRouter);
+app.use('/v2/open/schedules', openApiAuth, scheduleOpenRouter);
+app.use('/v2/open/tags', openApiAuth, tagOpenRouter);
+app.use('/v2/open/event_details', openApiAuth, eventDetailOpenRouter);
+
+// OAuth 2.1 Authorization Server (#189) — RFC 8414 metadata + JWKS + endpoints
+// register/token 가 먼저 mount (path 우선순위). authorize/consent 는 /v1/oauth 아래 묶음.
+app.use('/.well-known', oauthWellKnownRouter);
+app.use('/v1/oauth/register', oauthRegisterRouter);
+app.use('/v1/oauth/token', oauthTokenRouter);
+app.use('/v1/oauth', oauthAuthorizeRouter);
+
 // request logging
 const requestLogger = (gen) => (req, res, next) => {
     req.functionsGen = gen;
@@ -116,3 +150,6 @@ const appV2 = express();
 appV2.use(requestLogger('v2-gen'));
 appV2.use(app);
 exports.apiV2 = onRequest(appV2);
+
+// OAuth client garbage cleanup — 매 24시간, 30일 미사용 client 정리 (Asia/Seoul timezone)
+exports.oauthClientCleanup = require('./scheduled/oauthClientCleanup');

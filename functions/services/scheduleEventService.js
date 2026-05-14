@@ -87,8 +87,9 @@ class ScheduleEventService {
         }
         origin.repeating.end = endTime
         delete origin.repeating.end_count
+        const originPayload = origin.toJSON()
         const updated = await this.scheduleEventRepository.putEvent(
-            originEventId, origin
+            originEventId, originPayload
         )
         await this.#updateEventtime(userId, updated);
         const newEvent = await this.scheduleEventRepository.makeEvent(newPayload);

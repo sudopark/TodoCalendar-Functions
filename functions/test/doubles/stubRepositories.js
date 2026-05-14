@@ -167,6 +167,7 @@ class StubScheduleEventRepository {
         this.shouldFailUpdate = false
         this.eventMap = new Map();
         this.spyEventMap = new Map();
+        this.lastPutPayload = null
     }
 
     async findEvent(eventId) {
@@ -183,7 +184,7 @@ class StubScheduleEventRepository {
         })
         return events
     }
- 
+
     async makeEvent(payload) {
         if(this.shouldFailMake) {
             throw { message: 'failed' }
@@ -196,6 +197,7 @@ class StubScheduleEventRepository {
     }
 
     async putEvent(eventId, payload) {
+        this.lastPutPayload = payload
         if(this.shouldFailPut) {
             throw { message: 'failed' }
         }

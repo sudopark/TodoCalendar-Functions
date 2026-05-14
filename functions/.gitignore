@@ -1,3 +1,4 @@
 node_modules/
-secrets/
+secrets/*
+!secrets/.env.test.example
 .DS_Store
