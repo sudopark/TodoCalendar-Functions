@@ -155,3 +155,4 @@ exports.apiV2 = onRequest(appV2);
 
 // OAuth client garbage cleanup — 매 24시간, 30일 미사용 client 정리 (Asia/Seoul timezone)
 exports.oauthClientCleanup = require('./scheduled/oauthClientCleanup');
+exports.oauthRefreshTokenCleanup = require('./scheduled/oauthRefreshTokenCleanup');
