@@ -72,10 +72,9 @@ class RefreshTokenRepository {
         }
     }
 
-    async findExpiredOrRevokedBefore(beforeTimestamp, limit = 100) {
-        // cleanup 용 — expired 또는 revoked 된 token 중 일정 시간 지난 것 조회.
-        // Firestore 단일 쿼리로 두 조건 OR 불가 → 호출자가 두 번 조회 후 머지 (또는 schedule cleanup 에서 분리 실행).
-        // 본 메소드는 expired 만 우선 (단순). revoked grace 정리는 별 메소드 또는 후속.
+    async findExpiredBefore(beforeTimestamp, limit = 100) {
+        // cleanup 용 — expiresAt 기준 만료된 token 조회. revoked grace 정리는 별 메소드 (후속) 로 분리.
+        // Firestore 가 (expiresAt < X) OR (revokedAt 박힘 + revokedAt < Y) 같은 OR 쿼리 미지원 → 두 메소드 분리가 자연.
         try {
             const snap = await collectionRef
                 .where('expiresAt', '<', beforeTimestamp)

@@ -225,7 +225,7 @@ class StubRefreshTokenRepository {
         return revoked;
     }
 
-    async findExpiredOrRevokedBefore(beforeTimestamp, limit = 100) {
+    async findExpiredBefore(beforeTimestamp, limit = 100) {
         const results = [];
         for (const [id, data] of this.store.entries()) {
             if (!(data.expiresAt < beforeTimestamp)) continue;

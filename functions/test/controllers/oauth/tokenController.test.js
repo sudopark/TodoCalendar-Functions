@@ -238,6 +238,26 @@ describe('controllers/oauth/TokenController', () => {
             assert.strictEqual(call.ttlSeconds, 7200);
         });
 
+        it('refresh_token 누락 → 400 InvalidRequest (service 호출 전 거름)', async () => {
+            await assert.rejects(
+                () => controller.exchange({
+                    body: { grant_type: 'refresh_token', client_id: 'cli' }
+                }, res),
+                e => e.status === 400 && e.code === 'InvalidRequest' && /refresh_token/.test(e.message)
+            );
+            assert.strictEqual(refreshSvc.rotateCalls.length, 0, 'service 호출되지 않아야');
+        });
+
+        it('client_id 누락 → 400 InvalidRequest (service 호출 전 거름)', async () => {
+            await assert.rejects(
+                () => controller.exchange({
+                    body: { grant_type: 'refresh_token', refresh_token: 'rid' }
+                }, res),
+                e => e.status === 400 && e.code === 'InvalidRequest' && /client_id/.test(e.message)
+            );
+            assert.strictEqual(refreshSvc.rotateCalls.length, 0, 'service 호출되지 않아야');
+        });
+
         it('refresh service InvalidGrant → status 유지 (Application wrap)', async () => {
             refreshSvc.rotate = async () => {
                 const e = new Error('reuse detected');
