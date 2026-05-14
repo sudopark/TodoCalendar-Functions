@@ -54,8 +54,9 @@ describe('OAuth AS — well-known', () => {
         assert.ok(res.data.authorization_endpoint.endsWith('/v1/oauth/authorize'));
         assert.ok(res.data.token_endpoint.endsWith('/v1/oauth/token'));
         assert.ok(res.data.registration_endpoint.endsWith('/v1/oauth/register'));
+        assert.ok(res.data.revocation_endpoint.endsWith('/v1/oauth/revoke'));
         assert.deepStrictEqual(res.data.response_types_supported, ['code']);
-        assert.deepStrictEqual(res.data.grant_types_supported, ['authorization_code']);
+        assert.deepStrictEqual(res.data.grant_types_supported, ['authorization_code', 'refresh_token']);
         assert.deepStrictEqual(res.data.code_challenge_methods_supported, ['S256']);
         assert.deepStrictEqual(res.data.token_endpoint_auth_methods_supported, ['none']);
         assert.deepStrictEqual(res.data.scopes_supported.sort(), ['read:calendar', 'write:calendar']);
@@ -291,6 +292,72 @@ describe('OAuth AS — happy path (한 바퀴)', () => {
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
         });
         assert.strictEqual(res3.status, 400);
+    });
+
+    it('8. POST /revoke — refresh_token 회수 후 동일 token 으로 refresh 시도 → 400', async () => {
+        // 단계 1~5 재실행해 새로운 valid refresh_token 확보 (직전 family 는 7단계에서 모두 revoked).
+        const { res: rr } = await registerClient('Revoke Client');
+        const newClientId = rr.data.client_id;
+        const newRedirectUri = rr.data.redirect_uris[0];
+        const { verifier: v, challenge: ch } = pkce();
+        const qs = authorizeQuery({ clientId: newClientId, redirectUri: newRedirectUri, codeChallenge: ch });
+        const authzRes = await axios.get(`${BASE_URL}/v1/oauth/authorize?${qs}`, NO_REDIRECT);
+        const newChallengeId = challengeIdFromLocation(authzRes.headers.location);
+        const idToken = getAuthToken();
+        const cbBody = new URLSearchParams({ challenge: newChallengeId, allow: 'true', id_token: idToken });
+        const cbRes = await axios.post(`${BASE_URL}/v1/oauth/consent/callback`, cbBody.toString(), {
+            ...NO_REDIRECT,
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+        });
+        const newCode = new URL(cbRes.headers.location).searchParams.get('code');
+        const tokenBody = new URLSearchParams({
+            grant_type: 'authorization_code',
+            code: newCode, code_verifier: v,
+            redirect_uri: newRedirectUri, client_id: newClientId,
+            resource: process.env.OAUTH_CALENDAR_RESOURCE_URI
+        });
+        const tokenRes = await axios.post(`${BASE_URL}/v1/oauth/token`, tokenBody.toString(), {
+            ...NO_REDIRECT,
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+        });
+        const newRefreshToken = tokenRes.data.refresh_token;
+
+        // POST /revoke → 200 (RFC 7009 §2.2)
+        const revokeBody = new URLSearchParams({ token: newRefreshToken });
+        const revokeRes = await axios.post(`${BASE_URL}/v1/oauth/revoke`, revokeBody.toString(), {
+            ...NO_REDIRECT,
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+        });
+        assert.strictEqual(revokeRes.status, 200);
+
+        // 회수된 token 으로 refresh 시도 → 400 InvalidGrant (reuse detect 분기)
+        const useBody = new URLSearchParams({
+            grant_type: 'refresh_token',
+            refresh_token: newRefreshToken,
+            client_id: newClientId,
+            resource: process.env.OAUTH_CALENDAR_RESOURCE_URI
+        });
+        const useRes = await axios.post(`${BASE_URL}/v1/oauth/token`, useBody.toString(), {
+            ...NO_REDIRECT,
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+        });
+        assert.strictEqual(useRes.status, 400);
+
+        // 9. 알 수 없는 token 으로 revoke → silent 200 (RFC 7009 §2.2)
+        const unknownBody = new URLSearchParams({ token: 'totally-unknown-token-id' });
+        const unknownRes = await axios.post(`${BASE_URL}/v1/oauth/revoke`, unknownBody.toString(), {
+            ...NO_REDIRECT,
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+        });
+        assert.strictEqual(unknownRes.status, 200);
+
+        // 10. token 누락 → 400 InvalidRequest
+        const emptyBody = new URLSearchParams({});
+        const emptyRes = await axios.post(`${BASE_URL}/v1/oauth/revoke`, emptyBody.toString(), {
+            ...NO_REDIRECT,
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+        });
+        assert.strictEqual(emptyRes.status, 400);
     });
 });
 

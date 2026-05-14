@@ -50,6 +50,7 @@ const oauthWellKnownRouter = require('./routes/oauth/wellKnownRoutes');
 const oauthRegisterRouter = require('./routes/oauth/registerRoutes');
 const oauthAuthorizeRouter = require('./routes/oauth/authorizeRoutes');
 const oauthTokenRouter = require('./routes/oauth/tokenRoutes');
+const oauthRevocationRouter = require('./routes/oauth/revocationRoutes');
 
 const logger = require("firebase-functions/logger");
 
@@ -114,6 +115,7 @@ app.use('/v2/open/event_details', openApiAuth, eventDetailOpenRouter);
 app.use('/.well-known', oauthWellKnownRouter);
 app.use('/v1/oauth/register', oauthRegisterRouter);
 app.use('/v1/oauth/token', oauthTokenRouter);
+app.use('/v1/oauth/revoke', oauthRevocationRouter);
 app.use('/v1/oauth', oauthAuthorizeRouter);
 
 // request logging
