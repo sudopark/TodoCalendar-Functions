@@ -140,6 +140,16 @@ describe('services/oauth/TokenSigningService', () => {
             assert.strictEqual(payload.scope, 'read:calendar write:calendar');
         });
 
+        it('issuer trailing slash 박혀도 JWT iss 클레임 정규화', async () => {
+            const slashSvc = new TokenSigningService(privPem, pubPem, 'https://x.example/');
+            const token = await slashSvc.signAccessToken({
+                sub: 'u', aud: 'a', scope: ['read:calendar'], clientId: 'c'
+            });
+            const pubKey = await jose.importSPKI(pubPem, 'RS256');
+            const { payload } = await jose.jwtVerify(token, pubKey, { issuer: 'https://x.example', audience: 'a' });
+            assert.strictEqual(payload.iss, 'https://x.example');
+        });
+
         it('ttlSeconds 기본값 30분 (1800s)', async () => {
             const before = Math.floor(Date.now() / 1000);
             const token = await svc.signAccessToken({
