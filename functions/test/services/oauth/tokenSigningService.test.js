@@ -150,14 +150,14 @@ describe('services/oauth/TokenSigningService', () => {
             assert.strictEqual(payload.iss, 'https://x.example');
         });
 
-        it('ttlSeconds 기본값 30분 (1800s)', async () => {
+        it('ttlSeconds 기본값 2시간 (7200s)', async () => {
             const before = Math.floor(Date.now() / 1000);
             const token = await svc.signAccessToken({
                 sub: 'u', aud: 'a', scope: ['read:calendar'], clientId: 'c'
             });
             const pubKey = await jose.importSPKI(pubPem, 'RS256');
             const { payload } = await jose.jwtVerify(token, pubKey, { issuer: ISSUER, audience: 'a' });
-            assert.ok(payload.exp - payload.iat === 1800, `exp - iat == 1800 (got ${payload.exp - payload.iat})`);
+            assert.ok(payload.exp - payload.iat === 7200, `exp - iat == 7200 (got ${payload.exp - payload.iat})`);
             assert.ok(payload.iat >= before);
         });
     });

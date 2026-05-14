@@ -59,7 +59,7 @@ describe('controllers/oauth/TokenController', () => {
             assert.strictEqual(res._status, 200);
             assert.strictEqual(res._body.access_token, 'fake.jwt.user-1');
             assert.strictEqual(res._body.token_type, 'Bearer');
-            assert.strictEqual(res._body.expires_in, 1800);
+            assert.strictEqual(res._body.expires_in, 7200);
             assert.strictEqual(res._body.scope, 'read:calendar write:calendar');
         });
 
@@ -81,7 +81,7 @@ describe('controllers/oauth/TokenController', () => {
             assert.strictEqual(call.resource, 'r');
         });
 
-        it('signAccessToken 인자 (sub, aud, scope, clientId, ttlSeconds=1800)', async () => {
+        it('signAccessToken 인자 (sub, aud, scope, clientId, ttlSeconds=7200)', async () => {
             await controller.exchange({
                 body: {
                     grant_type: 'authorization_code',
@@ -95,7 +95,7 @@ describe('controllers/oauth/TokenController', () => {
             assert.strictEqual(call.aud, 'http://localhost:3000/mcp');
             assert.deepStrictEqual(call.scope, ['read:calendar', 'write:calendar']);
             assert.strictEqual(call.clientId, 'client-1');
-            assert.strictEqual(call.ttlSeconds, 1800);
+            assert.strictEqual(call.ttlSeconds, 7200);
         });
     });
 
