@@ -11,6 +11,7 @@ const services = [
   { name: 'Emulator UI',                port: 4000, url: 'http://localhost:4000' },
   { name: 'Emulator Hub',               port: 4400, url: 'http://localhost:4400' },
   { name: 'Web Dev Server (Vite)',       port: 5173, url: 'http://localhost:5173' },
+  { name: 'TodoCalendar MCP',            port: 3000, url: 'http://localhost:3000' },
 ];
 
 // Group: emulator ports share a single parent process
