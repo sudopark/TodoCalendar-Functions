@@ -62,6 +62,29 @@ describe('OAuth AS — well-known', () => {
         assert.deepStrictEqual(res.data.scopes_supported.sort(), ['read:calendar', 'write:calendar']);
     });
 
+    it('GET /.well-known/oauth-authorization-server<issuer-path> → RFC 8414 §3 host-root variant', async () => {
+        // RFC 8414 §3 표준 path: <host>/.well-known/oauth-authorization-server<issuer-path>.
+        // path-aware issuer (예: emulator) 일 때 SDK 가 시도하는 정통 경로.
+        const issuerPath = new URL(process.env.OAUTH_ISSUER).pathname.replace(/\/$/, '');
+        assert.ok(issuerPath, 'emulator OAUTH_ISSUER 는 path 컴포넌트를 가져야 한다 — 본 케이스 전제');
+        const res = await axios.get(`${BASE_URL}/.well-known/oauth-authorization-server${issuerPath}`);
+        assert.strictEqual(res.status, 200);
+        assert.strictEqual(res.data.issuer, process.env.OAUTH_ISSUER);
+        // path-aware variant 와 동일한 metadata body
+        assert.ok(res.data.authorization_endpoint.endsWith('/v1/oauth/authorize'));
+        assert.ok(res.data.registration_endpoint.endsWith('/v1/oauth/register'));
+        assert.ok(res.data.jwks_uri.endsWith('/.well-known/jwks.json'));
+    });
+
+    it('GET /.well-known/oauth-authorization-server/<wrong-path> → 404 (metadata leak 방지)', async () => {
+        // issuer-path 와 정확히 일치하지 않는 path 는 라우트 미등록.
+        const res = await axios.get(
+            `${BASE_URL}/.well-known/oauth-authorization-server/some/other/path`,
+            { validateStatus: () => true }
+        );
+        assert.strictEqual(res.status, 404);
+    });
+
     it('GET /.well-known/jwks.json → RFC 7517 JWKS', async () => {
         const res = await axios.get(`${BASE_URL}/.well-known/jwks.json`);
         assert.strictEqual(res.status, 200);

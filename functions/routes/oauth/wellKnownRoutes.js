@@ -1,4 +1,5 @@
 const express = require('express');
+const { URL } = require('url');
 const router = express.Router();
 
 const tokenSigningService = require('../../services/oauth/tokenSigningServiceInstance');
@@ -13,9 +14,24 @@ router.use((req, res, next) => {
     next();
 });
 
-router.get('/oauth-authorization-server', async (req, res) => {
+const getMetadata = async (req, res) => {
     await controller.getMetadata(req, res);
-});
+};
+
+// path-aware variant — OIDC discovery 호환: <issuer>/.well-known/oauth-authorization-server
+router.get('/oauth-authorization-server', getMetadata);
+
+// RFC 8414 §3 host-root variant — issuer 가 path 컴포넌트를 가질 때 표준 경로:
+//   <host>/.well-known/oauth-authorization-server<issuer-path>
+// 라우트는 issuer-path 와 정확히 일치할 때만 등록 (와일드카드 X — 임의 path 에 metadata leak 방지).
+// path 없는 host-root issuer 일 때는 위 path-aware variant 와 같은 URL 로 흡수되어 별도 등록 불필요.
+const issuerPath = (() => {
+    if (!process.env.OAUTH_ISSUER) return '';
+    return new URL(process.env.OAUTH_ISSUER).pathname.replace(/\/$/, '');
+})();
+if (issuerPath) {
+    router.get(`/oauth-authorization-server${issuerPath}`, getMetadata);
+}
 
 router.get('/jwks.json', async (req, res) => {
     await controller.getJwks(req, res);
