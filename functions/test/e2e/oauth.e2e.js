@@ -168,7 +168,8 @@ describe('OAuth AS — happy path (한 바퀴)', () => {
         assert.strictEqual(res.status, 200);
         assert.strictEqual(res.data.client_name, 'Flow Client');
         assert.strictEqual(res.data.redirect_uri_origin, new URL(redirectUri).origin);
-        assert.deepStrictEqual(res.data.scope, ['read:calendar']);
+        // RFC 6749 §3.3 — wire-level scope 는 space-separated string (array 아님).
+        assert.strictEqual(res.data.scope, 'read:calendar');
         assert.strictEqual(res.data.resource, process.env.OAUTH_CALENDAR_RESOURCE_URI);
         assert.ok(typeof res.data.expires_at === 'number');
     });
