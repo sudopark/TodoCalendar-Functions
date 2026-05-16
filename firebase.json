@@ -36,16 +36,14 @@
         "source": "/.well-known/**",
         "function": {
           "functionId": "apiV2",
-          "region": "us-central1",
-          "pinTag": true
+          "region": "us-central1"
         }
       },
       {
         "source": "**",
         "function": {
           "functionId": "apiV2",
-          "region": "us-central1",
-          "pinTag": true
+          "region": "us-central1"
         }
       }
     ]
