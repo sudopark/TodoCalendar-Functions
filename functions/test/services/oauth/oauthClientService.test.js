@@ -187,6 +187,31 @@ describe('services/oauth/OAuthClientService', () => {
             );
         });
 
+        it('grant_types=[authorization_code, refresh_token] → 정상 (metadata grant_types_supported 와 align)', async () => {
+            const c = await svc.register(
+                { ...VALID, grantTypes: ['authorization_code', 'refresh_token'] },
+                { ip: '1.1.1.1' }
+            );
+            assert.ok(c.id);
+        });
+
+        it('grant_types=[refresh_token] (authorization_code 누락) → 400', async () => {
+            await assert.rejects(
+                () => svc.register({ ...VALID, grantTypes: ['refresh_token'] }, { ip: '1.1.1.1' }),
+                e => e.status === 400 && /authorization_code/.test(e.message)
+            );
+        });
+
+        it('grant_types=[authorization_code, password] → 400 (unsupported 거부 유지)', async () => {
+            await assert.rejects(
+                () => svc.register(
+                    { ...VALID, grantTypes: ['authorization_code', 'password'] },
+                    { ip: '1.1.1.1' }
+                ),
+                e => e.status === 400 && /password/.test(e.message)
+            );
+        });
+
         it('response_types=token → 400', async () => {
             await assert.rejects(
                 () => svc.register({ ...VALID, responseTypes: ['token'] }, { ip: '1.1.1.1' }),

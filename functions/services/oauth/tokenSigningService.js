@@ -1,5 +1,6 @@
 const jose = require('jose');
 const { KNOWN_SCOPES, formatScopeArray } = require('../../models/oauth/scopes');
+const { KNOWN_GRANT_TYPES } = require('../../models/oauth/grantTypes');
 
 class TokenSigningService {
 
@@ -69,7 +70,7 @@ class TokenSigningService {
             revocation_endpoint: `${this.issuer}/v1/oauth/revoke`,
             jwks_uri: `${this.issuer}/.well-known/jwks.json`,
             response_types_supported: ['code'],
-            grant_types_supported: ['authorization_code', 'refresh_token'],
+            grant_types_supported: [...KNOWN_GRANT_TYPES],
             code_challenge_methods_supported: ['S256'],
             token_endpoint_auth_methods_supported: ['none'],
             revocation_endpoint_auth_methods_supported: ['none'],
