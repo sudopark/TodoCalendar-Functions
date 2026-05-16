@@ -1,4 +1,5 @@
 const Errors = require('../../models/Errors');
+const { formatScopeArray } = require('../../models/oauth/scopes');
 
 class AuthorizeController {
 
@@ -54,7 +55,9 @@ class AuthorizeController {
             res.status(200).json({
                 client_name: client.clientName,
                 redirect_uri_origin: origin,
-                scope: challenge.scope,
+                // RFC 6749 §3.3 wire-format — scope 는 space-separated string. metadata 의
+                // `scopes_supported` (capability 광고) 만 array, wire-level value 는 string.
+                scope: formatScopeArray(challenge.scope),
                 resource: challenge.resource,
                 expires_at: expMs
             });

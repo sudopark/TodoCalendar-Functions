@@ -151,9 +151,21 @@ describe('controllers/oauth/AuthorizeController', () => {
             assert.strictEqual(res._status, 200);
             assert.strictEqual(res._body.client_name, 'Claude Desktop');
             assert.strictEqual(res._body.redirect_uri_origin, 'http://127.0.0.1:54321');
-            assert.deepStrictEqual(res._body.scope, ['read:calendar']);
+            // RFC 6749 §3.3 — wire-level scope 는 space-separated string (array 아님).
+            assert.strictEqual(res._body.scope, 'read:calendar');
             assert.strictEqual(res._body.resource, 'http://localhost:3000/mcp');
             assert.ok(typeof res._body.expires_at === 'number');
+        });
+
+        it('multi-scope challenge → 응답 scope 는 space-separated string', async () => {
+            const multiScope = ConsentChallenge.fromData('ch-multi', {
+                ...SAMPLE_CHALLENGE,
+                scope: ['read:calendar', 'write:calendar']
+            });
+            svc.getConsentInfo = async () => ({ challenge: multiScope, client: SAMPLE_CLIENT });
+            await controller.getConsentPayload(makeReq({ params: { id: 'ch-multi' } }), res);
+            assert.strictEqual(res._status, 200);
+            assert.strictEqual(res._body.scope, 'read:calendar write:calendar');
         });
 
         it('challenge invalid → 404 InvalidChallenge', async () => {
