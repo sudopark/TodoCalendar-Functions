@@ -113,6 +113,20 @@ describe('OAuth AS — register', () => {
         assert.strictEqual(res.status, 400);
     });
 
+    it('grant_types=[authorization_code, refresh_token] → 201 (metadata `grant_types_supported` 와 align)', async () => {
+        const redirectUri = `http://127.0.0.1:${10000 + Math.floor(Math.random() * 50000)}/cb`;
+        const res = await axios.post(`${BASE_URL}/v1/oauth/register`, {
+            client_name: 'Standard Client',
+            redirect_uris: [redirectUri],
+            scope: 'read:calendar',
+            token_endpoint_auth_method: 'none',
+            grant_types: ['authorization_code', 'refresh_token'],
+            response_types: ['code']
+        }, NO_REDIRECT);
+        assert.strictEqual(res.status, 201);
+        assert.ok(res.data.client_id);
+    });
+
     it('redirect_uri 에 userinfo 포함 (`https://victim@evil.com/cb`) → 400', async () => {
         const res = await axios.post(`${BASE_URL}/v1/oauth/register`, {
             client_name: 'X',
