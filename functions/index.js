@@ -4,7 +4,7 @@ const { onRequest } = require("firebase-functions/v2/https");
 const express = require("express");
 require('express-async-errors');
 
-// const cors = require("cors");
+const cors = require("cors");
 const bodyParser = require("body-parser");
 const authValidator = require("./middlewares/authMiddleware.js");
 
@@ -58,6 +58,14 @@ const app = express();
 // Cloud Functions 는 GFE / Cloud Run proxy 뒤에서 동작. X-Forwarded-For 의 real client IP 가
 // req.ip 로 추출돼야 IP 기반 rate limit (oauth ipRateLimit) 와 dedup hash 가 정상 동작.
 app.set('trust proxy', true);
+// CORS — 웹 client (별 도메인 todo-calendar.com) 에서 api 도메인 (api.todo-calendar.com) 으로 cross-origin
+// 호출을 허용. 옛날엔 hosting rewrite 로 same-origin 이었어 CORS 미들웨어 필요 없었음.
+// cors 미들웨어가 OPTIONS preflight 응답에 Allow-Origin/Methods/Headers 자동 부착.
+// credentials: true — Authorization: Bearer <Firebase ID token> 헤더 전송 허용.
+const WEB_ORIGINS = (process.env.WEB_ORIGINS ?? 'https://todo-calendar.com')
+    .split(',').map((o) => o.trim()).filter(Boolean);
+app.use(cors({ origin: WEB_ORIGINS, credentials: true }));
+
 // app use middleware
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
