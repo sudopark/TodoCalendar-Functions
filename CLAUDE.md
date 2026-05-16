@@ -50,6 +50,13 @@ routes/ → controllers/ → services/ → repositories/
 
 Routes are registered under `/v1/` and `/v2/` prefixes. A `setVersion` middleware sets `req.apiVersion` so services can branch on version where needed (e.g., tag delete behavior differs between v1 and v2).
 
+### Special route groups
+
+위 v1/v2 prefix 외에 두 도메인 한정 라우트 그룹이 별도로 존재. 각자 독립된 인증 체계와 운영 정책을 가짐.
+
+- **openAPI** (`/v2/open/*`) — 외부 서비스를 위한 인증된 API 게이트웨이. PAT (서비스 식별) + signed user JWT (사용자 식별) + `requireScope` (인가). routes 는 `routes/openapi/`, 미들웨어는 `middlewares/openapi/`. 기능 스펙: [`docs/spec/openapi.md`](docs/spec/openapi.md). 운영/시크릿 정책은 "openAPI 시크릿 운영 정책" 섹션.
+- **OAuth 2.1 Authorization Server** (`/v1/oauth/*` + `/.well-known/*`) — 외부 OAuth client 에 access_token 발급 (RFC 6749 / 7591 / 7009 / 8414 / 8707 / 7636 / 7638). Firebase Auth 미들웨어 미적용. access_token JWT (RS256, 2h) + refresh_token (opaque, 30d, rotation + reuse detect). PKCE S256 mandatory. routes 는 `routes/oauth/`, 미들웨어는 `middlewares/oauth/`. 기능 스펙: [`docs/spec/oauth.md`](docs/spec/oauth.md). 운영/시크릿 정책은 "OAuth 2.1 Authorization Server 시크릿 운영 정책" 섹션.
+
 ### Key Cross-Cutting Services
 
 - **`EventTimeRangeService`** (`services/eventTimeRangeService.js`): Maintains a separate time-range index for every event (todo or schedule). Every create/update/delete must call this service to keep the index in sync. Supports `at`, `period`, and `allday` time types.
@@ -61,7 +68,9 @@ Routes are registered under `/v1/` and `/v2/` prefixes. A `setVersion` middlewar
 
 `middlewares/authMiddleware.js` verifies Firebase ID tokens from the `Authorization: Bearer <token>` header and attaches the decoded token to `req.auth`. Applied to all routes except `/v1/accounts` and `/v1/holiday`.
 
-**OAuth 2.1 Authorization Server** (`/v1/oauth/*` + `/.well-known/*`) 는 별도 라우트 그룹으로 격리 (Firebase Auth 인증 미들웨어 미적용). 외부 OAuth client (LLM 호스트 등) 에게 access_token 발급. 운영 정책은 아래 "OAuth 2.1 Authorization Server 운영 정책" 섹션 참조.
+**OAuth 2.1 Authorization Server** (`/v1/oauth/*` + `/.well-known/*`) 는 별도 라우트 그룹으로 격리 (Firebase Auth 인증 미들웨어 미적용). 외부 OAuth client 에 access_token 발급. 기능 스펙: [`docs/spec/oauth.md`](docs/spec/oauth.md). 운영/시크릿 정책은 아래 "OAuth 2.1 Authorization Server 시크릿 운영 정책" 섹션.
+
+**openAPI** (`/v2/open/*`) 도 별도 라우트 그룹 — Firebase Auth 대신 PAT + signed user JWT 로 인증. 기능 스펙: [`docs/spec/openapi.md`](docs/spec/openapi.md). 운영/시크릿 정책은 아래 "openAPI 시크릿 운영 정책" 섹션.
 
 ### Models
 
@@ -148,6 +157,8 @@ test/e2e/
 
 #### openAPI 시크릿 운영 정책 (`/v2/open/*`)
 
+기능 스펙은 [`docs/spec/openapi.md`](docs/spec/openapi.md) 참조. 아래는 운영/시크릿 정책만.
+
 `OPENAPI_PAT_MCP` 와 `SIGNING_SECRET` 두 키가 openAPI 인증 체계의 핵심. 운영(`.env`) 과
 테스트(`.env.test`) 양쪽에 **반드시 다른 값**으로 둔다 (테스트 dummy 가 운영 인증을 우회하지
 못하게).
@@ -171,8 +182,15 @@ test/e2e/
 - 운영에서 PAT 또는 SIGNING_SECRET 을 바꾸면 호출자(MCP, aiFrontAPI) 도 동시에 갱신해야 함 — 무중단 교체가 필요하면 화이트리스트에 임시로 두 secret 을 모두 허용하는 단계가 필요(현 MVP 미지원, 단기 다운타임 감수).
 - `.env.test.example` dummy 값(`deadbeef...`/`cafebabe...`) 은 절대 운영 secret 으로 쓰지 말 것.
 
-#### OAuth 2.1 Authorization Server (`/v1/oauth/*`)
+#### OAuth 2.1 Authorization Server 시크릿 운영 정책 (`/v1/oauth/*`)
 
-별도 라우트 그룹으로 격리 (Firebase Auth 미들웨어 미적용). 첫 RS = MCP server (`sudopark/TodoCalendar-mcp#23`), Web consent UI = `sudopark/TodoCalendar-Web#171`. 발급 JWT 는 RS256 + JWK thumbprint(RFC 7638) kid, `/.well-known/jwks.json` 로 public key 노출.
+기능 스펙은 [`docs/spec/oauth.md`](docs/spec/oauth.md) 참조. 아래는 운영/시크릿 정책만.
 
-5개 OAuth env (`OAUTH_ISSUER`, `OAUTH_SIGNING_PRIVATE_KEY`, `OAUTH_SIGNING_PUBLIC_KEY`, `OAUTH_CALENDAR_RESOURCE_URI`, `OAUTH_CONSENT_URL`) 는 emulator 와 production 분리 운용 (emulator dummy 절대 재사용 금지). spec / 운영 배포 절차는 이슈 #189 (특히 백로그 코멘트 #issuecomment-4426228666).
+5개 OAuth env 를 emulator 와 production 분리 운용 (emulator dummy 절대 재사용 금지):
+
+- **`OAUTH_ISSUER`** — AS issuer. JWT `iss` claim + JWKS/metadata base URL. trailing slash 는 서버에서 정규화. production 은 hosting custom domain root, emulator 는 hosting emulator host-root URL (예: `http://127.0.0.1:5002`). functions emulator port 직접 (`/<project>/<region>/<function>`) 은 prefix 강제로 host-root path 함수 진입 불가 — hosting rewrite (`firebase.json`) 가 `.well-known/**` + `**` 둘 다 잡도록 구성되어야 RFC 8414 §3.1 host-root insert 흐름 동작 (issue #211).
+- **`OAUTH_SIGNING_PRIVATE_KEY` / `OAUTH_SIGNING_PUBLIC_KEY`** — RS256 keypair (PKCS8 / SPKI PEM). access_token JWT 서명/검증. `kid` 는 public key 의 JWK thumbprint (RFC 7638) 로 자동 산출. 생성: `openssl genrsa 2048 > private.pem; openssl rsa -in private.pem -pubout > public.pem`. emulator dummy 는 `.env.test.example` 에 박혀 있으나 운영에서 절대 재사용 금지.
+- **`OAUTH_CALENDAR_RESOURCE_URI`** — 보호 리소스 canonical URI 화이트리스트 (RFC 8707). 현재 단일 값.
+- **`OAUTH_CONSENT_URL`** — Web consent UI base URL (`/authorize` 의 302 redirect 대상). error 페이지는 `<base>/error?reason=...`.
+
+호스팅 / 운영 배포 절차는 이슈 #189 (특히 백로그 코멘트 #issuecomment-4426228666).

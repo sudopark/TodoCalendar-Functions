@@ -50,6 +50,7 @@ const oauthWellKnownRouter = require('./routes/oauth/wellKnownRoutes');
 const oauthRegisterRouter = require('./routes/oauth/registerRoutes');
 const oauthAuthorizeRouter = require('./routes/oauth/authorizeRoutes');
 const oauthTokenRouter = require('./routes/oauth/tokenRoutes');
+const oauthRevocationRouter = require('./routes/oauth/revocationRoutes');
 
 const logger = require("firebase-functions/logger");
 
@@ -114,6 +115,7 @@ app.use('/v2/open/event_details', openApiAuth, eventDetailOpenRouter);
 app.use('/.well-known', oauthWellKnownRouter);
 app.use('/v1/oauth/register', oauthRegisterRouter);
 app.use('/v1/oauth/token', oauthTokenRouter);
+app.use('/v1/oauth/revoke', oauthRevocationRouter);
 app.use('/v1/oauth', oauthAuthorizeRouter);
 
 // request logging
@@ -153,3 +155,5 @@ exports.apiV2 = onRequest(appV2);
 
 // OAuth client garbage cleanup — 매 24시간, 30일 미사용 client 정리 (Asia/Seoul timezone)
 exports.oauthClientCleanup = require('./scheduled/oauthClientCleanup');
+// expired refresh_token 정리 — 매 24시간 (Asia/Seoul timezone). 자세한 정책: README 의 'Cleanup' 섹션
+exports.oauthRefreshTokenCleanup = require('./scheduled/oauthRefreshTokenCleanup');

@@ -1,6 +1,7 @@
 const OAuthClient = require('../../models/oauth/OAuthClient');
 const ConsentChallenge = require('../../models/oauth/ConsentChallenge');
 const AuthorizationCode = require('../../models/oauth/AuthorizationCode');
+const RefreshToken = require('../../models/oauth/RefreshToken');
 
 // MARK: - OAuthClient
 
@@ -167,6 +168,90 @@ class StubAuthorizationCodeRepository {
     }
 }
 
+// MARK: - RefreshToken
+
+class StubRefreshTokenRepository {
+
+    constructor() {
+        this.store = new Map();
+        this.shouldFailCreate = false;
+        this.nextId = null;
+        this.lastCreatedPayload = null;
+        this.markRevokedCalls = [];
+        this.revokeFamilyCalls = [];
+        this.deleteCalls = [];
+    }
+
+    async create(plainData) {
+        if (this.shouldFailCreate) throw { status: 500, message: 'failed' };
+        const id = this.nextId ?? `refresh-${this.store.size + 1}`;
+        this.nextId = null;
+        const docData = { ...plainData };
+        this.store.set(id, docData);
+        this.lastCreatedPayload = { id, ...docData };
+        return RefreshToken.fromData(id, docData);
+    }
+
+    async findById(id) {
+        const data = this.store.get(id);
+        if (!data) return null;
+        return RefreshToken.fromData(id, data);
+    }
+
+    async markRevoked(id, now = Date.now()) {
+        const data = this.store.get(id);
+        if (!data) {
+            const e = new Error('RefreshToken not found');
+            e.status = 404;
+            throw e;
+        }
+        this.markRevokedCalls.push({ id, now });
+        if (data.revokedAt != null) return false;
+        data.revokedAt = now;
+        this.store.set(id, data);
+        return true;
+    }
+
+    async revokeFamily(family, now = Date.now()) {
+        this.revokeFamilyCalls.push({ family, now });
+        let revoked = 0;
+        for (const [id, data] of this.store.entries()) {
+            if (data.family !== family) continue;
+            if (data.revokedAt != null) continue;
+            data.revokedAt = now;
+            this.store.set(id, data);
+            revoked += 1;
+        }
+        return revoked;
+    }
+
+    async findExpiredBefore(beforeTimestamp, limit = 100) {
+        const results = [];
+        for (const [id, data] of this.store.entries()) {
+            if (!(data.expiresAt < beforeTimestamp)) continue;
+            results.push(RefreshToken.fromData(id, data));
+            if (results.length >= limit) break;
+        }
+        return results;
+    }
+
+    async deleteById(id) {
+        this.deleteCalls.push({ id });
+        this.store.delete(id);
+    }
+
+    // 테스트 헬퍼
+    seed(id, plainData) {
+        this.store.set(id, {
+            createdAt: Date.now(),
+            expiresAt: Date.now() + 30 * 24 * 60 * 60 * 1000,
+            revokedAt: null,
+            parentId: null,
+            ...plainData
+        });
+    }
+}
+
 // MARK: - RateLimit
 
 class StubRateLimitRepository {
@@ -194,5 +279,6 @@ module.exports = {
     StubOAuthClientRepository,
     StubConsentChallengeRepository,
     StubAuthorizationCodeRepository,
+    StubRefreshTokenRepository,
     StubRateLimitRepository
 };

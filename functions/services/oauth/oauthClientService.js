@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const Errors = require('../../models/Errors');
 const { parseScopeString } = require('../../models/oauth/scopes');
+const { KNOWN_GRANT_TYPES } = require('../../models/oauth/grantTypes');
 
 const CLIENT_NAME_MAX = 64;
 const CONTROL_CHAR_REGEX = /[\x00-\x1F\x7F]/;
@@ -104,8 +105,11 @@ class OAuthClientService {
         if (!Array.isArray(arr) || arr.length === 0) {
             throw new Errors.Base(400, 'InvalidRequest', 'grant_types required');
         }
+        if (!arr.includes('authorization_code')) {
+            throw new Errors.Base(400, 'InvalidRequest', "grant_types must include 'authorization_code'");
+        }
         for (const g of arr) {
-            if (g !== 'authorization_code') {
+            if (!KNOWN_GRANT_TYPES.includes(g)) {
                 throw new Errors.Base(400, 'InvalidRequest', `grant_types contains unsupported: ${g}`);
             }
         }

@@ -33,6 +33,14 @@
     "public": "public",
     "rewrites": [
       {
+        "source": "/.well-known/**",
+        "function": {
+          "functionId": "apiV2",
+          "region": "us-central1",
+          "pinTag": true
+        }
+      },
+      {
         "source": "**",
         "function": {
           "functionId": "apiV2",

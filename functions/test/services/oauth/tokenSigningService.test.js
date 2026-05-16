@@ -55,11 +55,13 @@ describe('services/oauth/TokenSigningService', () => {
             assert.strictEqual(meta.authorization_endpoint, `${ISSUER}/v1/oauth/authorize`);
             assert.strictEqual(meta.token_endpoint, `${ISSUER}/v1/oauth/token`);
             assert.strictEqual(meta.registration_endpoint, `${ISSUER}/v1/oauth/register`);
+            assert.strictEqual(meta.revocation_endpoint, `${ISSUER}/v1/oauth/revoke`);
             assert.strictEqual(meta.jwks_uri, `${ISSUER}/.well-known/jwks.json`);
             assert.deepStrictEqual(meta.response_types_supported, ['code']);
-            assert.deepStrictEqual(meta.grant_types_supported, ['authorization_code']);
+            assert.deepStrictEqual(meta.grant_types_supported, ['authorization_code', 'refresh_token']);
             assert.deepStrictEqual(meta.code_challenge_methods_supported, ['S256']);
             assert.deepStrictEqual(meta.token_endpoint_auth_methods_supported, ['none']);
+            assert.deepStrictEqual(meta.revocation_endpoint_auth_methods_supported, ['none']);
         });
 
         it('scopes_supported 가 KNOWN_SCOPES 와 일치', () => {
@@ -74,6 +76,7 @@ describe('services/oauth/TokenSigningService', () => {
             assert.strictEqual(meta.authorization_endpoint, 'https://x.example/v1/oauth/authorize');
             assert.strictEqual(meta.token_endpoint, 'https://x.example/v1/oauth/token');
             assert.strictEqual(meta.registration_endpoint, 'https://x.example/v1/oauth/register');
+            assert.strictEqual(meta.revocation_endpoint, 'https://x.example/v1/oauth/revoke');
             assert.strictEqual(meta.jwks_uri, 'https://x.example/.well-known/jwks.json');
         });
     });
@@ -150,14 +153,14 @@ describe('services/oauth/TokenSigningService', () => {
             assert.strictEqual(payload.iss, 'https://x.example');
         });
 
-        it('ttlSeconds 기본값 30분 (1800s)', async () => {
+        it('ttlSeconds 기본값 2시간 (7200s)', async () => {
             const before = Math.floor(Date.now() / 1000);
             const token = await svc.signAccessToken({
                 sub: 'u', aud: 'a', scope: ['read:calendar'], clientId: 'c'
             });
             const pubKey = await jose.importSPKI(pubPem, 'RS256');
             const { payload } = await jose.jwtVerify(token, pubKey, { issuer: ISSUER, audience: 'a' });
-            assert.ok(payload.exp - payload.iat === 1800, `exp - iat == 1800 (got ${payload.exp - payload.iat})`);
+            assert.ok(payload.exp - payload.iat === 7200, `exp - iat == 7200 (got ${payload.exp - payload.iat})`);
             assert.ok(payload.iat >= before);
         });
     });

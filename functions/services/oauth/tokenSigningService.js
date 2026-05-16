@@ -1,5 +1,6 @@
 const jose = require('jose');
 const { KNOWN_SCOPES, formatScopeArray } = require('../../models/oauth/scopes');
+const { KNOWN_GRANT_TYPES } = require('../../models/oauth/grantTypes');
 
 class TokenSigningService {
 
@@ -66,16 +67,18 @@ class TokenSigningService {
             authorization_endpoint: `${this.issuer}/v1/oauth/authorize`,
             token_endpoint: `${this.issuer}/v1/oauth/token`,
             registration_endpoint: `${this.issuer}/v1/oauth/register`,
+            revocation_endpoint: `${this.issuer}/v1/oauth/revoke`,
             jwks_uri: `${this.issuer}/.well-known/jwks.json`,
             response_types_supported: ['code'],
-            grant_types_supported: ['authorization_code'],
+            grant_types_supported: [...KNOWN_GRANT_TYPES],
             code_challenge_methods_supported: ['S256'],
             token_endpoint_auth_methods_supported: ['none'],
+            revocation_endpoint_auth_methods_supported: ['none'],
             scopes_supported: Object.keys(KNOWN_SCOPES)
         };
     }
 
-    async signAccessToken({ sub, aud, scope, clientId, ttlSeconds = 1800 }) {
+    async signAccessToken({ sub, aud, scope, clientId, ttlSeconds = 7200 }) {
         const priv = await this._loadPriv();
         const kid = await this.getKid();
         return await new jose.SignJWT({ scope: formatScopeArray(scope), client_id: clientId })
