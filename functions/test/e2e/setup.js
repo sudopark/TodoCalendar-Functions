@@ -9,6 +9,15 @@ process.env.FIREBASE_AUTH_EMULATOR_HOST = '127.0.0.1:9099';
 // 읽어 양쪽이 동일한 값으로 동기화되게 한다.
 require('dotenv').config({ path: './secrets/.env.test' });
 
+// .env.test 로드 직후 환경 준비 확인 — before 훅 안에서 throw 하면 mocha 셋업 후에야
+// 에러가 보이지만, 모듈 로드 시점에 throw 하면 즉시 종료돼 피드백이 빠름.
+if (process.env.AI_STUB_DELAY_MS === undefined) {
+    throw new Error(
+        '[E2E setup] AI_STUB_DELAY_MS is not set. ' +
+        'Run: cp secrets/.env.test.example secrets/.env.test'
+    );
+}
+
 const admin = require('firebase-admin');
 const axios = require('axios');
 const { setAuthToken } = require('./helpers/request');
@@ -24,6 +33,7 @@ before(async function () {
     this.timeout(30000);
 
     // clear previous data (for manual emulator mode where data persists)
+    // 모든 컬렉션 전체 삭제 — ai_jobs 포함 (개별 컬렉션 cleanup 불필요).
     await clearFirestoreData();
 
     // create test user in Auth emulator (ignore if already exists)
