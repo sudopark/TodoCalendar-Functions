@@ -20,10 +20,15 @@ function makeEvent(jobId, rawData) {
 const BASE_JOB_DATA = {
     userId: 'user-1',
     deviceId: 'device-1',
-    commandText: 'hello',
+    commandText: '내일 회의 잡아줘',
     status: AiJob.STATUS.PENDING,
     result: null,
     expireAt: new Date(Date.now() + 86400_000)
+};
+
+const EN_JOB_DATA = {
+    ...BASE_JOB_DATA,
+    commandText: 'schedule a meeting tomorrow'
 };
 
 const BASE_DEVICE = {
@@ -56,7 +61,11 @@ function makeUserRepository(device) {
 
 function makeAgentLoopService(resultOverride) {
     return {
-        async run(_commandText) {
+        lastRunArgs: null,
+        allRunArgs: [],
+        async run(commandText, opts) {
+            this.lastRunArgs = { commandText, opts };
+            this.allRunArgs.push({ commandText, opts });
             return resultOverride ?? AiJobResult.done('stub done');
         }
     };
@@ -106,10 +115,16 @@ describe('AgentLoopHandler', () => {
         assert.strictEqual(messaging.sendCalled, 1, 'FCM send 1회');
         const payload = messaging.lastSendPayload;
         assert.strictEqual(payload.token, BASE_DEVICE.pushToken);
-        assert.strictEqual(payload.notification.title, FALLBACK_NOTIFICATION.DONE.title);
-        assert.strictEqual(payload.notification.body, FALLBACK_NOTIFICATION.DONE.body);
+        assert.strictEqual(payload.notification.title, FALLBACK_NOTIFICATION.ko.DONE.title);
+        assert.strictEqual(payload.notification.body, FALLBACK_NOTIFICATION.ko.DONE.body);
         assert.strictEqual(payload.data.jobId, 'job-1');
         assert.strictEqual(payload.data.status, 'DONE');
+
+        // handler 가 agentLoopService.run 에 commandText 와 {userId} 를 정확히 전달하는지 검증 (재발 방지)
+        assert.deepStrictEqual(agentLoopService.lastRunArgs, {
+            commandText: BASE_JOB_DATA.commandText,
+            opts: { userId: BASE_JOB_DATA.userId }
+        });
     });
 
     it('정상 발화 — result.notification 있으면 그 값으로 FCM 발송', async () => {
@@ -196,7 +211,7 @@ describe('AgentLoopHandler', () => {
         await handler.handle(makeEvent('job-1', BASE_JOB_DATA));
 
         assert.strictEqual(messaging.sendCalled, 1);
-        assert.strictEqual(messaging.lastSendPayload.notification.title, FALLBACK_NOTIFICATION.CONFIRM.title);
+        assert.strictEqual(messaging.lastSendPayload.notification.title, FALLBACK_NOTIFICATION.ko.CONFIRM.title);
         assert.strictEqual(messaging.lastSendPayload.data.status, 'CONFIRM');
     });
 
@@ -212,7 +227,7 @@ describe('AgentLoopHandler', () => {
         await handler.handle(makeEvent('job-1', BASE_JOB_DATA));
 
         assert.strictEqual(messaging.sendCalled, 1);
-        assert.strictEqual(messaging.lastSendPayload.notification.title, FALLBACK_NOTIFICATION.FAILED.title);
+        assert.strictEqual(messaging.lastSendPayload.notification.title, FALLBACK_NOTIFICATION.ko.FAILED.title);
         assert.strictEqual(messaging.lastSendPayload.data.status, 'FAILED');
     });
 
@@ -229,7 +244,7 @@ describe('AgentLoopHandler', () => {
         await handler.handle(makeEvent('job-1', BASE_JOB_DATA));
 
         assert.strictEqual(messaging.sendCalled, 1);
-        assert.strictEqual(messaging.lastSendPayload.notification.title, FALLBACK_NOTIFICATION.DONE.title);
+        assert.strictEqual(messaging.lastSendPayload.notification.title, FALLBACK_NOTIFICATION.ko.DONE.title);
     });
 
     it('FCM 발송 중 네트워크 오류로 throw 가 발생해도 핸들러는 정상 종료', async () => {
@@ -252,7 +267,7 @@ describe('AgentLoopHandler', () => {
         const repo = seededRepo();
         const jobService = new JobService(repo);
         const throwingLoop = {
-            async run(_commandText) { throw new Error('claude api timeout'); }
+            async run(_commandText, _opts) { throw new Error('claude api timeout'); }
         };
         const messaging = makeMessaging();
         const userRepo = makeUserRepository(BASE_DEVICE);
@@ -267,10 +282,61 @@ describe('AgentLoopHandler', () => {
         assert.strictEqual(stored.result.type, 'FAILED');
 
         assert.strictEqual(messaging.sendCalled, 1);
-        assert.strictEqual(messaging.lastSendPayload.notification.title, FALLBACK_NOTIFICATION.FAILED.title);
+        assert.strictEqual(messaging.lastSendPayload.notification.title, FALLBACK_NOTIFICATION.ko.FAILED.title);
         assert.strictEqual(messaging.lastSendPayload.data.status, 'FAILED');
 
         assert.ok(errors.length > 0, 'agentLoop 실패 error 로그');
+    });
+
+    it('DONE result.notification 이 없고 commandText 가 영어이면 영어 fallback 적용', async () => {
+        const repo = seededRepo('job-1', EN_JOB_DATA);
+        const jobService = new JobService(repo);
+        const agentLoopService = makeAgentLoopService(AiJobResult.done('stub done')); // no notification
+        const messaging = makeMessaging();
+        const userRepo = makeUserRepository(BASE_DEVICE);
+        const { logger } = captureLogger();
+
+        const handler = makeHandler({ jobService, agentLoopService, userRepository: userRepo, messaging, logger });
+        await handler.handle(makeEvent('job-1', EN_JOB_DATA));
+
+        assert.strictEqual(messaging.sendCalled, 1);
+        assert.strictEqual(messaging.lastSendPayload.notification.title, FALLBACK_NOTIFICATION.en.DONE.title);
+        assert.strictEqual(messaging.lastSendPayload.notification.body, FALLBACK_NOTIFICATION.en.DONE.body);
+        assert.strictEqual(messaging.lastSendPayload.data.status, 'DONE');
+    });
+
+    it('CONFIRM result.notification 이 없고 commandText 가 영어이면 영어 fallback 적용', async () => {
+        const repo = seededRepo('job-1', EN_JOB_DATA);
+        const jobService = new JobService(repo);
+        const agentLoopService = makeAgentLoopService(AiJobResult.confirm('stub confirm', { stub: true }));
+        const messaging = makeMessaging();
+        const userRepo = makeUserRepository(BASE_DEVICE);
+        const { logger } = captureLogger();
+
+        const handler = makeHandler({ jobService, agentLoopService, userRepository: userRepo, messaging, logger });
+        await handler.handle(makeEvent('job-1', EN_JOB_DATA));
+
+        assert.strictEqual(messaging.sendCalled, 1);
+        assert.strictEqual(messaging.lastSendPayload.notification.title, FALLBACK_NOTIFICATION.en.CONFIRM.title);
+        assert.strictEqual(messaging.lastSendPayload.notification.body, FALLBACK_NOTIFICATION.en.CONFIRM.body);
+        assert.strictEqual(messaging.lastSendPayload.data.status, 'CONFIRM');
+    });
+
+    it('FAILED result.notification 이 없고 commandText 가 영어이면 영어 fallback 적용', async () => {
+        const repo = seededRepo('job-1', EN_JOB_DATA);
+        const jobService = new JobService(repo);
+        const agentLoopService = makeAgentLoopService(AiJobResult.failed('stub failed'));
+        const messaging = makeMessaging();
+        const userRepo = makeUserRepository(BASE_DEVICE);
+        const { logger } = captureLogger();
+
+        const handler = makeHandler({ jobService, agentLoopService, userRepository: userRepo, messaging, logger });
+        await handler.handle(makeEvent('job-1', EN_JOB_DATA));
+
+        assert.strictEqual(messaging.sendCalled, 1);
+        assert.strictEqual(messaging.lastSendPayload.notification.title, FALLBACK_NOTIFICATION.en.FAILED.title);
+        assert.strictEqual(messaging.lastSendPayload.notification.body, FALLBACK_NOTIFICATION.en.FAILED.body);
+        assert.strictEqual(messaging.lastSendPayload.data.status, 'FAILED');
     });
 
     it('completeWith 가 false 를 반환하면 (외부 race) FCM 발송 skip + warn 로그', async () => {
