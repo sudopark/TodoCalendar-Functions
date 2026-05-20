@@ -18,6 +18,7 @@
   },
   "main": "index.js",
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.96.0",
     "axios": "^1.13.2",
     "body-parser": "^2.2.1",
     "cors": "^2.8.6",
@@ -28,6 +29,7 @@
     "jose": "^4.15.9",
     "jsonwebtoken": "^9.0.2",
     "swagger-ui-express": "^5.0.1",
+    "todocalendar-tools": "^0.2.0",
     "yamljs": "^0.3.0"
   },
   "overrides": {
