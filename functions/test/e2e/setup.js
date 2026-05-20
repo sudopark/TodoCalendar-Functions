@@ -11,11 +11,13 @@ require('dotenv').config({ path: './secrets/.env.test' });
 
 // .env.test 로드 직후 환경 준비 확인 — before 훅 안에서 throw 하면 mocha 셋업 후에야
 // 에러가 보이지만, 모듈 로드 시점에 throw 하면 즉시 종료돼 피드백이 빠름.
-if (process.env.AI_STUB_DELAY_MS === undefined) {
-    throw new Error(
-        '[E2E setup] AI_STUB_DELAY_MS is not set. ' +
-        'Run: cp secrets/.env.test.example secrets/.env.test'
-    );
+for (const envKey of ['AI_STUB_ANTHROPIC', 'ANTHROPIC_API_KEY', 'CONFIRM_SECRET', 'OPENAPI_BASE_URL']) {
+    if (process.env[envKey] === undefined) {
+        throw new Error(
+            `[E2E setup] ${envKey} is not set. ` +
+            'Run: cp secrets/.env.test.example secrets/.env.test'
+        );
+    }
 }
 
 const admin = require('firebase-admin');
