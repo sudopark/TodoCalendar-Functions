@@ -3,14 +3,23 @@
 const defaultLogger = require('firebase-functions/logger');
 const AiJob = require('../../models/ai/AiJob');
 const AiJobResult = require('../../models/ai/AiJobResult');
+const { detectLanguage } = require('../../services/ai/language');
 
 // status 별 fallback notification — result.notification 이 비어 있을 때 사용.
 // Agent Loop 이 컨텍스트 기반 맞춤 메시지를 못 만들 때만 진입하는 path.
+// 언어는 job.commandText 의 한글 포함 여부로 결정 (services/ai/language detectLanguage).
 // 다른 모듈에서 재사용 의도 없음 — handler 내부 private 상수.
 const FALLBACK_NOTIFICATION = Object.freeze({
-    DONE: Object.freeze({ title: 'AI 작업이 완료됐어요', body: '탭해서 결과를 확인해보세요' }),
-    CONFIRM: Object.freeze({ title: '확인이 필요해요', body: 'AI 가 작업 전 확인을 요청합니다' }),
-    FAILED: Object.freeze({ title: '처리에 실패했어요', body: '탭해서 자세히 확인해보세요' })
+    ko: Object.freeze({
+        DONE: Object.freeze({ title: 'AI 작업이 완료됐어요', body: '탭해서 결과를 확인해보세요' }),
+        CONFIRM: Object.freeze({ title: '확인이 필요해요', body: 'AI 가 작업 전 확인을 요청합니다' }),
+        FAILED: Object.freeze({ title: '처리에 실패했어요', body: '탭해서 자세히 확인해보세요' })
+    }),
+    en: Object.freeze({
+        DONE: Object.freeze({ title: 'AI command completed', body: 'Tap to view the result' }),
+        CONFIRM: Object.freeze({ title: 'Confirmation required', body: 'AI is asking for confirmation' }),
+        FAILED: Object.freeze({ title: 'AI command failed', body: 'Tap to view the result' })
+    })
 });
 
 class AgentLoopHandler {
@@ -18,7 +27,7 @@ class AgentLoopHandler {
     /**
      * @param {{
      *   jobService: import('../../services/ai/jobService'),
-     *   agentLoopService: { run(commandText: string): Promise<object> },
+     *   agentLoopService: { run(commandText: string, opts: { userId: string }): Promise<object> },
      *   userRepository: { loadUserDevice(deviceId: string): Promise<object|null> },
      *   messaging: { send(message: object): Promise<any> },
      *   logger?: object
@@ -47,7 +56,7 @@ class AgentLoopHandler {
         // MCP 호출 실패 시 throw 할 수 있음 — 본 stub 단계부터 인터페이스 잠금.
         let result;
         try {
-            result = await this.agentLoopService.run(job.commandText);
+            result = await this.agentLoopService.run(job.commandText, { userId: job.userId });
         } catch (err) {
             this.log.error('AI trigger — agentLoop 실패', { jobId, err });
             result = AiJobResult.failed('agent loop error');
@@ -85,9 +94,10 @@ class AgentLoopHandler {
             return;
         }
 
+        const lang = detectLanguage(job.commandText);
         const notification = AiJobResult.hasNotification(result)
             ? result.notification
-            : FALLBACK_NOTIFICATION[result.type];
+            : FALLBACK_NOTIFICATION[lang][result.type];
 
         if (!notification) {
             this.log.warn('AI trigger — notification 없음 (알 수 없는 status)', { jobId: job.jobId, status: result.type });
