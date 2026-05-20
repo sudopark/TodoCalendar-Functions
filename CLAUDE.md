@@ -194,3 +194,43 @@ test/e2e/
 - **`OAUTH_CONSENT_URL`** — Web consent UI base URL (`/authorize` 의 302 redirect 대상). error 페이지는 `<base>/error?reason=...`.
 
 호스팅 / 운영 배포 절차는 이슈 #189 (특히 백로그 코멘트 #issuecomment-4426228666).
+
+#### aiFrontAPI Agent Loop 시크릿 운영 정책 (`/v1/ai/*` + `aiAgentLoop` Firestore trigger)
+
+기능 스펙은 issue #154 (부모 #151) 참조. 아래는 운영/시크릿 정책만.
+
+`aiAgentLoop` 는 Firestore trigger 로 실행되며 Anthropic Claude API 와 `todocalendar-tools` 패키지를 호출하는 Agent Loop. 시크릿은 trigger runtime 에 `process.env` 로 주입된다. 운영(`.env`) 과 테스트(`.env.test`) 양쪽에 **반드시 다른 값**으로 둔다 (테스트 dummy 가 운영 인증을 우회하지 못하게).
+
+**`ANTHROPIC_API_KEY` — Anthropic API access token**
+- Agent Loop 가 Claude 모델을 호출할 때 사용. Anthropic console(`https://console.anthropic.com/settings/keys`)에서 발급.
+- Firebase Secret 등록: `firebase functions:secrets:set ANTHROPIC_API_KEY`
+- 기본 모델: `claude-haiku-4-5-20251001` (`AnthropicClient` constructor 기본값). 다른 모델로 바꾸려면 `AI_MODEL` env 추가.
+- 비용 주의: trigger 호출마다 Anthropic 측 과금 발생. 플랜별 한도 / rate limit 관리는 후속 issue #157 에서.
+
+**`CONFIRM_SECRET` — `todocalendar-tools` confirmToken HMAC 키**
+- `delete_todo` / `delete_schedule` tool 의 confirmToken 서명·검증에 사용. lib (`todocalendar-tools`) 가 process require 시점에 `process.env.CONFIRM_SECRET` 읽음.
+- 생성: `openssl rand -hex 32` (32바이트 = 64 hex 문자)
+- Firebase Secret 등록: `firebase functions:secrets:set CONFIRM_SECRET`
+- MVP 1차 호출은 confirmToken 실제 HMAC 검증 없이 처리됨. 하지만 lib require 시점에 env 가 없으면 오류가 나므로 dummy 라도 반드시 세팅해야 함. 2차 HMAC 검증 흐름은 후속 issue #158 에서.
+
+**`OPENAPI_BASE_URL` — functions self-loopback base URL**
+- `todocalendar-tools` lib 이 openAPI 엔드포인트(`/v2/open/*`)를 HTTP 로 호출할 때 사용. 같은 service 내부라도 lib transport 가 HTTP fixed 이므로 반드시 명시.
+- production 예시: `https://us-central1-<PROJECT>.cloudfunctions.net/api` (functions canonical URL) 또는 hosting custom domain (예: `https://api.todo-calendar.com`)
+- emulator 예시: `http://127.0.0.1:5001/<PROJECT>/<REGION>/api` (예: `http://127.0.0.1:5001/todocalendar-1707723626269/us-central1/api`)
+- Firebase Secret 등록: `firebase functions:secrets:set OPENAPI_BASE_URL`
+
+**재사용 시크릿 — openAPI 인증 체계와 공유**
+
+`OPENAPI_PAT_MCP` 와 `SIGNING_SECRET` 은 기존 "openAPI 시크릿 운영 정책" 섹션에서 관리. `todocalendar-tools` lib 이 openAPI 호출 시 같은 process env 에서 읽으므로 별도 세팅 불필요 — 값이 이미 있어야 함.
+
+**Emulator 분리 정책 — `.env.test`**
+- 신규 시크릿 3개(`ANTHROPIC_API_KEY` / `CONFIRM_SECRET` / `OPENAPI_BASE_URL`) 는 emulator 에서 dummy 값 사용.
+- `ANTHROPIC_API_KEY` 의 emulator dummy: `deadbeef...` 64 hex 문자. E2E 는 `AI_STUB_ANTHROPIC=true` env 로 `StubAnthropicClient` 를 주입해 실 Anthropic API 호출을 차단.
+- `CONFIRM_SECRET` 의 emulator dummy: `deadbeef...` 64 hex 문자. MVP 1차 흐름만이라 실제 HMAC 비교 거의 없음.
+- `OPENAPI_BASE_URL` 은 emulator self URL 로 세팅 — emulator 가 functions + auth + firestore 모두 뜨면 lib self-loopback 이 emulator 내부 openAPI 로 라우팅됨.
+- `.env.test.example` 에 위 3개 dummy 항목 모두 포함할 것. 신규 시크릿 키 추가 시 example 도 함께 갱신.
+
+**로테이션 / 변경**
+- `ANTHROPIC_API_KEY` 갱신: Anthropic console 에서 새 키 발급 → Firebase Secret 재등록(`firebase functions:secrets:set`) → functions redeploy. 무중단 교체가 필요하면 Anthropic console 의 multi-key 지원 확인 후 구키 회수.
+- `CONFIRM_SECRET` 갱신: 변경하면 미결 confirmToken 이 모두 무효화됨. MVP 1차 흐름만이라 영향 적음. 후속 issue #158 시점에 본격 운영 정책 수립 필요.
+- `OPENAPI_BASE_URL` 은 hosting domain 변경 또는 functions region 변경 시 갱신.
