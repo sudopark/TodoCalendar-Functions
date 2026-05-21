@@ -3,9 +3,9 @@
 class SystemPromptBuilder {
 
     build({ now }) {
-        const dateStr = now.toISOString().slice(0, 10); // YYYY-MM-DD (UTC)
+        const nowStr = now.toISOString(); // ISO 8601 UTC, e.g. 2026-05-21T14:06:52.000Z
 
-        return `Today is ${dateStr} (UTC).
+        return `Current UTC time: ${nowStr}.
 
 You are a todo/calendar assistant. Convert user natural-language requests into tool calls.
 
