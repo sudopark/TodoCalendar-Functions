@@ -68,8 +68,9 @@ class FakeAnthropicClient {
     }
 
     async createMessage(args) {
-        this.lastCreateMessageArgs = args;
-        this.allCreateMessageArgs.push(args);
+        const snapshot = structuredClone(args);
+        this.lastCreateMessageArgs = snapshot;
+        this.allCreateMessageArgs.push(snapshot);
 
         if (this._queue.length > 0) {
             return this._queue.shift();
