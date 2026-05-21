@@ -15,11 +15,11 @@ function makeRes() {
     };
 }
 
-function makePostReq({ uid = 'user-1', deviceId = 'device-1', commandText = '오늘 할일 추가해줘' } = {}) {
+function makePostReq({ uid = 'user-1', deviceId = 'device-1', commandText = '오늘 할일 추가해줘', timezone = 'Asia/Seoul' } = {}) {
     return {
         auth: { uid },
         header: (name) => name === 'device_id' ? deviceId : null,
-        body: { command_text: commandText }
+        body: { command_text: commandText, timezone }
     };
 }
 
@@ -71,7 +71,8 @@ describe('AiController', () => {
             assert.deepEqual(stubService.lastCreateJobArgs, {
                 userId: 'user-1',
                 deviceId: 'device-1',
-                commandText: '오늘 할일 추가해줘'
+                commandText: '오늘 할일 추가해줘',
+                timezone: 'Asia/Seoul'
             });
         });
 
@@ -131,6 +132,46 @@ describe('AiController', () => {
                 assert.ok(error instanceof Errors.BadRequest);
                 assert.equal(error.status, 400);
             }
+        });
+
+        it('timezone 누락 → 400 BadRequest', async () => {
+            const req = {
+                auth: { uid: 'user-1' },
+                header: (name) => name === 'device_id' ? 'device-1' : null,
+                body: { command_text: '오늘 할일 추가해줘' }
+            };
+            const res = makeRes();
+
+            try {
+                await controller.postCommand(req, res);
+                assert.fail('에러가 발생해야 합니다');
+            } catch (error) {
+                assert.ok(error instanceof Errors.BadRequest);
+                assert.equal(error.status, 400);
+                assert.equal(error.message, 'timezone is required');
+            }
+        });
+
+        it('유효하지 않은 IANA timezone → 400 BadRequest', async () => {
+            const req = makePostReq({ timezone: 'Not/ATimezone' });
+            const res = makeRes();
+
+            try {
+                await controller.postCommand(req, res);
+                assert.fail('에러가 발생해야 합니다');
+            } catch (error) {
+                assert.ok(error instanceof Errors.BadRequest);
+                assert.equal(error.status, 400);
+            }
+        });
+
+        it('유효한 IANA timezone 은 jobService.createJob 에 그대로 전달', async () => {
+            const req = makePostReq({ timezone: 'America/Los_Angeles' });
+            const res = makeRes();
+
+            await controller.postCommand(req, res);
+
+            assert.equal(stubService.lastCreateJobArgs.timezone, 'America/Los_Angeles');
         });
     });
 

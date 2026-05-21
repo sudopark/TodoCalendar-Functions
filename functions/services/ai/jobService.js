@@ -14,10 +14,10 @@ class JobService {
      * createdAt / updatedAt 은 jobRepository 가 serverTimestamp 로 채움 — 본 서비스는
      * 시간 필드를 만들지 않음. expireAt 만 24h 후 Date 로 caller 가 결정.
      *
-     * @param {{ userId: string, deviceId: string, commandText: string }} params
+     * @param {{ userId: string, deviceId: string, commandText: string, timezone: string }} params
      * @returns {Promise<string>} jobId
      */
-    async createJob({ userId, deviceId, commandText }) {
+    async createJob({ userId, deviceId, commandText, timezone }) {
         const jobId = crypto.randomUUID();
         const expireAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
@@ -25,6 +25,7 @@ class JobService {
             userId,
             deviceId,
             commandText,
+            timezone,
             status: AiJob.STATUS.PENDING,
             result: null,
             expireAt

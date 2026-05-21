@@ -16,9 +16,9 @@ class StubAiJobService {
         this._jobs[job.jobId] = job;
     }
 
-    async createJob({ userId, deviceId, commandText }) {
+    async createJob({ userId, deviceId, commandText, timezone }) {
         if (this.shouldFail) throw { message: 'service failed' };
-        this.lastCreateJobArgs = { userId, deviceId, commandText };
+        this.lastCreateJobArgs = { userId, deviceId, commandText, timezone };
         return this._nextJobId;
     }
 

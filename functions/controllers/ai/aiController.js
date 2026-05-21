@@ -1,6 +1,15 @@
 
 const Errors = require('../../models/Errors');
 
+function isValidTimezone(tz) {
+    if (typeof tz !== 'string' || !tz) return false;
+    try {
+        Intl.DateTimeFormat(undefined, { timeZone: tz });
+        return true;
+    } catch {
+        return false;
+    }
+}
 
 class AiController {
 
@@ -20,8 +29,16 @@ class AiController {
         }
         const commandText = rawCommandText.trim();
 
+        const timezone = req.body.timezone;
+        if (!timezone) {
+            throw new Errors.BadRequest('timezone is required');
+        }
+        if (!isValidTimezone(timezone)) {
+            throw new Errors.BadRequest('timezone is invalid (must be a valid IANA timezone name)');
+        }
+
         const userId = req.auth.uid;
-        const jobId = await this.jobService.createJob({ userId, deviceId, commandText });
+        const jobId = await this.jobService.createJob({ userId, deviceId, commandText, timezone });
         res.status(202).send({ job_id: jobId });
     }
 
