@@ -23,11 +23,12 @@ function toISOString(value) {
 }
 
 class AiJob {
-    constructor({ jobId, userId, deviceId, commandText, status, result, createdAt, updatedAt, expireAt }) {
+    constructor({ jobId, userId, deviceId, commandText, timezone, status, result, createdAt, updatedAt, expireAt }) {
         this.jobId = jobId;
         this.userId = userId;
         this.deviceId = deviceId;
         this.commandText = commandText;
+        this.timezone = timezone;
         this.status = status;
         this.result = result ?? null;
         this.createdAt = createdAt;
@@ -41,6 +42,7 @@ class AiJob {
             userId: data.userId,
             deviceId: data.deviceId,
             commandText: data.commandText,
+            timezone: data.timezone,
             status: data.status,
             result: data.result ?? null,
             createdAt: toISOString(data.createdAt),
@@ -55,6 +57,7 @@ class AiJob {
             user_id: this.userId,
             device_id: this.deviceId,
             command_text: this.commandText,
+            timezone: this.timezone,
             status: this.status,
             result: this.result,
             created_at: this.createdAt,

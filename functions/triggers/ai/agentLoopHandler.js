@@ -56,7 +56,7 @@ class AgentLoopHandler {
         // MCP 호출 실패 시 throw 할 수 있음 — 본 stub 단계부터 인터페이스 잠금.
         let result;
         try {
-            result = await this.agentLoopService.run(job.commandText, { userId: job.userId });
+            result = await this.agentLoopService.run(job.commandText, { userId: job.userId, timezone: job.timezone });
         } catch (err) {
             this.log.error('AI trigger — agentLoop 실패', { jobId, err });
             result = AiJobResult.failed('agent loop error');

@@ -59,7 +59,7 @@ describe('AgentLoopService', () => {
             notification: { title: 'OK', body: '완료' }
         }));
 
-        const result = await service.run('할일 목록 보여줘', { userId: 'u1' });
+        const result = await service.run('할일 목록 보여줘', { userId: 'u1', timezone: 'Asia/Seoul' });
 
         assert.strictEqual(result.type, 'DONE');
         assert.strictEqual(result.text, '완료');
@@ -73,7 +73,7 @@ describe('AgentLoopService', () => {
         anthropic.enqueue(makeToolUseResponse('get_todos', {}));
         anthropic.enqueue(makeToolUseResponse('finalize', { type: 'DONE', text: '할일 3개' }));
 
-        const result = await service.run('할일 알려줘', { userId: 'u1' });
+        const result = await service.run('할일 알려줘', { userId: 'u1', timezone: 'Asia/Seoul' });
 
         assert.strictEqual(result.type, 'DONE');
         assert.strictEqual(result.text, '할일 3개');
@@ -99,7 +99,7 @@ describe('AgentLoopService', () => {
 
         anthropic.enqueue(makeToolUseResponse('delete_todo', { todo_id: 't1' }));
 
-        const result = await service.run('할일 삭제해', { userId: 'u1' });
+        const result = await service.run('할일 삭제해', { userId: 'u1', timezone: 'Asia/Seoul' });
 
         assert.strictEqual(result.type, 'CONFIRM');
         assert.strictEqual(result.text, '확인이 필요한 작업이야');
@@ -126,7 +126,7 @@ describe('AgentLoopService', () => {
 
         anthropic.enqueue(makeToolUseResponse('delete_todo', { todo_id: 't1' }));
 
-        const result = await service.run('delete a todo', { userId: 'u1' });
+        const result = await service.run('delete a todo', { userId: 'u1', timezone: 'Asia/Seoul' });
 
         assert.strictEqual(result.type, 'CONFIRM');
         assert.strictEqual(result.text, 'Confirmation required for this action');
@@ -146,7 +146,7 @@ describe('AgentLoopService', () => {
 
         anthropic.enqueue(makeToolUseResponse('delete_todo', { todo_id: 't1' }));
 
-        const result = await service.run('할일 삭제', { userId: 'u1' });
+        const result = await service.run('할일 삭제', { userId: 'u1', timezone: 'Asia/Seoul' });
 
         assert.strictEqual(result.type, 'CONFIRM');
         assert.strictEqual(result.text, '정말 삭제할 거야?');
@@ -164,7 +164,7 @@ describe('AgentLoopService', () => {
 
         anthropic.enqueue(makeToolUseResponse('future_tool', { some_arg: 'x' }));
 
-        const result = await service.run('미래 기능 실행해', { userId: 'u1' });
+        const result = await service.run('미래 기능 실행해', { userId: 'u1', timezone: 'Asia/Seoul' });
 
         assert.strictEqual(result.type, 'CONFIRM');
         assert.strictEqual(result.notification.title, '확인 필요');
@@ -177,7 +177,7 @@ describe('AgentLoopService', () => {
             text: '요청 처리 불가'
         }));
 
-        const result = await service.run('할 수 없는 것', { userId: 'u1' });
+        const result = await service.run('할 수 없는 것', { userId: 'u1', timezone: 'Asia/Seoul' });
 
         assert.strictEqual(result.type, 'FAILED');
         assert.strictEqual(result.reason, '요청 처리 불가');
@@ -202,7 +202,7 @@ describe('AgentLoopService', () => {
             scopes: ['read:calendar']
         });
 
-        const result = await service.run('할일 알려줘', { userId: 'u1' });
+        const result = await service.run('할일 알려줘', { userId: 'u1', timezone: 'Asia/Seoul' });
 
         assert.strictEqual(result.type, 'FAILED');
         assert.strictEqual(result.reason, 'loop cap exceeded');
@@ -225,7 +225,7 @@ describe('AgentLoopService', () => {
             scopes: ['read:calendar']
         });
 
-        const result = await service.run('할일 알려줘', { userId: 'u1' });
+        const result = await service.run('할일 알려줘', { userId: 'u1', timezone: 'Asia/Seoul' });
 
         assert.strictEqual(result.type, 'FAILED');
         assert.strictEqual(result.reason, 'token cap exceeded');
@@ -244,7 +244,7 @@ describe('AgentLoopService', () => {
         anthropic.enqueue(makeToolUseResponse('get_todos', {}));
         anthropic.enqueue(makeToolUseResponse('finalize', { type: 'DONE', text: '복구 후 완료' }));
 
-        const result = await service.run('할일 알려줘', { userId: 'u1' });
+        const result = await service.run('할일 알려줘', { userId: 'u1', timezone: 'Asia/Seoul' });
 
         assert.strictEqual(result.type, 'DONE');
         assert.strictEqual(result.text, '복구 후 완료');
@@ -268,7 +268,7 @@ describe('AgentLoopService', () => {
         // queue 비어있으면 'stub queue empty' throw
 
         await assert.rejects(
-            () => service.run('할일 알려줘', { userId: 'u1' }),
+            () => service.run('할일 알려줘', { userId: 'u1', timezone: 'Asia/Seoul' }),
             /stub queue empty/
         );
     });
@@ -292,7 +292,7 @@ describe('AgentLoopService', () => {
             scopes: ['read:calendar']
         });
 
-        await service.run('할일 알려줘', { userId: 'u1' });
+        await service.run('할일 알려줘', { userId: 'u1', timezone: 'Asia/Seoul' });
 
         const args = anthropic.lastCreateMessageArgs;
 
@@ -327,7 +327,7 @@ describe('AgentLoopService', () => {
             usage: { input_tokens: 10, output_tokens: 10 }
         });
 
-        const result = await service.run('할일 삭제해', { userId: 'u1' });
+        const result = await service.run('할일 삭제해', { userId: 'u1', timezone: 'Asia/Seoul' });
 
         assert.strictEqual(result.type, 'FAILED');
         assert.strictEqual(result.reason, 'multiple tool_uses in single turn');
@@ -343,7 +343,7 @@ describe('AgentLoopService', () => {
         anthropic.enqueue(makeToolUseResponse('get_todos', {}));
         anthropic.enqueue(makeToolUseResponse('finalize', { type: 'DONE', text: '완료' }));
 
-        await service.run('할일 알려줘', { userId: 'u1' });
+        await service.run('할일 알려줘', { userId: 'u1', timezone: 'Asia/Seoul' });
 
         // 첫 번째 turn: 초기 user message(string) 가 array 로 변환되고 cache_control 마크
         const firstCallArgs = anthropic.allCreateMessageArgs[0];
@@ -383,11 +383,40 @@ describe('AgentLoopService', () => {
             scopes: ['read:calendar']
         });
 
-        const result = await service.run('할일 알려줘', { userId: 'u1' });
+        const result = await service.run('할일 알려줘', { userId: 'u1', timezone: 'Asia/Seoul' });
 
         // over-count 였다면 100+10+200+10=320 > 250 → FAILED.
         // 올바른 계산: 200(last input) + 20(sum output) = 220 ≤ 250 → DONE.
         assert.strictEqual(result.type, 'DONE');
+    });
+
+    it('systemPromptBuilder.build 에 { now, timezone } 이 전달됨', async () => {
+        const anthropic = new FakeAnthropicClient();
+        const registry = new StubToolRegistry();
+        anthropic.enqueue(makeToolUseResponse('finalize', { type: 'DONE', text: '완료' }));
+
+        let capturedArgs = null;
+        const systemPromptBuilder = {
+            build(args) {
+                capturedArgs = args;
+                return 'stub-prompt';
+            }
+        };
+
+        const service = new AgentLoopService({
+            anthropic,
+            registryFactory: () => Promise.resolve(registry),
+            systemPromptBuilder,
+            loopCap: 10,
+            tokenCap: 50000,
+            scopes: ['read:calendar']
+        });
+
+        await service.run('할일 알려줘', { userId: 'u1', timezone: 'America/New_York' });
+
+        assert.ok(capturedArgs !== null, 'build 가 호출됨');
+        assert.ok(capturedArgs.now instanceof Date, 'now 는 Date 인스턴스');
+        assert.strictEqual(capturedArgs.timezone, 'America/New_York');
     });
 
 });
