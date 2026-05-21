@@ -16,6 +16,15 @@ const CONFIRM_DEFAULTS = {
     }
 };
 
+const CONFIRM_TITLES_BY_TOOL = {
+    delete_todo: { ko: '할일 삭제 확인', en: 'Confirm todo deletion' },
+    delete_schedule: { ko: '일정 삭제 확인', en: 'Confirm schedule deletion' }
+};
+
+function getConfirmTitle(toolName, lang) {
+    return CONFIRM_TITLES_BY_TOOL[toolName]?.[lang] ?? CONFIRM_DEFAULTS[lang].title;
+}
+
 class AgentLoopService {
 
     /**
@@ -115,7 +124,7 @@ class AgentLoopService {
                         return AiJobResult.confirm(
                             result.message || defaults.text,
                             { tool: tu.name, args: tu.input, confirmToken: result.confirmToken },
-                            { title: defaults.title, body: defaults.body }
+                            { title: getConfirmTitle(tu.name, lang), body: defaults.body }
                         );
                     }
                     toolResults.push({
