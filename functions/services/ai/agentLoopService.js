@@ -6,20 +6,28 @@ const { detectLanguage } = require('./language');
 /**
  * messages 배열의 마지막 message 마지막 content block 에 cache_control 마크.
  * turn N+1 에서 turn 1~N 누적 prefix 를 cache hit 으로 처리하기 위해
- * createMessage 호출 직전에 호출. idempotent — 이미 마크된 block 은 skip.
+ * createMessage 호출 직전에 호출. sliding window — 이전 마커를 모두 제거하고
+ * 마지막 message 에만 새로 박아 Anthropic 4-breakpoint 한계 초과를 방지.
  *
  * @param {Array<{role: string, content: string|Array}>} messages
  */
 function _markLastMessageForCache(messages) {
+    // 이전 모든 message 의 cache_control 마커 제거 (sliding)
+    for (const msg of messages) {
+        if (Array.isArray(msg.content)) {
+            for (const block of msg.content) {
+                if (block.cache_control) delete block.cache_control;
+            }
+        }
+    }
+    // 마지막 message 에만 새로 박기
     const last = messages[messages.length - 1];
     if (!last) return;
     if (typeof last.content === 'string') {
         last.content = [{ type: 'text', text: last.content, cache_control: { type: 'ephemeral' } }];
     } else if (Array.isArray(last.content) && last.content.length > 0) {
         const lastBlock = last.content[last.content.length - 1];
-        if (!lastBlock.cache_control) {
-            lastBlock.cache_control = { type: 'ephemeral' };
-        }
+        lastBlock.cache_control = { type: 'ephemeral' };
     }
 }
 
@@ -36,6 +44,8 @@ const CONFIRM_DEFAULTS = {
     }
 };
 
+// CONFIRM_TITLES_BY_TOOL — confirm 발생 가능한 lib tool 한정 매핑. 새 confirm tool 추가 시 여기도 갱신.
+// 미등록 tool 은 CONFIRM_DEFAULTS[lang].title 으로 silent fallback.
 const CONFIRM_TITLES_BY_TOOL = {
     delete_todo: { ko: '할일 삭제 확인', en: 'Confirm todo deletion' },
     delete_schedule: { ko: '일정 삭제 확인', en: 'Confirm schedule deletion' }
@@ -51,7 +61,7 @@ class AgentLoopService {
      * @param {{
      *   anthropic: object,
      *   registryFactory: () => Promise<object>,
-     *   systemPromptBuilder: { build({ now: Date }): string },
+     *   systemPromptBuilder: { build({ now: Date, timezone: string }): string },
      *   loopCap?: number,
      *   tokenCap?: number,
      *   scopes?: string[]
