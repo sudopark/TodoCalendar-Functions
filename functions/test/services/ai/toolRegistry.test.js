@@ -5,19 +5,19 @@ const assert = require('assert');
 const ToolRegistry = require('../../../services/ai/toolRegistry');
 
 // ------------------------------------------------------------------ //
-// mock lib
+// stub lib
 // ------------------------------------------------------------------ //
 
-function makeMockZodSchema(jsonSchemaResult) {
+function makeStubZodSchema(jsonSchemaResult) {
     return {
         toJSONSchema: () => jsonSchemaResult
     };
 }
 
-const mockToolA = {
+const stubToolA = {
     name: 'get_todos',
     description: 'get todos for user',
-    inputSchema: makeMockZodSchema({
+    inputSchema: makeStubZodSchema({
         type: 'object',
         properties: { mode: { type: 'string' } },
         required: []
@@ -25,10 +25,10 @@ const mockToolA = {
     execute: async (auth, args) => ({ items: [{ id: '1', title: 'test', mode: args.mode }], auth })
 };
 
-const mockToolB = {
+const stubToolB = {
     name: 'create_todo',
     description: 'create a todo',
-    inputSchema: makeMockZodSchema({
+    inputSchema: makeStubZodSchema({
         type: 'object',
         properties: { title: { type: 'string' } },
         required: ['title']
@@ -36,10 +36,10 @@ const mockToolB = {
     execute: async (_auth, args) => ({ created: true, title: args.title })
 };
 
-const mockToolC = {
+const stubToolC = {
     name: 'delete_todo',
     description: 'delete a todo',
-    inputSchema: makeMockZodSchema({
+    inputSchema: makeStubZodSchema({
         type: 'object',
         properties: { id: { type: 'string' } },
         required: ['id']
@@ -47,17 +47,17 @@ const mockToolC = {
     execute: async (_auth, _args) => ({ status: 'confirm_required', message: '정말 삭제할까요?' })
 };
 
-function makeMockLib(toolsMap = {}) {
+function makeStubLib(toolsMap = {}) {
     return {
         tools: toolsMap,
         ToolError: class ToolError extends Error {}
     };
 }
 
-const mockLib = makeMockLib({
-    get_todos: mockToolA,
-    create_todo: mockToolB,
-    delete_todo: mockToolC
+const stubLib = makeStubLib({
+    get_todos: stubToolA,
+    create_todo: stubToolB,
+    delete_todo: stubToolC
 });
 
 // ------------------------------------------------------------------ //
@@ -69,7 +69,7 @@ describe('ToolRegistry', () => {
     describe('lib tools 와 finalize tool 을 합쳐 anthropic 형식 배열로 노출', () => {
 
         it('lib tools 와 finalize tool 을 합쳐 anthropic 형식 배열로 노출', async () => {
-            const registry = await ToolRegistry.create({ lib: mockLib });
+            const registry = await ToolRegistry.create({ lib: stubLib });
 
             assert.strictEqual(registry.anthropicTools.length, 4, '3 lib tools + finalize = 4');
 
@@ -98,7 +98,7 @@ describe('ToolRegistry', () => {
     describe('finalize tool', () => {
 
         it('finalize tool 의 input_schema 가 사양과 일치', async () => {
-            const registry = await ToolRegistry.create({ lib: mockLib });
+            const registry = await ToolRegistry.create({ lib: stubLib });
             const finalize = registry.anthropicTools.find(t => t.name === 'finalize');
 
             assert.ok(finalize, 'finalize tool 이 존재해야 함');
@@ -127,7 +127,7 @@ describe('ToolRegistry', () => {
     describe('isFinalize', () => {
 
         it('isFinalize 는 finalize 이름만 true', async () => {
-            const registry = await ToolRegistry.create({ lib: mockLib });
+            const registry = await ToolRegistry.create({ lib: stubLib });
 
             assert.strictEqual(registry.isFinalize('finalize'), true);
             assert.strictEqual(registry.isFinalize('get_todos'), false);
@@ -139,7 +139,7 @@ describe('ToolRegistry', () => {
     describe('isConfirmRequired', () => {
 
         it('isConfirmRequired 는 result.status 가 confirm_required 면 true', async () => {
-            const registry = await ToolRegistry.create({ lib: mockLib });
+            const registry = await ToolRegistry.create({ lib: stubLib });
 
             assert.strictEqual(registry.isConfirmRequired({ status: 'confirm_required', message: 'test' }), true);
             assert.strictEqual(registry.isConfirmRequired({ status: 'ok' }), false);
@@ -152,7 +152,7 @@ describe('ToolRegistry', () => {
     describe('execute', () => {
 
         it('execute 가 lib tool 의 execute(auth, args) 를 위임하고 결과를 그대로 반환', async () => {
-            const registry = await ToolRegistry.create({ lib: mockLib });
+            const registry = await ToolRegistry.create({ lib: stubLib });
 
             const auth = { userId: 'u1' };
             const args = { mode: 'current' };
@@ -162,7 +162,7 @@ describe('ToolRegistry', () => {
         });
 
         it('execute 가 등록되지 않은 tool 이름이면 unknown tool 에러를 던짐', async () => {
-            const registry = await ToolRegistry.create({ lib: mockLib });
+            const registry = await ToolRegistry.create({ lib: stubLib });
 
             await assert.rejects(
                 registry.execute('does_not_exist', {}, {}),
@@ -187,8 +187,8 @@ describe('ToolRegistry', () => {
                 inputSchema: { toJSONSchema: 'not-a-function' },
                 execute: async () => ({})
             };
-            const lib = makeMockLib({
-                get_todos: mockToolA,
+            const lib = makeStubLib({
+                get_todos: stubToolA,
                 no_schema_tool: toolWithoutSchema,
                 broken_schema_tool: toolWithBrokenSchema
             });
@@ -208,7 +208,7 @@ describe('ToolRegistry', () => {
     describe('create caching', () => {
 
         it('create 에 lib 주입 시 매 호출마다 별도 인스턴스 (캐시 우회)', async () => {
-            const lib1 = makeMockLib({ get_todos: mockToolA });
+            const lib1 = makeStubLib({ get_todos: stubToolA });
             const r1 = await ToolRegistry.create({ lib: lib1 });
             const r2 = await ToolRegistry.create({ lib: lib1 });
 
