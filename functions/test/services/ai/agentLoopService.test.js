@@ -390,6 +390,44 @@ describe('AgentLoopService', () => {
         assert.strictEqual(result.type, 'DONE');
     });
 
+    it('multi-turn 에서 messages 의 cache_control marker 는 항상 마지막 message 한 자리에만 유지', async () => {
+        // 3 turn: get_todos → tool_result → get_todos → tool_result → finalize
+        // 각 createMessage 호출 직전 마커는 마지막 message 에만 존재해야 함 (Anthropic 4-breakpoint 한계 방어)
+        const { service, anthropic, registry } = makeService();
+        registry.registerExecute('get_todos', { items: [] });
+
+        anthropic.enqueue(makeToolUseResponse('get_todos', {}));
+        anthropic.enqueue(makeToolUseResponse('get_todos', {}));
+        anthropic.enqueue(makeToolUseResponse('finalize', { type: 'DONE', text: '완료' }));
+
+        await service.run('할일 알려줘', { userId: 'u1', timezone: 'Asia/Seoul' });
+
+        function countCacheControlBlocks(messages) {
+            let count = 0;
+            for (const msg of messages) {
+                if (Array.isArray(msg.content)) {
+                    for (const block of msg.content) {
+                        if (block.cache_control) count++;
+                    }
+                }
+            }
+            return count;
+        }
+
+        // 3번 모두 cache_control 마크된 block 은 정확히 1개
+        assert.strictEqual(countCacheControlBlocks(anthropic.allCreateMessageArgs[0].messages), 1, '1st turn: marker 1개');
+        assert.strictEqual(countCacheControlBlocks(anthropic.allCreateMessageArgs[1].messages), 1, '2nd turn: marker 1개');
+        assert.strictEqual(countCacheControlBlocks(anthropic.allCreateMessageArgs[2].messages), 1, '3rd turn: marker 1개');
+
+        // 각 turn 에서 마커가 마지막 message 의 마지막 block 에 있음을 검증
+        for (let i = 0; i < 3; i++) {
+            const msgs = anthropic.allCreateMessageArgs[i].messages;
+            const lastMsg = msgs[msgs.length - 1];
+            const lastBlock = lastMsg.content[lastMsg.content.length - 1];
+            assert.deepStrictEqual(lastBlock.cache_control, { type: 'ephemeral' }, `turn ${i + 1}: 마커 위치 정확`);
+        }
+    });
+
     it('systemPromptBuilder.build 에 { now, timezone } 이 전달됨', async () => {
         const anthropic = new FakeAnthropicClient();
         const registry = new StubToolRegistry();
