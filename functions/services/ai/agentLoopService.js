@@ -80,17 +80,17 @@ class AgentLoopService {
 
     /**
      * @param {string} commandText
-     * @param {{ userId: string }} context
+     * @param {{ userId: string, timezone: string }} context
      * @returns {Promise<object>}  AiJobResult plain object
      */
-    async run(commandText, { userId }) {
+    async run(commandText, { userId, timezone }) {
         const auth = { userId, scopes: this.scopes };
         const messages = [{ role: 'user', content: commandText }];
         let sumOutputTokens = 0;
         let lastInputTokens = 0;
         const systemBlocks = [{
             type: 'text',
-            text: this.systemPromptBuilder.build({ now: new Date() }),
+            text: this.systemPromptBuilder.build({ now: new Date(), timezone }),
             cache_control: { type: 'ephemeral' }
         }];
         const registry = await this._registryFactory();

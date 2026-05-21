@@ -71,7 +71,25 @@ describe('aiFrontAPI /v1/ai', function () {
     describe('POST /v1/ai/command', function () {
 
         it('device_id 헤더 누락 → 400', async function () {
-            const res = await client.post('/v1/ai/command', { command_text: 'hello' });
+            const res = await client.post('/v1/ai/command', { command_text: 'hello', timezone: 'Asia/Seoul' });
+            assert.strictEqual(res.status, 400);
+        });
+
+        it('timezone 누락 → 400', async function () {
+            const res = await client.post(
+                '/v1/ai/command',
+                { command_text: 'hello' },
+                { headers: { device_id: 'e2e-device-001' } }
+            );
+            assert.strictEqual(res.status, 400);
+        });
+
+        it('유효하지 않은 timezone → 400', async function () {
+            const res = await client.post(
+                '/v1/ai/command',
+                { command_text: 'hello', timezone: 'Not/ATimezone' },
+                { headers: { device_id: 'e2e-device-001' } }
+            );
             assert.strictEqual(res.status, 400);
         });
 
@@ -79,7 +97,7 @@ describe('aiFrontAPI /v1/ai', function () {
             this.timeout(10000);
             const res = await client.post(
                 '/v1/ai/command',
-                { command_text: 'plain text' },
+                { command_text: 'plain text', timezone: 'Asia/Seoul' },
                 { headers: { device_id: 'e2e-device-001' } }
             );
             assert.strictEqual(res.status, 202);
@@ -94,7 +112,7 @@ describe('aiFrontAPI /v1/ai', function () {
             this.timeout(10000);
             const res = await client.post(
                 '/v1/ai/command',
-                { command_text: '[stub:CONFIRM] do something' },
+                { command_text: '[stub:CONFIRM] do something', timezone: 'Asia/Seoul' },
                 { headers: { device_id: 'e2e-device-001' } }
             );
             assert.strictEqual(res.status, 202);
@@ -108,7 +126,7 @@ describe('aiFrontAPI /v1/ai', function () {
             this.timeout(10000);
             const res = await client.post(
                 '/v1/ai/command',
-                { command_text: '[stub:FAILED] bad command' },
+                { command_text: '[stub:FAILED] bad command', timezone: 'Asia/Seoul' },
                 { headers: { device_id: 'e2e-device-001' } }
             );
             assert.strictEqual(res.status, 202);
@@ -127,7 +145,7 @@ describe('aiFrontAPI /v1/ai', function () {
             // userA(기본 테스트 유저)가 job 생성
             const postRes = await client.post(
                 '/v1/ai/command',
-                { command_text: 'test job for auth check' },
+                { command_text: 'test job for auth check', timezone: 'Asia/Seoul' },
                 { headers: { device_id: 'e2e-device-001' } }
             );
             assert.strictEqual(postRes.status, 202);

@@ -21,6 +21,7 @@ const BASE_JOB_DATA = {
     userId: 'user-1',
     deviceId: 'device-1',
     commandText: '내일 회의 잡아줘',
+    timezone: 'Asia/Seoul',
     status: AiJob.STATUS.PENDING,
     result: null,
     expireAt: new Date(Date.now() + 86400_000)
@@ -120,10 +121,10 @@ describe('AgentLoopHandler', () => {
         assert.strictEqual(payload.data.jobId, 'job-1');
         assert.strictEqual(payload.data.status, 'DONE');
 
-        // handler 가 agentLoopService.run 에 commandText 와 {userId} 를 정확히 전달하는지 검증 (재발 방지)
+        // handler 가 agentLoopService.run 에 commandText 와 {userId, timezone} 을 정확히 전달하는지 검증 (재발 방지)
         assert.deepStrictEqual(agentLoopService.lastRunArgs, {
             commandText: BASE_JOB_DATA.commandText,
-            opts: { userId: BASE_JOB_DATA.userId }
+            opts: { userId: BASE_JOB_DATA.userId, timezone: BASE_JOB_DATA.timezone }
         });
     });
 

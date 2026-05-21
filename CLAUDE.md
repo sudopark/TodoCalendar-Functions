@@ -199,6 +199,10 @@ test/e2e/
 
 기능 스펙은 issue #154 (부모 #151) 참조. 아래는 운영/시크릿 정책만.
 
+**POST `/v1/ai/command` body schema** (required fields):
+- `command_text` (string): 사용자 자연어 명령
+- `timezone` (string, IANA — 예: `Asia/Seoul`, `America/Los_Angeles`): 클라이언트 timezone. 누락·invalid 시 400. 서버 default 없음.
+
 `aiAgentLoop` 는 Firestore trigger 로 실행되며 Anthropic Claude API 와 `todocalendar-tools` 패키지를 호출하는 Agent Loop. 시크릿은 trigger runtime 에 `process.env` 로 주입된다. 운영(`.env`) 과 테스트(`.env.test`) 양쪽에 **반드시 다른 값**으로 둔다 (테스트 dummy 가 운영 인증을 우회하지 못하게).
 
 **`ANTHROPIC_API_KEY` — Anthropic API access token**
