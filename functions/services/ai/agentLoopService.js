@@ -3,6 +3,26 @@
 const AiJobResult = require('../../models/ai/AiJobResult');
 const { detectLanguage } = require('./language');
 
+/**
+ * messages 배열의 마지막 message 마지막 content block 에 cache_control 마크.
+ * turn N+1 에서 turn 1~N 누적 prefix 를 cache hit 으로 처리하기 위해
+ * createMessage 호출 직전에 호출. idempotent — 이미 마크된 block 은 skip.
+ *
+ * @param {Array<{role: string, content: string|Array}>} messages
+ */
+function _markLastMessageForCache(messages) {
+    const last = messages[messages.length - 1];
+    if (!last) return;
+    if (typeof last.content === 'string') {
+        last.content = [{ type: 'text', text: last.content, cache_control: { type: 'ephemeral' } }];
+    } else if (Array.isArray(last.content) && last.content.length > 0) {
+        const lastBlock = last.content[last.content.length - 1];
+        if (!lastBlock.cache_control) {
+            lastBlock.cache_control = { type: 'ephemeral' };
+        }
+    }
+}
+
 const CONFIRM_DEFAULTS = {
     ko: {
         text: '확인이 필요한 작업이야',
@@ -84,6 +104,7 @@ class AgentLoopService {
             : rawTools;
 
         for (let iter = 0; iter < this.loopCap; iter++) {
+            _markLastMessageForCache(messages);
             const resp = await this.anthropic.createMessage({
                 system: systemBlocks,
                 messages,

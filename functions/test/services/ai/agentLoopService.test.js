@@ -333,6 +333,35 @@ describe('AgentLoopService', () => {
         assert.strictEqual(result.reason, 'multiple tool_uses in single turn');
     });
 
+    it('createMessage 호출 시 messages 마지막 message 의 마지막 content block 에 cache_control 마크', async () => {
+        // multi-turn: get_todos → tool_result → finalize
+        // 두 번째 turn 호출 시 messages = [user, assistant, user(tool_result)]
+        // 마지막 user(tool_result) 의 마지막 block 에 cache_control 마크됨을 검증
+        const { service, anthropic, registry } = makeService();
+        registry.registerExecute('get_todos', { items: [] });
+
+        anthropic.enqueue(makeToolUseResponse('get_todos', {}));
+        anthropic.enqueue(makeToolUseResponse('finalize', { type: 'DONE', text: '완료' }));
+
+        await service.run('할일 알려줘', { userId: 'u1' });
+
+        // 첫 번째 turn: 초기 user message(string) 가 array 로 변환되고 cache_control 마크
+        const firstCallArgs = anthropic.allCreateMessageArgs[0];
+        const firstMsg = firstCallArgs.messages[0];
+        assert.ok(Array.isArray(firstMsg.content), '첫 turn user message 가 array form 으로 변환됨');
+        assert.deepStrictEqual(firstMsg.content[0].cache_control, { type: 'ephemeral' });
+
+        // 두 번째 turn createMessage 호출 직전: messages = [user, assistant, user(tool_result)]
+        // FakeAnthropicClient 는 args.messages 를 reference 로 저장하므로
+        // finalize 후 push 된 assistant 가 추가 포함될 수 있어 role==='user' 필터로 마지막 user 추적
+        const secondCallArgs = anthropic.allCreateMessageArgs[1];
+        const userMsgs = secondCallArgs.messages.filter(m => m.role === 'user');
+        const lastUserMsg = userMsgs[userMsgs.length - 1];
+        assert.strictEqual(lastUserMsg.role, 'user');
+        const lastBlock = lastUserMsg.content[lastUserMsg.content.length - 1];
+        assert.deepStrictEqual(lastBlock.cache_control, { type: 'ephemeral' });
+    });
+
     it('multi-turn 에서 input_tokens 누적 over-count 가 발생하지 않음', async () => {
         // Anthropic input_tokens = 전체 prompt 토큰 (turn 마다 누적됨).
         // turn1: input=100, output=10 / turn2: input=200, output=10 → 단순 합산 시 320 이지만
