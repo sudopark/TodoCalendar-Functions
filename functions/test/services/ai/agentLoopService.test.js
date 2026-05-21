@@ -87,7 +87,7 @@ describe('AgentLoopService', () => {
         });
     });
 
-    it('CONFIRM_DEFAULTS ko — 한국어 commandText 의 confirm_required 응답이 fallback 문구 사용', async () => {
+    it('ko confirm_required — delete_todo tool 의 한국어 notification.title 이 tool 별 매핑 적용', async () => {
         const { service, anthropic, registry } = makeService();
         registry.registerExecute('delete_todo', {
             status: 'confirm_required',
@@ -109,12 +109,12 @@ describe('AgentLoopService', () => {
             confirmToken: 'tok123'
         });
         assert.deepStrictEqual(result.notification, {
-            title: '확인 필요',
+            title: '할일 삭제 확인',
             body: '실행 전 확인이 필요해'
         });
     });
 
-    it('CONFIRM_DEFAULTS en — 영어 commandText 의 confirm_required 응답이 영어 fallback 문구 사용', async () => {
+    it('en confirm_required — delete_todo tool 의 영어 notification.title 이 tool 별 매핑 적용', async () => {
         const { service, anthropic, registry } = makeService();
         registry.registerExecute('delete_todo', {
             status: 'confirm_required',
@@ -131,12 +131,12 @@ describe('AgentLoopService', () => {
         assert.strictEqual(result.type, 'CONFIRM');
         assert.strictEqual(result.text, 'Confirmation required for this action');
         assert.deepStrictEqual(result.notification, {
-            title: 'Confirmation required',
+            title: 'Confirm todo deletion',
             body: 'Please confirm before proceeding'
         });
     });
 
-    it('lib 의 confirm_required result.message 가 있으면 fallback 대신 그 message 사용', async () => {
+    it('lib 의 confirm_required result.message 가 있으면 fallback 대신 그 message 사용, title 은 tool 별 매핑', async () => {
         const { service, anthropic, registry } = makeService();
         registry.registerExecute('delete_todo', {
             status: 'confirm_required',
@@ -150,8 +150,24 @@ describe('AgentLoopService', () => {
 
         assert.strictEqual(result.type, 'CONFIRM');
         assert.strictEqual(result.text, '정말 삭제할 거야?');
-        // notification.body 는 lib message 가 아닌 항상 locale defaults (push 알림 wording 은 시스템 책임)
+        // notification.title 은 tool 별 매핑, body 는 항상 locale defaults (push 알림 wording 은 시스템 책임)
+        assert.strictEqual(result.notification.title, '할일 삭제 확인');
         assert.strictEqual(result.notification.body, '실행 전 확인이 필요해');
+    });
+
+    it('confirm_required — 매핑 없는 tool 이면 locale defaults.title 으로 fallback', async () => {
+        const { service, anthropic, registry } = makeService();
+        registry.registerExecute('future_tool', {
+            status: 'confirm_required',
+            confirmToken: 'tok-future'
+        });
+
+        anthropic.enqueue(makeToolUseResponse('future_tool', { some_arg: 'x' }));
+
+        const result = await service.run('미래 기능 실행해', { userId: 'u1' });
+
+        assert.strictEqual(result.type, 'CONFIRM');
+        assert.strictEqual(result.notification.title, '확인 필요');
     });
 
     it('finalize tool FAILED 응답이면 AiJobResult.failed 반환', async () => {
