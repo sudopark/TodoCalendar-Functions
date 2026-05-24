@@ -537,4 +537,124 @@ describe('AgentLoopHandler', () => {
         assert.strictEqual(agentLoopService.allRunArgs.length, 1);
         assert.strictEqual(agentLoopService.allRunConfirmArgs.length, 0);
     });
+
+    // ─── 에러 로그 sanitize (#160) ─────────────────────────────────────────────
+    //
+    // Cloud Logging 에 err 객체를 raw dump 하면 SDK 에러 안의 stack / response headers /
+    // request body / 우발적 secret 이 함께 박힘. helper 가 { code, status, message } 만
+    // 추출하고 message 는 길이 캡 적용해야 함.
+
+    describe('에러 로그 sanitize (#160)', () => {
+
+        function makeFatErr() {
+            // Anthropic SDK 류 fat error: 추가 필드와 stack 포함
+            const err = new Error('upstream failed: api key abc-secret-12345 rejected');
+            err.code = 'unauthorized';
+            err.status = 401;
+            err.headers = { 'x-api-key': 'leaked-secret' };
+            err.response = { body: { detail: 'leaked' } };
+            err.request = { url: 'https://api.anthropic.com/v1/messages', body: { messages: ['leaked'] } };
+            return err;
+        }
+
+        function assertSanitized(loggedPayload, expected) {
+            assert.ok(loggedPayload.error, 'error key 존재');
+            assert.strictEqual('err' in loggedPayload, false, 'err key (raw) 가 더 이상 없음');
+            assert.deepStrictEqual(Object.keys(loggedPayload.error).sort(), ['code', 'message', 'status']);
+            assert.strictEqual(loggedPayload.error.code, expected.code);
+            assert.strictEqual(loggedPayload.error.status, expected.status);
+            assert.ok(loggedPayload.error.message.includes(expected.messageContains));
+        }
+
+        it('agentLoop throw 경로 — err 의 stack / headers / response / request 제외, code/status/message 만 로깅', async () => {
+            const repo = seededRepo();
+            const jobService = new JobService(repo);
+            const fatErr = makeFatErr();
+            const throwingLoop = { async run() { throw fatErr; } };
+            const messaging = makeMessaging();
+            const userRepo = makeUserRepository(BASE_DEVICE);
+            const { errors, logger } = captureLogger();
+
+            const handler = makeHandler({ jobService, agentLoopService: throwingLoop, userRepository: userRepo, messaging, logger });
+            await handler.handle(makeEvent('job-1', BASE_JOB_DATA));
+
+            const [msg, payload] = errors[0];
+            assert.ok(msg.includes('agentLoop 실패'));
+            assertSanitized(payload, { code: 'unauthorized', status: 401, messageContains: 'upstream failed' });
+        });
+
+        it('aiUsage record throw 경로 — 동일 sanitize 적용', async () => {
+            const repo = seededRepo();
+            const jobService = new JobService(repo);
+            const agentLoopService = makeAgentLoopService(
+                AiJobResult.done('stub done'),
+                { inputTokens: 100, outputTokens: 30 }
+            );
+            const aiUsageService = makeAiUsageService();
+            const fatErr = makeFatErr();
+            aiUsageService.recordUsage = async () => { throw fatErr; };
+            const messaging = makeMessaging();
+            const userRepo = makeUserRepository(BASE_DEVICE);
+            const { errors, logger } = captureLogger();
+
+            const handler = makeHandler({ jobService, agentLoopService, aiUsageService, userRepository: userRepo, messaging, logger });
+            await handler.handle(makeEvent('job-1', BASE_JOB_DATA));
+
+            const recordErr = errors.find(([m]) => m.includes('aiUsage record 실패'));
+            assert.ok(recordErr, 'aiUsage record 실패 로그 존재');
+            assertSanitized(recordErr[1], { code: 'unauthorized', status: 401, messageContains: 'upstream failed' });
+        });
+
+        it('FCM send throw 경로 — 동일 sanitize 적용', async () => {
+            const repo = seededRepo();
+            const jobService = new JobService(repo);
+            const agentLoopService = makeAgentLoopService();
+            const fatErr = makeFatErr();
+            const failMessaging = { async send() { throw fatErr; } };
+            const userRepo = makeUserRepository(BASE_DEVICE);
+            const { errors, logger } = captureLogger();
+
+            const handler = makeHandler({ jobService, agentLoopService, userRepository: userRepo, messaging: failMessaging, logger });
+            await handler.handle(makeEvent('job-1', BASE_JOB_DATA));
+
+            const fcmErr = errors.find(([m]) => m.includes('FCM 발송 실패'));
+            assert.ok(fcmErr, 'FCM 발송 실패 로그 존재');
+            assertSanitized(fcmErr[1], { code: 'unauthorized', status: 401, messageContains: 'upstream failed' });
+        });
+
+        it('매우 긴 message 는 길이 캡 적용 후 로깅', async () => {
+            const repo = seededRepo();
+            const jobService = new JobService(repo);
+            const hugeMsg = 'X'.repeat(2000);
+            const hugeErr = Object.assign(new Error(hugeMsg), { code: 'huge', status: 500 });
+            const throwingLoop = { async run() { throw hugeErr; } };
+            const messaging = makeMessaging();
+            const userRepo = makeUserRepository(BASE_DEVICE);
+            const { errors, logger } = captureLogger();
+
+            const handler = makeHandler({ jobService, agentLoopService: throwingLoop, userRepository: userRepo, messaging, logger });
+            await handler.handle(makeEvent('job-1', BASE_JOB_DATA));
+
+            const loggedMsg = errors[0][1].error.message;
+            assert.ok(loggedMsg.length < hugeMsg.length, '캡 적용으로 원본보다 짧음');
+            assert.ok(loggedMsg.length <= 600, '하드 cap 600자 이하');
+        });
+
+        it('non-Error 입력 (string throw) 도 안전 fallback', async () => {
+            const repo = seededRepo();
+            const jobService = new JobService(repo);
+            const throwingLoop = { async run() { throw 'plain string error'; } };
+            const messaging = makeMessaging();
+            const userRepo = makeUserRepository(BASE_DEVICE);
+            const { errors, logger } = captureLogger();
+
+            const handler = makeHandler({ jobService, agentLoopService: throwingLoop, userRepository: userRepo, messaging, logger });
+            await handler.handle(makeEvent('job-1', BASE_JOB_DATA));
+
+            const payload = errors[0][1];
+            assert.ok(payload.error.message.includes('plain string error'));
+            assert.strictEqual(payload.error.code, undefined);
+            assert.strictEqual(payload.error.status, undefined);
+        });
+    });
 });
