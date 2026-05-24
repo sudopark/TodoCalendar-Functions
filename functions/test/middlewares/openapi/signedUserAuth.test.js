@@ -16,10 +16,14 @@ describe('middlewares/openapi/signedUserAuth', () => {
         res = {};
         nextCalled = false;
         process.env.SIGNING_SECRET = SECRET;
+        delete process.env.SIGNING_SECRET_PRIMARY;
+        delete process.env.SIGNING_SECRET_SECONDARY;
     });
 
     afterEach(() => {
         delete process.env.SIGNING_SECRET;
+        delete process.env.SIGNING_SECRET_PRIMARY;
+        delete process.env.SIGNING_SECRET_SECONDARY;
     });
 
     const next = () => { nextCalled = true; };
@@ -103,5 +107,71 @@ describe('middlewares/openapi/signedUserAuth', () => {
         signedUserAuth(req, res, next);
         assert.strictEqual(nextCalled, true);
         assert.strictEqual(req.openUserId, 'user-1');
+    });
+
+    describe('PRIMARY/SECONDARY 키 로테이션 지원', () => {
+        const PRIMARY_KEY = 'p'.repeat(32);
+        const SECONDARY_KEY = 's'.repeat(32);
+
+        it('PRIMARY 만 설정 → PRIMARY 로 서명된 토큰 통과', () => {
+            delete process.env.SIGNING_SECRET;
+            process.env.SIGNING_SECRET_PRIMARY = PRIMARY_KEY;
+            const token = jwt.sign({ sub: 'user-1', scope: ['read:calendar'] }, PRIMARY_KEY, { algorithm: 'HS256' });
+            req.headers['x-open-user-token'] = token;
+            signedUserAuth(req, res, next);
+            assert.strictEqual(nextCalled, true);
+            assert.strictEqual(req.openUserId, 'user-1');
+            assert.deepStrictEqual(req.openScope, ['read:calendar']);
+        });
+
+        it('SECONDARY 만 설정 → SECONDARY 로 서명된 토큰 통과', () => {
+            delete process.env.SIGNING_SECRET;
+            process.env.SIGNING_SECRET_SECONDARY = SECONDARY_KEY;
+            const token = jwt.sign({ sub: 'user-2', scope: ['write:calendar'] }, SECONDARY_KEY, { algorithm: 'HS256' });
+            req.headers['x-open-user-token'] = token;
+            signedUserAuth(req, res, next);
+            assert.strictEqual(nextCalled, true);
+            assert.strictEqual(req.openUserId, 'user-2');
+            assert.deepStrictEqual(req.openScope, ['write:calendar']);
+        });
+
+        it('PRIMARY + SECONDARY 둘 다 설정 → 어느 키로 서명된 토큰이든 통과', () => {
+            delete process.env.SIGNING_SECRET;
+            process.env.SIGNING_SECRET_PRIMARY = PRIMARY_KEY;
+            process.env.SIGNING_SECRET_SECONDARY = SECONDARY_KEY;
+
+            // PRIMARY 로 서명된 토큰
+            const tokenPrimary = jwt.sign({ sub: 'user-primary' }, PRIMARY_KEY, { algorithm: 'HS256' });
+            req.headers['x-open-user-token'] = tokenPrimary;
+            signedUserAuth(req, res, next);
+            assert.strictEqual(nextCalled, true);
+            assert.strictEqual(req.openUserId, 'user-primary');
+
+            // SECONDARY 로 서명된 토큰
+            nextCalled = false;
+            const tokenSecondary = jwt.sign({ sub: 'user-secondary' }, SECONDARY_KEY, { algorithm: 'HS256' });
+            req.headers['x-open-user-token'] = tokenSecondary;
+            signedUserAuth(req, res, next);
+            assert.strictEqual(nextCalled, true);
+            assert.strictEqual(req.openUserId, 'user-secondary');
+        });
+
+        it('PRIMARY + SECONDARY 설정되었으나 어느 키로도 검증 불가 → 401', () => {
+            delete process.env.SIGNING_SECRET;
+            process.env.SIGNING_SECRET_PRIMARY = PRIMARY_KEY;
+            process.env.SIGNING_SECRET_SECONDARY = SECONDARY_KEY;
+            const wrongKey = 'w'.repeat(32);
+            const token = jwt.sign({ sub: 'user-3' }, wrongKey, { algorithm: 'HS256' });
+            req.headers['x-open-user-token'] = token;
+            expectFail(401, 'InvalidCredentials');
+        });
+
+        it('PRIMARY/SECONDARY/SIGNING_SECRET 셋 다 미설정 → 500 ServerMisconfigured', () => {
+            delete process.env.SIGNING_SECRET;
+            delete process.env.SIGNING_SECRET_PRIMARY;
+            delete process.env.SIGNING_SECRET_SECONDARY;
+            req.headers['x-open-user-token'] = 'any.token.string';
+            expectFail(500, 'ServerMisconfigured');
+        });
     });
 });
