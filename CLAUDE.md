@@ -164,11 +164,11 @@ test/e2e/
 못하게).
 
 **OPENAPI_PAT_MCP — PAT(Personal Access Token) secret**
-- 호출자(MCP 서비스)가 헤더에 넣는 토큰 형식: `Authorization: Bearer mcp_<secret>`
-- 환경변수에는 **prefix 없이 secret 만** 둔다. 예: `OPENAPI_PAT_MCP=abc123...` (X: `mcp_abc123...`)
-- 검증 로직(`middlewares/openapi/patAuth.js`): 인입 토큰을 `_` 로 split → secret 부분만
-  `crypto.timingSafeEqual` 비교. prefix 가 env 값에 섞이면 절대 일치하지 않음.
-- 생성: `openssl rand -hex 32` (32바이트 = 64 hex 문자) — 길이는 32 이상 권장
+- 호출자(MCP 서비스 또는 functions self-loopback)가 헤더에 넣는 토큰 형식: `Authorization: Bearer mcp_<secret>`
+- 환경변수에는 **prefix 포함 full token** 을 둔다. 예: `OPENAPI_PAT_MCP=mcp_abc123...`
+  - lib `todocalendar-tools` 의 `callOpenApi` 가 env 값을 그대로 Authorization 헤더에 박는 형식과 일관. Agent Loop → openAPI self-loopback 흐름(예: `delete_todo` 2차 confirm) 이 작동하려면 prefix 포함 필수.
+- 검증 로직(`middlewares/openapi/patAuth.js`): 인입 토큰을 `_` 로 split → service+secret 분리, env 값도 같은 형식이라 prefix 떼고 secret 부분만 `crypto.timingSafeEqual` 비교.
+- 생성: secret 부분만 `openssl rand -hex 32` (32바이트 = 64 hex 문자) → 앞에 `mcp_` 접두 → env 에 박는다.
 - 화이트리스트(`KNOWN_SERVICES`): MVP 는 `mcp` 한 종류만. 새 서비스 추가 시 코드 수정 필요.
 
 **SIGNING_SECRET — 사용자 JWT(HS256) 서명키**
