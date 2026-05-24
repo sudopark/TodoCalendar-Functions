@@ -26,6 +26,34 @@ class JobService {
             deviceId,
             commandText,
             timezone,
+            mode: AiJob.MODE.COMMAND,
+            confirmPayload: null,
+            status: AiJob.STATUS.PENDING,
+            result: null,
+            expireAt
+        };
+
+        await this.jobRepository.put(jobId, data);
+        return jobId;
+    }
+
+    /**
+     * CONFIRM 2차 호출용 job 발행. 새 jobId 발급 — 1차 jobId 와 독립.
+     *
+     * @param {{ userId, deviceId, commandText, timezone, confirmPayload: { tool, args, confirmToken } }} params
+     * @returns {Promise<string>} jobId
+     */
+    async createConfirmJob({ userId, deviceId, commandText, timezone, confirmPayload }) {
+        const jobId = crypto.randomUUID();
+        const expireAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+        const data = {
+            userId,
+            deviceId,
+            commandText,
+            timezone,
+            mode: AiJob.MODE.CONFIRM,
+            confirmPayload,
             status: AiJob.STATUS.PENDING,
             result: null,
             expireAt

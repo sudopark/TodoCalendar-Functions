@@ -71,6 +71,57 @@ describe('JobService', () => {
                 () => service.createJob({ userId: 'u', deviceId: 'd', commandText: 'cmd' })
             );
         });
+
+        it('createJob 은 mode=command + confirmPayload=null 로 plain object 를 박음', async () => {
+            await service.createJob({ userId: 'u', deviceId: 'd', commandText: 'cmd', timezone: 'Asia/Seoul' });
+            const { data } = stubRepo.lastPutPayload;
+            assert.strictEqual(data.mode, AiJob.MODE.COMMAND);
+            assert.strictEqual(data.confirmPayload, null);
+        });
+    });
+
+    // ------------------------------------------------------------------ //
+    // createConfirmJob
+    // ------------------------------------------------------------------ //
+
+    describe('createConfirmJob', () => {
+
+        it('mode=confirm + confirmPayload 가 plain object 로 박히고 새 jobId 반환', async () => {
+            const before = Date.now();
+            const jobId = await service.createConfirmJob({
+                userId: 'u', deviceId: 'd', commandText: '삭제',
+                timezone: 'Asia/Seoul',
+                confirmPayload: { tool: 'delete_todo', args: { todo_id: 't1' }, confirmToken: 'tk' }
+            });
+            const after = Date.now();
+
+            assert.ok(typeof jobId === 'string' && jobId.length > 0);
+
+            const { jobId: storedJobId, data } = stubRepo.lastPutPayload;
+            assert.strictEqual(storedJobId, jobId);
+            assert.strictEqual(Object.getPrototypeOf(data), Object.prototype);
+
+            assert.strictEqual(data.userId, 'u');
+            assert.strictEqual(data.deviceId, 'd');
+            assert.strictEqual(data.commandText, '삭제');
+            assert.strictEqual(data.timezone, 'Asia/Seoul');
+            assert.strictEqual(data.mode, AiJob.MODE.CONFIRM);
+            assert.deepStrictEqual(data.confirmPayload, { tool: 'delete_todo', args: { todo_id: 't1' }, confirmToken: 'tk' });
+            assert.strictEqual(data.status, AiJob.STATUS.PENDING);
+            assert.strictEqual(data.result, null);
+
+            assert.ok(data.expireAt instanceof Date);
+            const expected24hLater = before + 24 * 60 * 60 * 1000;
+            const drift = data.expireAt.getTime() - expected24hLater;
+            assert.ok(drift >= 0 && drift <= (after - before) + 1000);
+        });
+
+        it('두 번 호출하면 서로 다른 jobId 반환', async () => {
+            const payload = { tool: 'delete_todo', args: { todo_id: 't1' }, confirmToken: 'tk' };
+            const a = await service.createConfirmJob({ userId: 'u', deviceId: 'd', commandText: 'cmd', timezone: 'UTC', confirmPayload: payload });
+            const b = await service.createConfirmJob({ userId: 'u', deviceId: 'd', commandText: 'cmd', timezone: 'UTC', confirmPayload: payload });
+            assert.notStrictEqual(a, b);
+        });
     });
 
     // ------------------------------------------------------------------ //

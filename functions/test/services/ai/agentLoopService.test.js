@@ -522,4 +522,108 @@ describe('AgentLoopService', () => {
         assert.deepStrictEqual(usage, { inputTokens: 120, outputTokens: 25 });
     });
 
+    // ─── runConfirm (CONFIRM 2차 호출) ─────────────────────────────────────────
+
+    describe('runConfirm', () => {
+
+        it('lib tool 정상 응답 → DONE, args 에 confirmToken merge 후 전달, usage 0/0', async () => {
+            const { service, registry } = makeService();
+            registry.registerExecute('delete_todo', { status: 'ok' });
+
+            const { result, usage } = await service.runConfirm(
+                { tool: 'delete_todo', args: { todo_id: 'todo-1' }, confirmToken: 'token-xyz' },
+                { userId: 'u1', timezone: 'Asia/Seoul', commandText: '이거 삭제해' }
+            );
+
+            assert.strictEqual(result.type, 'DONE');
+            assert.strictEqual(result.text, '요청한 작업을 완료했어');
+            assert.deepStrictEqual(usage, { inputTokens: 0, outputTokens: 0 });
+            assert.deepStrictEqual(registry.lastExecute.args, { todo_id: 'todo-1', confirmToken: 'token-xyz' });
+            assert.deepStrictEqual(registry.lastExecute.auth, { userId: 'u1', scopes: ['read:calendar', 'write:calendar'] });
+        });
+
+        it('영어 commandText → DONE text 영어 (language 분기)', async () => {
+            const { service, registry } = makeService();
+            registry.registerExecute('delete_todo', { status: 'ok' });
+
+            const { result } = await service.runConfirm(
+                { tool: 'delete_todo', args: { todo_id: 't1' }, confirmToken: 'tk' },
+                { userId: 'u1', timezone: 'UTC', commandText: 'delete this todo' }
+            );
+
+            assert.strictEqual(result.type, 'DONE');
+            assert.strictEqual(result.text, 'Done');
+        });
+
+        it('lib 가 ToolError(ConfirmExpired) throw → FAILED, reason=e.code', async () => {
+            const { service, registry } = makeService();
+            registry.registerExecute('delete_todo', () => {
+                const err = new Error('confirm token expired');
+                err.name = 'ToolError';
+                err.code = 'ConfirmExpired';
+                err.status = 410;
+                throw err;
+            });
+
+            const { result, usage } = await service.runConfirm(
+                { tool: 'delete_todo', args: { todo_id: 't1' }, confirmToken: 'tk' },
+                { userId: 'u1', timezone: 'Asia/Seoul', commandText: '삭제' }
+            );
+
+            assert.strictEqual(result.type, 'FAILED');
+            assert.strictEqual(result.reason, 'ConfirmExpired');
+            assert.deepStrictEqual(usage, { inputTokens: 0, outputTokens: 0 });
+        });
+
+        it('lib 가 ToolError(ConfirmArgsMismatch) throw → FAILED, reason=e.code (e.code 라우팅 검증)', async () => {
+            const { service, registry } = makeService();
+            registry.registerExecute('delete_schedule', () => {
+                const err = new Error('confirm token args mismatch');
+                err.code = 'ConfirmArgsMismatch';
+                err.status = 400;
+                throw err;
+            });
+
+            const { result } = await service.runConfirm(
+                { tool: 'delete_schedule', args: { schedule_id: 's1' }, confirmToken: 'tk' },
+                { userId: 'u1', timezone: 'Asia/Seoul', commandText: 'delete' }
+            );
+
+            assert.strictEqual(result.type, 'FAILED');
+            assert.strictEqual(result.reason, 'ConfirmArgsMismatch');
+        });
+
+        it('lib 가 confirm_required 다시 반환 (비정상) → FAILED', async () => {
+            const { service, registry } = makeService();
+            registry.registerExecute('delete_todo', {
+                status: 'confirm_required',
+                message: 'still requires confirmation',
+                confirmToken: 'new-token'
+            });
+
+            const { result } = await service.runConfirm(
+                { tool: 'delete_todo', args: { todo_id: 't1' }, confirmToken: 'tk' },
+                { userId: 'u1', timezone: 'Asia/Seoul', commandText: 'delete' }
+            );
+
+            assert.strictEqual(result.type, 'FAILED');
+            assert.strictEqual(result.reason, 'unexpected confirm_required on confirm-mode');
+        });
+
+        it('e.code 없는 generic Error throw → FAILED, reason="agent error"', async () => {
+            const { service, registry } = makeService();
+            registry.registerExecute('delete_todo', () => {
+                throw new Error('network down');
+            });
+
+            const { result } = await service.runConfirm(
+                { tool: 'delete_todo', args: { todo_id: 't1' }, confirmToken: 'tk' },
+                { userId: 'u1', timezone: 'Asia/Seoul', commandText: '삭제' }
+            );
+
+            assert.strictEqual(result.type, 'FAILED');
+            assert.strictEqual(result.reason, 'agent error');
+        });
+    });
+
 });
