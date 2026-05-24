@@ -32,14 +32,17 @@ function openClient({ pat, userToken, baseURL = BASE_URL_OPEN } = {}) {
     });
 }
 
-// .env.test 의 OPENAPI_PAT_MCP 값으로 정상 PAT 토큰 문자열 ('mcp_<secret>') 을 만든다.
-// 호출자에 prefix 붙이는 책임을 한 곳에 가둠.
+// .env.test 의 OPENAPI_PAT_MCP 값을 그대로 반환 (정책: 'mcp_<secret>' 형식으로 저장).
+// 잘못 셋업 (prefix 누락) 시 명시적 throw — operator 가 secrets 갱신해야 함.
 function defaultMcpPat() {
-    const secret = process.env.OPENAPI_PAT_MCP;
-    if (!secret) {
+    const raw = process.env.OPENAPI_PAT_MCP;
+    if (!raw) {
         throw new Error('OPENAPI_PAT_MCP not set; load secrets/.env.test');
     }
-    return `mcp_${secret}`;
+    if (!raw.startsWith('mcp_')) {
+        throw new Error('OPENAPI_PAT_MCP must start with "mcp_" (see CLAUDE.md openAPI 시크릿 운영 정책)');
+    }
+    return raw;
 }
 
 module.exports = {
