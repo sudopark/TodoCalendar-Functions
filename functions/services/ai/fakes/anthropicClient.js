@@ -31,8 +31,11 @@ function resolveMarkerResponse(messages) {
         ? content
         : (Array.isArray(content) ? (content.find(b => b.type === 'text')?.text ?? '') : '');
 
-    if (text.includes('[stub:CONFIRM]')) {
-        return makeToolUseResponse('delete_todo', { todo_id: 'stub-todo-id' });
+    // [stub:CONFIRM] → 'stub-todo-id' (기본). [stub:CONFIRM:<id>] → 그 id (e2e #158 2차 흐름 검증용).
+    const confirmMatch = text.match(/\[stub:CONFIRM(?::([^\]]+))?\]/);
+    if (confirmMatch) {
+        const todoId = confirmMatch[1] || 'stub-todo-id';
+        return makeToolUseResponse('delete_todo', { todo_id: todoId });
     }
     if (text.includes('[stub:FAILED]')) {
         return makeToolUseResponse('finalize', {

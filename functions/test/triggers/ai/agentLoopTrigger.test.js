@@ -64,9 +64,19 @@ function makeAgentLoopService(resultOverride, usageOverride) {
     return {
         lastRunArgs: null,
         allRunArgs: [],
+        lastRunConfirmArgs: null,
+        allRunConfirmArgs: [],
         async run(commandText, opts) {
             this.lastRunArgs = { commandText, opts };
             this.allRunArgs.push({ commandText, opts });
+            return {
+                result: resultOverride ?? AiJobResult.done('stub done'),
+                usage: usageOverride ?? { inputTokens: 0, outputTokens: 0 }
+            };
+        },
+        async runConfirm(payload, opts) {
+            this.lastRunConfirmArgs = { payload, opts };
+            this.allRunConfirmArgs.push({ payload, opts });
             return {
                 result: resultOverride ?? AiJobResult.done('stub done'),
                 usage: usageOverride ?? { inputTokens: 0, outputTokens: 0 }
@@ -483,5 +493,48 @@ describe('AgentLoopHandler', () => {
         await handler.handle(makeEvent('job-1', BASE_JOB_DATA));
 
         assert.strictEqual(messaging.sendCalled, 1, 'record 실패와 무관하게 FCM 발송');
+    });
+
+    // ─── mode 분기 (#158) ────────────────────────────────────────────────────
+
+    it('mode=confirm job → runConfirm 호출, run 호출 X, confirmPayload 그대로 전달', async () => {
+        const confirmPayload = { tool: 'delete_todo', args: { todo_id: 't1' }, confirmToken: 'tk' };
+        const confirmJobData = {
+            ...BASE_JOB_DATA,
+            mode: AiJob.MODE.CONFIRM,
+            confirmPayload
+        };
+        const repo = seededRepo('job-cf', confirmJobData);
+        const jobService = new JobService(repo);
+        const agentLoopService = makeAgentLoopService(AiJobResult.done('done'));
+        const messaging = makeMessaging();
+        const userRepo = makeUserRepository(BASE_DEVICE);
+        const { logger } = captureLogger();
+
+        const handler = makeHandler({ jobService, agentLoopService, userRepository: userRepo, messaging, logger });
+        await handler.handle(makeEvent('job-cf', confirmJobData));
+
+        assert.strictEqual(agentLoopService.allRunArgs.length, 0, 'run 호출 X');
+        assert.strictEqual(agentLoopService.allRunConfirmArgs.length, 1, 'runConfirm 1회');
+        assert.deepStrictEqual(agentLoopService.lastRunConfirmArgs, {
+            payload: confirmPayload,
+            opts: { userId: BASE_JOB_DATA.userId, timezone: BASE_JOB_DATA.timezone, commandText: BASE_JOB_DATA.commandText }
+        });
+        assert.strictEqual(messaging.sendCalled, 1, 'FCM 정상 발송');
+    });
+
+    it('mode=command (default) job → run 호출, runConfirm 호출 X — 기존 흐름 회귀 가드', async () => {
+        const repo = seededRepo();
+        const jobService = new JobService(repo);
+        const agentLoopService = makeAgentLoopService(AiJobResult.done('done'));
+        const messaging = makeMessaging();
+        const userRepo = makeUserRepository(BASE_DEVICE);
+        const { logger } = captureLogger();
+
+        const handler = makeHandler({ jobService, agentLoopService, userRepository: userRepo, messaging, logger });
+        await handler.handle(makeEvent('job-1', BASE_JOB_DATA));
+
+        assert.strictEqual(agentLoopService.allRunArgs.length, 1);
+        assert.strictEqual(agentLoopService.allRunConfirmArgs.length, 0);
     });
 });

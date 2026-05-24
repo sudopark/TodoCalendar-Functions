@@ -14,6 +14,13 @@ describe('AiJob', () => {
         });
     });
 
+    describe('MODE enum', () => {
+        it('command / confirm 두 상수가 존재함', () => {
+            assert.strictEqual(AiJob.MODE.COMMAND, 'command');
+            assert.strictEqual(AiJob.MODE.CONFIRM, 'confirm');
+        });
+    });
+
     describe('isTerminal', () => {
         it('DONE 은 terminal', () => {
             assert.strictEqual(AiJob.isTerminal(AiJob.STATUS.DONE), true);
@@ -97,6 +104,30 @@ describe('AiJob', () => {
             assert.strictEqual(job.updatedAt, isoStr);
         });
 
+        it('mode 가 doc 에 없으면 command default — backward-compat (#158 이전 doc)', () => {
+            const now = new Date();
+            const job = AiJob.fromData('job-bc', {
+                userId: 'u', deviceId: 'd', commandText: 'cmd',
+                status: AiJob.STATUS.PENDING, result: null,
+                createdAt: now, updatedAt: now, expireAt: now
+            });
+            assert.strictEqual(job.mode, AiJob.MODE.COMMAND);
+            assert.strictEqual(job.confirmPayload, null);
+        });
+
+        it('mode=confirm + confirmPayload 가 있는 doc → 그대로 보존', () => {
+            const now = new Date();
+            const payload = { tool: 'delete_todo', args: { todo_id: 't1' }, confirmToken: 'tk' };
+            const job = AiJob.fromData('job-cf', {
+                userId: 'u', deviceId: 'd', commandText: 'cmd',
+                mode: 'confirm', confirmPayload: payload,
+                status: AiJob.STATUS.PENDING, result: null,
+                createdAt: now, updatedAt: now, expireAt: now
+            });
+            assert.strictEqual(job.mode, 'confirm');
+            assert.deepStrictEqual(job.confirmPayload, payload);
+        });
+
         it('result 가 있을 때 그대로 보존', () => {
             const result = { type: 'DONE', text: '완료됐어' };
             const now = new Date();
@@ -140,8 +171,18 @@ describe('AiJob', () => {
             assert.strictEqual(json.command_text, 'test command');
             assert.strictEqual(json.status, AiJob.STATUS.PENDING);
             assert.strictEqual(json.result, null);
+            assert.strictEqual(json.mode, AiJob.MODE.COMMAND);
+            assert.strictEqual(json.confirm_payload, null);
             assert.strictEqual(json.created_at, '2026-05-17T00:00:00.000Z');
             assert.strictEqual(json.updated_at, '2026-05-17T00:00:00.000Z');
+        });
+
+        it('confirm 모드 job — mode / confirm_payload 가 응답에 포함됨', () => {
+            const payload = { tool: 'delete_todo', args: { todo_id: 't1' }, confirmToken: 'tk' };
+            const job = makeJob({ mode: 'confirm', confirmPayload: payload });
+            const json = job.toJSON();
+            assert.strictEqual(json.mode, 'confirm');
+            assert.deepStrictEqual(json.confirm_payload, payload);
         });
 
         it('expire_at 은 응답에 포함되지 않음', () => {
