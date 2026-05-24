@@ -1,26 +1,6 @@
 
 
-/**
- * Firestore Timestamp 객체, Date 인스턴스, ISO string 을 모두 ISO string 으로 정규화.
- * Firestore snapshot 의 Timestamp 타입에는 toDate() 메서드가 있다.
- *
- * 호출 경계: 본 모델의 시간 필드(createdAt/updatedAt/expireAt) 는 항상
- * Firestore Timestamp 로 저장됨 (jobRepository 가 FieldValue.serverTimestamp /
- * Timestamp.fromDate 만 사용). Date / ISO string 분기는 테스트 편의용 입력 케이스.
- * 그 외 타입(숫자 timestamp, 잘못된 형식 string 등) 은 caller 보장 — 정규화 안 함.
- */
-function toISOString(value) {
-    if (!value) return null;
-    if (typeof value.toDate === 'function') {
-        // Firestore Timestamp
-        return value.toDate().toISOString();
-    }
-    if (value instanceof Date) {
-        return value.toISOString();
-    }
-    // ISO string 가정 — 그 외 primitive 는 caller 보장
-    return value;
-}
+const { toISOString } = require('./_timestamp');
 
 class AiJob {
     constructor({ jobId, userId, deviceId, commandText, timezone, status, result, createdAt, updatedAt, expireAt }) {
