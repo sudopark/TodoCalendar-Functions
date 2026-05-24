@@ -21,6 +21,8 @@ const ToolRegistry = require('../../services/ai/toolRegistry');
 const AgentLoopService = require('../../services/ai/agentLoopService');
 const SystemPromptBuilder = require('../../services/ai/systemPrompt');
 const UserRepository = require('../../repositories/userRepository');
+const AiUsageRepository = require('../../repositories/ai/aiUsageRepository');
+const AiUsageService = require('../../services/ai/aiUsageService');
 
 // emulator 한정 분기 — production 에서는 require 자체 발생하지 않도록 lazy require
 let anthropic;
@@ -46,6 +48,7 @@ const agentLoopService = new AgentLoopService({
 const handler = new AgentLoopHandler({
     jobService: new JobService(new JobRepository()),
     agentLoopService,
+    aiUsageService: new AiUsageService({ repository: new AiUsageRepository() }),
     userRepository: new UserRepository(),
     messaging: getMessaging()
     // logger 생략 → AgentLoopHandler 내부에서 firebase-functions/logger 사용

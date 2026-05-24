@@ -13,8 +13,9 @@ function isValidTimezone(tz) {
 
 class AiController {
 
-    constructor(jobService) {
+    constructor(jobService, aiUsageService) {
         this.jobService = jobService;
+        this.aiUsageService = aiUsageService;
     }
 
     async postCommand(req, res) {
@@ -53,6 +54,11 @@ class AiController {
         }
 
         res.status(200).send(job.toJSON());
+    }
+
+    async getUsage(req, res) {
+        const usage = await this.aiUsageService.getTodayUsage(req.auth.uid);
+        res.status(200).send(usage.toJSON());
     }
 }
 
