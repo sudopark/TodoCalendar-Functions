@@ -47,6 +47,11 @@ const eventDetailOpenRouter = require('./routes/openapi/eventDetailOpenRoutes');
 const foremostOpenRouter = require('./routes/openapi/foremostOpenRoutes');
 const patAuth = require('./middlewares/openapi/patAuth');
 const signedUserAuth = require('./middlewares/openapi/signedUserAuth');
+const OpenRateLimitRepository = require('./repositories/openRateLimitRepository');
+const OpenRateLimitConfigRepository = require('./repositories/openRateLimitConfigRepository');
+const OpenRateLimitConfigProvider = require('./services/openRateLimitConfigProvider');
+const OpenRateLimitService = require('./services/openRateLimitService');
+const openRateLimit = require('./middlewares/openapi/rateLimit');
 
 const oauthWellKnownRouter = require('./routes/oauth/wellKnownRoutes');
 const oauthRegisterRouter = require('./routes/oauth/registerRoutes');
@@ -118,7 +123,18 @@ app.use('/v1/ai', authValidator, setVersion('v1'), aiRouter);
 
 // openAPI (/v2/open/*) — PAT (서비스 식별) + signed user JWT (사용자 식별) + scope 인가
 // dones 가 todos 보다 먼저 mount: '/v2/open/todos/dones/...' 가 '/v2/open/todos' 의 prefix 매칭으로 흡수되지 않게.
-const openApiAuth = [patAuth, signedUserAuth, setVersion('v2')];
+const openRateLimitConfigProvider = new OpenRateLimitConfigProvider({
+    repository: new OpenRateLimitConfigRepository(),
+    ttlMs: parseInt(process.env.RATE_LIMIT_CONFIG_CACHE_TTL_SEC ?? '60', 10) * 1000
+});
+const openRateLimitService = new OpenRateLimitService({
+    repository: new OpenRateLimitRepository(),
+    configProvider: openRateLimitConfigProvider,
+    userPerMin: parseInt(process.env.RATE_LIMIT_USER_PER_MIN ?? '120', 10),
+    patPerMin: parseInt(process.env.RATE_LIMIT_PAT_PER_MIN ?? '600', 10),
+    unlimitedPats: (process.env.RATE_LIMIT_PAT_UNLIMITED ?? 'mcp').split(',').map((s) => s.trim()).filter(Boolean)
+});
+const openApiAuth = [patAuth, signedUserAuth, openRateLimit(openRateLimitService), setVersion('v2')];
 app.use('/v2/open/todos/dones', openApiAuth, doneTodoOpenRouter);
 app.use('/v2/open/todos', openApiAuth, todoOpenRouter);
 app.use('/v2/open/schedules', openApiAuth, scheduleOpenRouter);
