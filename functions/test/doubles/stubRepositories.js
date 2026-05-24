@@ -781,7 +781,7 @@ class StubUserRepository {
         }
         this.userDevices.set(device.deviceId, device)
     }
-    
+
     async removeUserDevice(deviceId) {
         if(this.shouldFail) {
             throw { message: 'failed' };
@@ -791,6 +791,25 @@ class StubUserRepository {
 }
 
 // MARK: - openAPI rate limit
+
+class StubOpenRateLimitRepository {
+
+    constructor() {
+        this.shouldFail = false
+        this.calls = []
+        this.counts = {}
+        this.defaultCount = 1
+    }
+
+    async incrementWithinWindow(dimension, entityId, windowSeconds, now = Date.now()) {
+        this.calls.push({ dimension, entityId, windowSeconds, now })
+        if(this.shouldFail) {
+            throw { message: 'failed' }
+        }
+        const key = `${dimension}:${entityId}`
+        return this.counts[key] !== undefined ? this.counts[key] : this.defaultCount
+    }
+}
 
 class StubOpenRateLimitConfigRepository {
 
@@ -812,17 +831,18 @@ class StubOpenRateLimitConfigRepository {
 module.exports = {
     Account: StubAccountRepository,
     User: StubUserRepository,
-    Todo: StubTodoRepository, 
-    EventTime: StubEventTimeRangeRepository, 
-    DoneTodo: StubDoneTodoEventRepository, 
+    Todo: StubTodoRepository,
+    EventTime: StubEventTimeRangeRepository,
+    DoneTodo: StubDoneTodoEventRepository,
     ScheduleEvent: StubScheduleEventRepository,
     Foremost: StubForemostEventIdRepository,
-    EventTag: StubEventTagRepository, 
-    EventDetailData: StubEventDetailDataRepository, 
-    Migration: StubMigrationReposiotry, 
-    ApPSetting: StubAppSettingRepository, 
-    Holiday: StubHolidayRepository, 
+    EventTag: StubEventTagRepository,
+    EventDetailData: StubEventDetailDataRepository,
+    Migration: StubMigrationReposiotry,
+    ApPSetting: StubAppSettingRepository,
+    Holiday: StubHolidayRepository,
     ChangeLog: StubDataChangeLogRepository,
     SyncTimeStamp: StubSyncTimeStampRepository,
+    OpenRateLimit: StubOpenRateLimitRepository,
     OpenRateLimitConfig: StubOpenRateLimitConfigRepository
 };
