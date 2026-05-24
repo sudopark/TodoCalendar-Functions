@@ -90,75 +90,64 @@ sequenceDiagram
     participant App
     participant Ctrl as AiController
     participant JobSvc as JobService
-    participant FS as Firestore<br/>ai_jobs/{id}
+    participant FS as Firestore ai_jobs
     participant Trig as agentLoopTrigger
-    participant H as AgentLoopHandler
-    participant Loop as AgentLoopService
+    participant Hand as AgentLoopHandler
+    participant Agent as AgentLoopService
     participant Sys as SystemPromptBuilder
     participant Reg as ToolRegistry
     participant Anth as AnthropicClient
     participant Lib as todocalendar-tools
-    participant OAPI as openAPI<br/>/v2/open/*
-    participant UsageSvc as AiUsageService
+    participant OAPI as openAPI
+    participant Usage as AiUsageService
     participant URepo as UserRepository
     participant FCM as Messaging
-
-    App->>Ctrl: POST /v1/ai/command<br/>{command_text, timezone}, header: device_id
-    Ctrl->>Ctrl: validate body + timezone (IANA)
-    Ctrl->>JobSvc: createJob({userId, deviceId, commandText, timezone})
-    JobSvc->>FS: put(jobId, {status: PENDING, mode: command, ...})
+    App->>Ctrl: POST /v1/ai/command with command_text, timezone, device_id
+    Ctrl->>Ctrl: validate body and timezone IANA
+    Ctrl->>JobSvc: createJob with userId, deviceId, commandText, timezone
+    JobSvc->>FS: put jobId, status PENDING, mode command
     JobSvc-->>Ctrl: jobId
-    Ctrl-->>App: 202 {job_id}
-
+    Ctrl-->>App: 202 job_id
     Note over FS,Trig: onCreate 발화
-
-    Trig->>H: handle(event)
-    H->>JobSvc: transitionToRunning(jobId)
-    JobSvc->>FS: tx: PENDING → RUNNING (CAS)
-    JobSvc-->>H: acquired? (false면 즉시 종료)
-
-    H->>Loop: run(commandText, {userId, timezone})
-    Loop->>Sys: build({now, timezone})
-    Sys-->>Loop: system prompt (Rule 1-8)
-    Loop->>Reg: create()
-    Reg-->>Loop: anthropicTools[] (+finalize)
-
-    loop turn 1..loopCap (default 10)
-        Loop->>Loop: _markLastMessageForCache(messages)
-        Loop->>Anth: createMessage({system, messages, tools, toolChoice: any})
-        Anth->>Anth: cache_control: system + tools + accumulated messages prefix
-        Anth-->>Loop: {content[], usage}
-
+    Trig->>Hand: handle event
+    Hand->>JobSvc: transitionToRunning jobId
+    JobSvc->>FS: tx PENDING to RUNNING via CAS
+    JobSvc-->>Hand: acquired or false then return
+    Hand->>Agent: run commandText, userId, timezone
+    Agent->>Sys: build now, timezone
+    Sys-->>Agent: system prompt with Rule 1 to 8
+    Agent->>Reg: create
+    Reg-->>Agent: anthropicTools plus finalize
+    loop turn 1 to loopCap 10
+        Agent->>Agent: markLastMessageForCache messages
+        Agent->>Anth: createMessage system, messages, tools, toolChoice any
+        Anth-->>Agent: content, usage
         alt content has finalize
-            Loop-->>H: {result: DONE|FAILED, usage}
-        else content has confirm-target tool
-            Loop->>Reg: execute(name, args, auth)
-            Reg->>Lib: tool.execute(auth, args)
-            Lib->>OAPI: GET/POST/DELETE /v2/open/* (PAT + signed user JWT)
+            Agent-->>Hand: result DONE or FAILED, usage
+        else content has tool_use
+            Agent->>Reg: execute name, args, auth
+            Reg->>Lib: tool execute auth, args
+            Lib->>OAPI: GET or POST or DELETE on /v2/open with PAT and signed user JWT
             OAPI-->>Lib: result
             Lib-->>Reg: result
-            alt result.status == confirm_required
-                Loop-->>H: {result: CONFIRM, usage}
-            else
-                Note over Loop: tool_result wrapped in<br/>&lt;tool_result_data&gt; envelope (#159)
-                Loop->>Loop: messages.push(tool_result)
+            alt result status is confirm_required
+                Agent-->>Hand: result CONFIRM, usage
+            else normal
+                Note over Agent: tool_result wrapped in envelope #159
+                Agent->>Agent: messages push tool_result
             end
         end
     end
-
-    H->>UsageSvc: recordUsage(userId, usage)
-    UsageSvc->>FS: aiUsage/{uid}/dailyUsage/{date}<br/>increment(input, output)
-
-    H->>JobSvc: completeWith(jobId, result)
-    JobSvc->>FS: tx: RUNNING → {DONE|CONFIRM|FAILED} (CAS)
-    JobSvc-->>H: completed? (false면 FCM skip)
-
-    H->>URepo: loadUserDevice(deviceId)
-    URepo-->>H: device (or null)
-    Note over H: 가드: device 미존재 또는<br/>device.userId !== job.userId → skip
-    H->>FCM: send({token, notification, data: {jobId, status}})
-
-    Note over App,FCM: App 가 FCM 수신 또는 ai_jobs/{jobId} listen 으로 결과 획득
+    Hand->>Usage: recordUsage userId, usage
+    Usage->>FS: aiUsage daily increment
+    Hand->>JobSvc: completeWith jobId, result
+    JobSvc->>FS: tx RUNNING to DONE or CONFIRM or FAILED
+    JobSvc-->>Hand: completed or false then FCM skip
+    Hand->>URepo: loadUserDevice deviceId
+    URepo-->>Hand: device or null
+    Note over Hand: device 미존재 또는 device.userId 불일치 시 FCM skip
+    Hand->>FCM: send token, notification, data with jobId and status
+    Note over App,FCM: App 가 FCM 수신 또는 ai_jobs doc listen 으로 결과 획득
 ```
 
 ---
@@ -174,50 +163,45 @@ sequenceDiagram
     participant App
     participant Ctrl as AiController
     participant JobSvc as JobService
-    participant FS as Firestore<br/>ai_jobs/{id}
+    participant FS as Firestore ai_jobs
     participant Trig as agentLoopTrigger
-    participant H as AgentLoopHandler
-    participant Loop as AgentLoopService
+    participant Hand as AgentLoopHandler
+    participant Agent as AgentLoopService
     participant Reg as ToolRegistry
     participant Lib as todocalendar-tools
-    participant OAPI as openAPI<br/>/v2/open/*
+    participant OAPI as openAPI
     participant FCM as Messaging
-
-    App->>Ctrl: POST /v1/ai/command/confirm<br/>{command_text, timezone, tool, args, confirm_token}
-    Ctrl->>Ctrl: validate (tool / args object / confirm_token / timezone)
-    Ctrl->>JobSvc: createConfirmJob({userId, ..., confirmPayload: {tool, args, confirmToken}})
-    JobSvc->>FS: put(jobId, {status: PENDING, mode: confirm, confirmPayload})
+    App->>Ctrl: POST /v1/ai/command/confirm with command_text, timezone, tool, args, confirm_token
+    Ctrl->>Ctrl: validate tool and args object and confirm_token and timezone
+    Ctrl->>JobSvc: createConfirmJob with userId and confirmPayload
+    JobSvc->>FS: put jobId, status PENDING, mode confirm
     JobSvc-->>Ctrl: jobId
-    Ctrl-->>App: 202 {job_id}
-
+    Ctrl-->>App: 202 job_id
     Note over FS,Trig: onCreate 발화
-
-    Trig->>H: handle(event)
-    H->>JobSvc: transitionToRunning(jobId)
-    JobSvc->>FS: tx: PENDING → RUNNING
-
-    H->>Loop: runConfirm({tool, args, confirmToken}, {userId, commandText})
-    Note over Loop: Claude API 호출 X<br/>systemPrompt build X
-    Loop->>Reg: execute(tool, {...args, confirmToken}, auth)
-    Reg->>Lib: tool.execute(auth, {...args, confirmToken})
-    Lib->>Lib: ensureConfirmToken(HMAC verify + argsHash + 5min TTL)
-    Lib->>OAPI: DELETE /v2/open/* (PAT + signed user JWT)
+    Trig->>Hand: handle event
+    Hand->>JobSvc: transitionToRunning jobId
+    JobSvc->>FS: tx PENDING to RUNNING
+    Hand->>Agent: runConfirm with tool, args, confirmToken, userId, commandText
+    Note over Agent: Claude API 호출 없음, systemPrompt 빌드 없음
+    Agent->>Reg: execute tool, args plus confirmToken, auth
+    Reg->>Lib: tool execute auth, args plus confirmToken
+    Lib->>Lib: ensureConfirmToken via HMAC and argsHash and 5min TTL
+    Lib->>OAPI: DELETE /v2/open with PAT and signed user JWT
     OAPI-->>Lib: result
     Lib-->>Reg: result
-    alt result.status == confirm_required (재요청)
-        Reg-->>Loop: result
-        Loop-->>H: {result: FAILED("unexpected confirm_required"), usage: 0/0}
+    alt result status is confirm_required 재요청
+        Reg-->>Agent: result
+        Agent-->>Hand: result FAILED, usage 0
     else success
-        Reg-->>Loop: result
-        Loop-->>H: {result: DONE(text), usage: 0/0}
-    else lib throws ToolError(Confirm*)
-        Loop-->>H: {result: FAILED(err.code), usage: 0/0}
+        Reg-->>Agent: result
+        Agent-->>Hand: result DONE text, usage 0
+    else lib throws ToolError
+        Agent-->>Hand: result FAILED err.code, usage 0
     end
-
-    Note over H: usage 0/0 이면 record skip
-    H->>JobSvc: completeWith(jobId, result)
-    JobSvc->>FS: tx: RUNNING → {DONE|FAILED}
-    H->>FCM: send (device 가드 통과 시)
+    Note over Hand: usage 0이면 record skip
+    Hand->>JobSvc: completeWith jobId, result
+    JobSvc->>FS: tx RUNNING to DONE or FAILED
+    Hand->>FCM: send only if device 가드 통과
 ```
 
 ---
@@ -229,19 +213,18 @@ sequenceDiagram
     autonumber
     participant App
     participant Ctrl as AiController
-    participant UsageSvc as AiUsageService
+    participant Usage as AiUsageService
     participant URepo as AiUsageRepository
-    participant FS as Firestore<br/>aiUsage/{uid}/dailyUsage
-
-    App->>Ctrl: GET /v1/ai/usage (Firebase Auth)
-    Ctrl->>UsageSvc: getTodayUsage(userId)
-    UsageSvc->>UsageSvc: dateKey = today (UTC, YYYY-MM-DD)
-    UsageSvc->>URepo: load(userId, dateKey)
-    URepo->>FS: get aiUsage/{uid}/dailyUsage/{date}
-    FS-->>URepo: doc | null
-    URepo-->>UsageSvc: AiUsage | null
-    UsageSvc-->>Ctrl: usage ?? AiUsage.empty(dateKey)
-    Ctrl-->>App: 200 {dateKey, inputTokens, outputTokens, lastUpdatedAt}
+    participant FS as Firestore aiUsage
+    App->>Ctrl: GET /v1/ai/usage with Firebase Auth
+    Ctrl->>Usage: getTodayUsage userId
+    Usage->>Usage: dateKey is today UTC YYYY-MM-DD
+    Usage->>URepo: load userId, dateKey
+    URepo->>FS: get aiUsage userId dailyUsage date
+    FS-->>URepo: doc or null
+    URepo-->>Usage: AiUsage or null
+    Usage-->>Ctrl: usage or empty dateKey
+    Ctrl-->>App: 200 with dateKey, inputTokens, outputTokens, lastUpdatedAt
 ```
 
 ---
