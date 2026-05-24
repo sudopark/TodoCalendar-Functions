@@ -102,3 +102,35 @@ describe('openAPI auth/scope 실패', function () {
         });
     });
 });
+
+describe('openAPI 시크릿 로테이션 (#176) — SECONDARY 슬롯', function () {
+
+    it('PAT SECONDARY 만 매칭하는 토큰 → 200 통과', async function () {
+        const secondary = process.env.OPENAPI_PAT_MCP_SECONDARY;
+        assert.ok(secondary, 'OPENAPI_PAT_MCP_SECONDARY 가 .env.test 에 있어야 함');
+        const client = openClient({
+            pat: `mcp_${secondary}`,
+            userToken: signUserToken({
+                sub: TEST_USER_UID,
+                scope: ['read:calendar']
+            })
+        });
+        const res = await client.get('/v2/open/tags/');
+        assert.strictEqual(res.status, 200);
+    });
+
+    it('SIGNING SECONDARY 키로 서명한 JWT → 200 통과', async function () {
+        const secondary = process.env.SIGNING_SECRET_SECONDARY;
+        assert.ok(secondary, 'SIGNING_SECRET_SECONDARY 가 .env.test 에 있어야 함');
+        const client = openClient({
+            pat: defaultMcpPat(),
+            userToken: signUserToken({
+                sub: TEST_USER_UID,
+                scope: ['read:calendar'],
+                secret: secondary
+            })
+        });
+        const res = await client.get('/v2/open/tags/');
+        assert.strictEqual(res.status, 200);
+    });
+});

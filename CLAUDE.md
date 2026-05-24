@@ -179,7 +179,13 @@ test/e2e/
 - 생성: `openssl rand -hex 32` (32바이트 이상 random hex 권장)
 
 **로테이션 / 변경**
-- 운영에서 PAT 또는 SIGNING_SECRET 을 바꾸면 호출자(MCP, aiFrontAPI) 도 동시에 갱신해야 함 — 무중단 교체가 필요하면 화이트리스트에 임시로 두 secret 을 모두 허용하는 단계가 필요(현 MVP 미지원, 단기 다운타임 감수).
+- **무중단 로테이션 지원 (#176)** — PAT, SIGNING_SECRET 둘 다 `_PRIMARY` / `_SECONDARY` 두 슬롯을 동시에 허용. 호출자(MCP, aiFrontAPI) 전환 시점을 분리할 수 있어 다운타임 없이 교체 가능. 기존 단일 env 이름(`OPENAPI_PAT_<SVC>`, `SIGNING_SECRET`) 은 PRIMARY 별칭으로 그대로 인식.
+- **로테이션 절차 (예: `OPENAPI_PAT_MCP`)**:
+  1. `OPENAPI_PAT_MCP_SECONDARY` 에 신 secret 등록 (구 secret 은 PRIMARY/legacy 그대로). 서버 재시작/redeploy 로 신 secret 검증 활성화.
+  2. 호출자(MCP) 가 신 secret 으로 전환 — 호출 측 배포 완료까지 대기.
+  3. `OPENAPI_PAT_MCP_PRIMARY` (또는 legacy `OPENAPI_PAT_MCP`) 에 신 secret 복사.
+  4. `OPENAPI_PAT_MCP_SECONDARY` 비움. 다시 단일 슬롯 운영으로 복귀.
+  `SIGNING_SECRET` 도 동일 절차 — 단 발급자(aiFrontAPI) 가 SECONDARY 로 서명을 전환하는 동안 구 PRIMARY 로 발급된 미만료 JWT 도 계속 통과.
 - `.env.test.example` dummy 값(`deadbeef...`/`cafebabe...`) 은 절대 운영 secret 으로 쓰지 말 것.
 
 #### OAuth 2.1 Authorization Server 시크릿 운영 정책 (`/v1/oauth/*`)
