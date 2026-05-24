@@ -27,15 +27,17 @@ class AgentLoopHandler {
     /**
      * @param {{
      *   jobService: import('../../services/ai/jobService'),
-     *   agentLoopService: { run(commandText: string, opts: { userId: string }): Promise<object> },
+     *   agentLoopService: { run(commandText, opts): Promise<{ result: object, usage: { inputTokens: number, outputTokens: number } }> },
+     *   aiUsageService: { recordUsage(userId, tokens): Promise<void> },
      *   userRepository: { loadUserDevice(deviceId: string): Promise<object|null> },
      *   messaging: { send(message: object): Promise<any> },
      *   logger?: object
      * }} deps
      */
-    constructor({ jobService, agentLoopService, userRepository, messaging, logger }) {
+    constructor({ jobService, agentLoopService, aiUsageService, userRepository, messaging, logger }) {
         this.jobService = jobService;
         this.agentLoopService = agentLoopService;
+        this.aiUsageService = aiUsageService;
         this.userRepository = userRepository;
         this.messaging = messaging;
         this.log = logger ?? defaultLogger;
@@ -55,11 +57,20 @@ class AgentLoopHandler {
         // FAILED 결과로 종결시켜야 함. #154 의 실제 Agent Loop 이 Claude API /
         // MCP 호출 실패 시 throw 할 수 있음 — 본 stub 단계부터 인터페이스 잠금.
         let result;
+        let usage = null;
         try {
-            result = await this.agentLoopService.run(job.commandText, { userId: job.userId, timezone: job.timezone });
+            ({ result, usage } = await this.agentLoopService.run(job.commandText, { userId: job.userId, timezone: job.timezone }));
         } catch (err) {
             this.log.error('AI trigger — agentLoop 실패', { jobId, err });
             result = AiJobResult.failed('agent loop error');
+            // throw 경로는 usage 추출 불가 — 부분 사용 토큰이 있어도 손실 (acceptable loss).
+            // 정밀도 필요 시 service 가 throw 대신 partial usage 동봉한 error 객체로 전환 필요.
+        }
+
+        // 일별 사용량 record — completeWith / FCM 흐름과 독립. record 실패가 후속 단계를
+        // 막지 않도록 try/catch 로 격리. usage 가 0/0 이면 service 가 no-op.
+        if (usage) {
+            await this._recordUsage(job.userId, usage, jobId);
         }
 
         // completeWith false = 외부 process 가 이미 종결시킨 race. 우리가 만든 result 가
@@ -72,6 +83,14 @@ class AgentLoopHandler {
         }
 
         await this._sendFcm(job, result);
+    }
+
+    async _recordUsage(userId, usage, jobId) {
+        try {
+            await this.aiUsageService.recordUsage(userId, usage);
+        } catch (err) {
+            this.log.error('AI trigger — aiUsage record 실패', { jobId, err });
+        }
     }
 
     // _sendFcm — 보안 가드:

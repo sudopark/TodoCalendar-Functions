@@ -91,13 +91,20 @@ class AgentLoopService {
     /**
      * @param {string} commandText
      * @param {{ userId: string, timezone: string }} context
-     * @returns {Promise<object>}  AiJobResult plain object
+     * @returns {Promise<{ result: object, usage: { inputTokens: number, outputTokens: number } }>}
+     *   result: AiJobResult plain object
+     *   usage: 호출 누적 토큰 — caller (AgentLoopHandler) 가 일별 record 입력으로 사용.
+     *          inputTokens 는 **마지막 createMessage 호출의 input_tokens** (Anthropic 가
+     *          매 호출에 누적 prompt 전체를 input_tokens 로 보고하기 때문 — turn 별 합산
+     *          시 double count 됨). outputTokens 는 모든 turn 합산.
+     *          throw 경로는 catch 안 함 → caller 가 0/0 으로 처리 (acceptable loss).
      */
     async run(commandText, { userId, timezone }) {
         const auth = { userId, scopes: this.scopes };
         const messages = [{ role: 'user', content: commandText }];
         let sumOutputTokens = 0;
         let lastInputTokens = 0;
+        const usage = () => ({ inputTokens: lastInputTokens, outputTokens: sumOutputTokens });
         const systemBlocks = [{
             type: 'text',
             text: this.systemPromptBuilder.build({ now: new Date(), timezone }),
@@ -128,35 +135,38 @@ class AgentLoopService {
             // Anthropic input_tokens includes all accumulated prompt tokens for the current call.
             // Summing input across turns would double-count. Use last call's input + cumulative output.
             if (lastInputTokens + sumOutputTokens > this.tokenCap) {
-                return AiJobResult.failed('token cap exceeded');
+                return { result: AiJobResult.failed('token cap exceeded'), usage: usage() };
             }
 
             messages.push({ role: 'assistant', content: resp.content });
             const toolUses = resp.content.filter(c => c.type === 'tool_use');
 
             if (toolUses.length === 0) {
-                return AiJobResult.failed('no tool_use returned');
+                return { result: AiJobResult.failed('no tool_use returned'), usage: usage() };
             }
 
             if (toolUses.length > 1) {
-                return AiJobResult.failed('multiple tool_uses in single turn');
+                return { result: AiJobResult.failed('multiple tool_uses in single turn'), usage: usage() };
             }
 
             const toolResults = [];
             for (const tu of toolUses) {
                 if (registry.isFinalize(tu.name)) {
-                    return this._mapFinalizeToResult(tu.input);
+                    return { result: this._mapFinalizeToResult(tu.input), usage: usage() };
                 }
                 try {
                     const result = await registry.execute(tu.name, tu.input, auth);
                     if (registry.isConfirmRequired(result)) {
                         const lang = detectLanguage(commandText);
                         const defaults = CONFIRM_DEFAULTS[lang];
-                        return AiJobResult.confirm(
-                            result.message || defaults.text,
-                            { tool: tu.name, args: tu.input, confirmToken: result.confirmToken },
-                            { title: getConfirmTitle(tu.name, lang), body: defaults.body }
-                        );
+                        return {
+                            result: AiJobResult.confirm(
+                                result.message || defaults.text,
+                                { tool: tu.name, args: tu.input, confirmToken: result.confirmToken },
+                                { title: getConfirmTitle(tu.name, lang), body: defaults.body }
+                            ),
+                            usage: usage()
+                        };
                     }
                     toolResults.push({
                         type: 'tool_result',
@@ -176,7 +186,7 @@ class AgentLoopService {
             messages.push({ role: 'user', content: toolResults });
         }
 
-        return AiJobResult.failed('loop cap exceeded');
+        return { result: AiJobResult.failed('loop cap exceeded'), usage: usage() };
     }
 }
 

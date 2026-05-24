@@ -60,14 +60,17 @@ function makeUserRepository(device) {
     };
 }
 
-function makeAgentLoopService(resultOverride) {
+function makeAgentLoopService(resultOverride, usageOverride) {
     return {
         lastRunArgs: null,
         allRunArgs: [],
         async run(commandText, opts) {
             this.lastRunArgs = { commandText, opts };
             this.allRunArgs.push({ commandText, opts });
-            return resultOverride ?? AiJobResult.done('stub done');
+            return {
+                result: resultOverride ?? AiJobResult.done('stub done'),
+                usage: usageOverride ?? { inputTokens: 0, outputTokens: 0 }
+            };
         }
     };
 }
@@ -94,8 +97,29 @@ function seededRepo(jobId = 'job-1', data = BASE_JOB_DATA) {
     return repo;
 }
 
-function makeHandler({ jobService, agentLoopService, userRepository, messaging, logger }) {
-    return new AgentLoopHandler({ jobService, agentLoopService, userRepository, messaging, logger });
+function makeAiUsageService() {
+    return {
+        allRecordCalls: [],
+        lastRecordCall: null,
+        shouldFailRecord: false,
+        async recordUsage(userId, tokens) {
+            if (this.shouldFailRecord) throw new Error('stub recordUsage failed');
+            const call = { userId, tokens };
+            this.allRecordCalls.push(call);
+            this.lastRecordCall = call;
+        }
+    };
+}
+
+function makeHandler({ jobService, agentLoopService, aiUsageService, userRepository, messaging, logger }) {
+    return new AgentLoopHandler({
+        jobService,
+        agentLoopService,
+        aiUsageService: aiUsageService ?? makeAiUsageService(),
+        userRepository,
+        messaging,
+        logger
+    });
 }
 
 // ── cases ─────────────────────────────────────────────────────────────────────
@@ -151,7 +175,7 @@ describe('AgentLoopHandler', () => {
         const jobService = new JobService(repo);
         let runCalled = 0;
         const agentLoopService = {
-            async run() { runCalled += 1; return AiJobResult.done('x'); }
+            async run() { runCalled += 1; return { result: AiJobResult.done('x'), usage: { inputTokens: 0, outputTokens: 0 } }; }
         };
         const messaging = makeMessaging();
         const userRepo = makeUserRepository(BASE_DEVICE);
@@ -357,5 +381,107 @@ describe('AgentLoopHandler', () => {
 
         assert.strictEqual(messaging.sendCalled, 0, 'FCM 미호출');
         assert.ok(warns.length > 0, 'race warn 로그');
+    });
+
+    // ─── usage record (#156) ──────────────────────────────────────────────────
+
+    it('DONE 결과로 종결되면 aiUsageService.recordUsage 가 job.userId 와 usage 토큰으로 호출됨', async () => {
+        const repo = seededRepo();
+        const jobService = new JobService(repo);
+        const agentLoopService = makeAgentLoopService(
+            AiJobResult.done('stub done'),
+            { inputTokens: 1200, outputTokens: 340 }
+        );
+        const aiUsageService = makeAiUsageService();
+        const messaging = makeMessaging();
+        const userRepo = makeUserRepository(BASE_DEVICE);
+        const { logger } = captureLogger();
+
+        const handler = makeHandler({ jobService, agentLoopService, aiUsageService, userRepository: userRepo, messaging, logger });
+        await handler.handle(makeEvent('job-1', BASE_JOB_DATA));
+
+        assert.strictEqual(aiUsageService.allRecordCalls.length, 1);
+        assert.deepStrictEqual(aiUsageService.lastRecordCall, {
+            userId: BASE_JOB_DATA.userId,
+            tokens: { inputTokens: 1200, outputTokens: 340 }
+        });
+    });
+
+    it('CONFIRM 결과로 종결되어도 동일하게 usage record 호출', async () => {
+        const repo = seededRepo();
+        const jobService = new JobService(repo);
+        const agentLoopService = makeAgentLoopService(
+            AiJobResult.confirm('stub confirm', { stub: true }),
+            { inputTokens: 500, outputTokens: 60 }
+        );
+        const aiUsageService = makeAiUsageService();
+        const messaging = makeMessaging();
+        const userRepo = makeUserRepository(BASE_DEVICE);
+        const { logger } = captureLogger();
+
+        const handler = makeHandler({ jobService, agentLoopService, aiUsageService, userRepository: userRepo, messaging, logger });
+        await handler.handle(makeEvent('job-1', BASE_JOB_DATA));
+
+        assert.deepStrictEqual(aiUsageService.lastRecordCall, {
+            userId: BASE_JOB_DATA.userId,
+            tokens: { inputTokens: 500, outputTokens: 60 }
+        });
+    });
+
+    it('FAILED 결과 (finalize 또는 cap 초과) 종결 시에도 usage record 호출', async () => {
+        const repo = seededRepo();
+        const jobService = new JobService(repo);
+        const agentLoopService = makeAgentLoopService(
+            AiJobResult.failed('stub failed'),
+            { inputTokens: 800, outputTokens: 200 }
+        );
+        const aiUsageService = makeAiUsageService();
+        const messaging = makeMessaging();
+        const userRepo = makeUserRepository(BASE_DEVICE);
+        const { logger } = captureLogger();
+
+        const handler = makeHandler({ jobService, agentLoopService, aiUsageService, userRepository: userRepo, messaging, logger });
+        await handler.handle(makeEvent('job-1', BASE_JOB_DATA));
+
+        assert.deepStrictEqual(aiUsageService.lastRecordCall, {
+            userId: BASE_JOB_DATA.userId,
+            tokens: { inputTokens: 800, outputTokens: 200 }
+        });
+    });
+
+    it('agentLoopService.run 이 throw 한 경로에서는 usage record 호출되지 않음 (partial usage 손실)', async () => {
+        const repo = seededRepo();
+        const jobService = new JobService(repo);
+        const throwingLoop = {
+            async run(_commandText, _opts) { throw new Error('claude api timeout'); }
+        };
+        const aiUsageService = makeAiUsageService();
+        const messaging = makeMessaging();
+        const userRepo = makeUserRepository(BASE_DEVICE);
+        const { logger } = captureLogger();
+
+        const handler = makeHandler({ jobService, agentLoopService: throwingLoop, aiUsageService, userRepository: userRepo, messaging, logger });
+        await handler.handle(makeEvent('job-1', BASE_JOB_DATA));
+
+        assert.strictEqual(aiUsageService.allRecordCalls.length, 0);
+    });
+
+    it('aiUsageService.recordUsage 가 throw 해도 후속 FCM 발송은 정상 진행', async () => {
+        const repo = seededRepo();
+        const jobService = new JobService(repo);
+        const agentLoopService = makeAgentLoopService(
+            AiJobResult.done('stub done'),
+            { inputTokens: 100, outputTokens: 30 }
+        );
+        const aiUsageService = makeAiUsageService();
+        aiUsageService.shouldFailRecord = true;
+        const messaging = makeMessaging();
+        const userRepo = makeUserRepository(BASE_DEVICE);
+        const { logger } = captureLogger();
+
+        const handler = makeHandler({ jobService, agentLoopService, aiUsageService, userRepository: userRepo, messaging, logger });
+        await handler.handle(makeEvent('job-1', BASE_JOB_DATA));
+
+        assert.strictEqual(messaging.sendCalled, 1, 'record 실패와 무관하게 FCM 발송');
     });
 });

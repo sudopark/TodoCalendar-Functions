@@ -3,6 +3,7 @@ const assert = require('assert');
 const AiController = require('../../../controllers/ai/aiController');
 const Errors = require('../../../models/Errors');
 const StubAiJobService = require('../../doubles/stubAiJobService');
+const StubAiUsageService = require('../../doubles/stubAiUsageService');
 const AiJob = require('../../../models/ai/AiJob');
 
 
@@ -48,11 +49,13 @@ function makeJob({ jobId = 'job-123', userId = 'user-1' } = {}) {
 describe('AiController', () => {
 
     let stubService;
+    let stubUsageService;
     let controller;
 
     beforeEach(() => {
         stubService = new StubAiJobService();
-        controller = new AiController(stubService);
+        stubUsageService = new StubAiUsageService();
+        controller = new AiController(stubService, stubUsageService);
     });
 
 
@@ -220,6 +223,47 @@ describe('AiController', () => {
                 assert.equal(error.status, 404);
                 assert.equal(error.message, 'job not found');
             }
+        });
+    });
+
+
+    // MARK: - getUsage
+
+    describe('getUsage', () => {
+
+        it('오늘 사용량 존재 — 200 + AiUsage.toJSON 응답', async () => {
+            stubUsageService.seedUsage('user-1', {
+                inputTokens: 1234,
+                outputTokens: 567,
+                updatedAt: new Date('2026-05-22T10:00:00.000Z'),
+                dateKey: '2026-05-22'
+            });
+            const req = { auth: { uid: 'user-1' } };
+            const res = makeRes();
+
+            await controller.getUsage(req, res);
+
+            assert.equal(res.statusCode, 200);
+            assert.deepEqual(res.body, {
+                date: '2026-05-22',
+                input_tokens: 1234,
+                output_tokens: 567,
+                updated_at: '2026-05-22T10:00:00.000Z'
+            });
+        });
+
+        it('오늘 사용량 doc 미존재 — 200 + 0/0/null 빈 응답 (caller 가 null 분기 안 하게)', async () => {
+            // seed 없음 → service 가 AiUsage.empty 반환
+            const req = { auth: { uid: 'user-no-history' } };
+            const res = makeRes();
+
+            await controller.getUsage(req, res);
+
+            assert.equal(res.statusCode, 200);
+            assert.equal(res.body.input_tokens, 0);
+            assert.equal(res.body.output_tokens, 0);
+            assert.equal(res.body.updated_at, null);
+            assert.ok(typeof res.body.date === 'string', 'date 필드는 비어있지 않음');
         });
     });
 });
