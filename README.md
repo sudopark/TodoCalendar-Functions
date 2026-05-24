@@ -47,6 +47,15 @@ functions/
 | `/v1/oauth/*` | OAuth 2.1 AS | dynamic client registration (RFC 7591), authorization code + PKCE, token 발급 |
 | `/.well-known/*` | OAuth metadata | `oauth-authorization-server` (RFC 8414), `jwks.json` (RFC 7517). 정적 public 데이터 — `Cache-Control: public, max-age=600` |
 
+### 운영 / 구현 spec
+
+라우트 그룹별 상세 spec 문서:
+
+- [serviceAPI](docs/spec/serviceApi.md) — `/v1/*` `/v2/*` 도메인 API (앱 직접 호출)
+- [openAPI](docs/spec/openapi.md) — `/v2/open/*` 외부 서비스용 게이트웨이 (PAT + signed user JWT)
+- [aiFrontAPI](docs/spec/aiFront.md) — `/v1/ai/*` AI 자연어 명령 + Agent Loop
+- [OAuth 2.1 AS](docs/spec/oauth.md) — `/v1/oauth/*` + `/.well-known/*` Authorization Server
+
 ### OAuth 운영 정책
 
 **Dynamic client registration dedup (`POST /v1/oauth/register`)** — 같은 `(ip, client_name, redirect_uris)` 조합으로 **1시간 이내** 재등록 요청이 들어오면 신규 client 를 발급하지 않고 **기존 client 를 그대로 반환**. 봇/실수 재시도로 인한 client 누적을 막기 위한 정책.
