@@ -5,6 +5,28 @@ const AiJob = require('../../models/ai/AiJob');
 const AiJobResult = require('../../models/ai/AiJobResult');
 const { detectLanguage } = require('../../services/ai/language');
 
+// Cloud Logging sanitize (#160). err 를 그대로 logger.error 2nd arg 에 박으면
+// Anthropic SDK / firebase-admin / Firestore 에러의 stack, response headers,
+// request body, 우발적 secret 이 함께 박힌다. code/status/message 만 추출하고
+// message 는 캡을 둬 response body echo 가 통째로 들어오는 경우 차단.
+const ERROR_MESSAGE_CAP = 600;
+function _summarizeError(err) {
+    if (err && typeof err === 'object') {
+        const message = typeof err.message === 'string' ? err.message : String(err);
+        return {
+            code: err.code,
+            status: err.status,
+            message: message.length > ERROR_MESSAGE_CAP ? message.slice(0, ERROR_MESSAGE_CAP) : message
+        };
+    }
+    const fallback = String(err);
+    return {
+        code: undefined,
+        status: undefined,
+        message: fallback.length > ERROR_MESSAGE_CAP ? fallback.slice(0, ERROR_MESSAGE_CAP) : fallback
+    };
+}
+
 // status 별 fallback notification — result.notification 이 비어 있을 때 사용.
 // Agent Loop 이 컨텍스트 기반 맞춤 메시지를 못 만들 때만 진입하는 path.
 // 언어는 job.commandText 의 한글 포함 여부로 결정 (services/ai/language detectLanguage).
@@ -64,7 +86,7 @@ class AgentLoopHandler {
         try {
             ({ result, usage } = await this._dispatchAgentLoop(job));
         } catch (err) {
-            this.log.error('AI trigger — agentLoop 실패', { jobId, err });
+            this.log.error('AI trigger — agentLoop 실패', { jobId, error: _summarizeError(err) });
             result = AiJobResult.failed('agent loop error');
             // throw 경로는 usage 추출 불가 — 부분 사용 토큰이 있어도 손실 (acceptable loss).
             // 정밀도 필요 시 service 가 throw 대신 partial usage 동봉한 error 객체로 전환 필요.
@@ -108,7 +130,7 @@ class AgentLoopHandler {
         try {
             await this.aiUsageService.recordUsage(userId, usage);
         } catch (err) {
-            this.log.error('AI trigger — aiUsage record 실패', { jobId, err });
+            this.log.error('AI trigger — aiUsage record 실패', { jobId, error: _summarizeError(err) });
         }
     }
 
@@ -149,7 +171,7 @@ class AgentLoopHandler {
                 data: { jobId: job.jobId, status: result.type }
             });
         } catch (err) {
-            this.log.error('AI trigger — FCM 발송 실패', { jobId: job.jobId, err });
+            this.log.error('AI trigger — FCM 발송 실패', { jobId: job.jobId, error: _summarizeError(err) });
         }
     }
 }
