@@ -790,6 +790,25 @@ class StubUserRepository {
     }
 }
 
+// MARK: - openAPI rate limit
+
+class StubOpenRateLimitConfigRepository {
+
+    constructor() {
+        this.shouldFail = false
+        this.loadCalls = 0
+        this.loadResult = { userUnlimited: [], userOverrides: {} }
+    }
+
+    async load() {
+        this.loadCalls += 1
+        if(this.shouldFail) {
+            throw { message: 'failed' }
+        }
+        return this.loadResult
+    }
+}
+
 module.exports = {
     Account: StubAccountRepository,
     User: StubUserRepository,
@@ -804,5 +823,6 @@ module.exports = {
     ApPSetting: StubAppSettingRepository, 
     Holiday: StubHolidayRepository, 
     ChangeLog: StubDataChangeLogRepository,
-    SyncTimeStamp: StubSyncTimeStampRepository
+    SyncTimeStamp: StubSyncTimeStampRepository,
+    OpenRateLimitConfig: StubOpenRateLimitConfigRepository
 };
