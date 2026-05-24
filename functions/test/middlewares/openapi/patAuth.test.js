@@ -14,11 +14,15 @@ describe('middlewares/openapi/patAuth', () => {
         req = { headers: {} };
         res = {};
         nextCalled = false;
+        delete process.env.OPENAPI_PAT_MCP_PRIMARY;
+        delete process.env.OPENAPI_PAT_MCP_SECONDARY;
         process.env.OPENAPI_PAT_MCP = SECRET;
     });
 
     afterEach(() => {
         delete process.env.OPENAPI_PAT_MCP;
+        delete process.env.OPENAPI_PAT_MCP_PRIMARY;
+        delete process.env.OPENAPI_PAT_MCP_SECONDARY;
     });
 
     const next = () => { nextCalled = true; };
@@ -75,5 +79,53 @@ describe('middlewares/openapi/patAuth', () => {
     it('시크릿 길이 다름 → 401', () => {
         req.headers.authorization = `Bearer mcp_short`;
         expectFail(401, 'InvalidCredentials');
+    });
+
+    it('PRIMARY 만 설정 — PRIMARY secret 일치 → next 호출', () => {
+        delete process.env.OPENAPI_PAT_MCP;
+        process.env.OPENAPI_PAT_MCP_PRIMARY = SECRET;
+        req.headers.authorization = `Bearer mcp_${SECRET}`;
+        patAuth(req, res, next);
+        assert.strictEqual(nextCalled, true);
+        assert.strictEqual(req.callerId, 'mcp');
+    });
+
+    it('SECONDARY 만 설정 — SECONDARY secret 일치 → next 호출 (로테이션 중간 단계)', () => {
+        delete process.env.OPENAPI_PAT_MCP;
+        const NEW = 'c'.repeat(32);
+        process.env.OPENAPI_PAT_MCP_SECONDARY = NEW;
+        req.headers.authorization = `Bearer mcp_${NEW}`;
+        patAuth(req, res, next);
+        assert.strictEqual(nextCalled, true);
+    });
+
+    it('PRIMARY + SECONDARY 동시 설정 — 둘 중 어느 쪽이든 일치하면 통과', () => {
+        delete process.env.OPENAPI_PAT_MCP;
+        const NEW = 'c'.repeat(32);
+        process.env.OPENAPI_PAT_MCP_PRIMARY = SECRET;
+        process.env.OPENAPI_PAT_MCP_SECONDARY = NEW;
+
+        req.headers.authorization = `Bearer mcp_${SECRET}`;
+        patAuth(req, res, () => { nextCalled = true; });
+        assert.strictEqual(nextCalled, true);
+
+        nextCalled = false;
+        req.headers.authorization = `Bearer mcp_${NEW}`;
+        patAuth(req, res, () => { nextCalled = true; });
+        assert.strictEqual(nextCalled, true);
+    });
+
+    it('PRIMARY + SECONDARY 둘 다 불일치 → 401', () => {
+        delete process.env.OPENAPI_PAT_MCP;
+        process.env.OPENAPI_PAT_MCP_PRIMARY = 'p'.repeat(32);
+        process.env.OPENAPI_PAT_MCP_SECONDARY = 's'.repeat(32);
+        req.headers.authorization = `Bearer mcp_${'x'.repeat(32)}`;
+        expectFail(401, 'InvalidCredentials');
+    });
+
+    it('PRIMARY/SECONDARY/legacy 셋 다 미설정 → 500 ServerMisconfigured', () => {
+        delete process.env.OPENAPI_PAT_MCP;
+        req.headers.authorization = `Bearer mcp_${SECRET}`;
+        expectFail(500, 'ServerMisconfigured');
     });
 });
