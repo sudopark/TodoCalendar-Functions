@@ -55,6 +55,12 @@ function getConfirmTitle(toolName, lang) {
     return CONFIRM_TITLES_BY_TOOL[toolName]?.[lang] ?? CONFIRM_DEFAULTS[lang].title;
 }
 
+// runConfirm 의 DONE 응답 text — language 별 한 줄. notification 은 handler fallback 에 맡김.
+const CONFIRM_DONE_TEXTS = {
+    ko: '요청한 작업을 완료했어',
+    en: 'Done'
+};
+
 class AgentLoopService {
 
     /**
@@ -187,6 +193,36 @@ class AgentLoopService {
         }
 
         return { result: AiJobResult.failed('loop cap exceeded'), usage: usage() };
+    }
+
+    /**
+     * CONFIRM 2차 호출 흐름.
+     *
+     * Claude API / systemPrompt 호출 없이 lib tool 1회만 실행.
+     * confirmToken 검증·실 mutation 은 lib (`ensureConfirmToken` → openAPI DELETE 등) 가 수행.
+     * 검증 실패는 lib 가 `ToolError(Confirm*)` 로 throw → 본 메서드가 FAILED 로 매핑.
+     * usage 는 항상 0/0 (Claude 호출 없음) — handler 의 record 분기 일관성 유지용.
+     *
+     * @param {{ tool: string, args: object, confirmToken: string }} payload
+     * @param {{ userId: string, timezone?: string, commandText?: string }} context  commandText 는 language 검출 전용
+     * @returns {Promise<{ result: object, usage: { inputTokens: number, outputTokens: number } }>}
+     */
+    async runConfirm({ tool, args, confirmToken }, { userId, commandText }) {
+        const auth = { userId, scopes: this.scopes };
+        const lang = detectLanguage(commandText || '');
+        const usage = { inputTokens: 0, outputTokens: 0 };
+        const registry = await this._registryFactory();
+
+        try {
+            const result = await registry.execute(tool, { ...args, confirmToken }, auth);
+            if (registry.isConfirmRequired(result)) {
+                return { result: AiJobResult.failed('unexpected confirm_required on confirm-mode'), usage };
+            }
+            return { result: AiJobResult.done(CONFIRM_DONE_TEXTS[lang]), usage };
+        } catch (e) {
+            const reason = (e && e.code) ? e.code : 'agent error';
+            return { result: AiJobResult.failed(reason), usage };
+        }
     }
 }
 

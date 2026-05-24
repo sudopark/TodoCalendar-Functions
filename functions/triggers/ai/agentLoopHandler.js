@@ -27,7 +27,10 @@ class AgentLoopHandler {
     /**
      * @param {{
      *   jobService: import('../../services/ai/jobService'),
-     *   agentLoopService: { run(commandText, opts): Promise<{ result: object, usage: { inputTokens: number, outputTokens: number } }> },
+     *   agentLoopService: {
+     *     run(commandText, opts): Promise<{ result: object, usage: { inputTokens: number, outputTokens: number } }>,
+     *     runConfirm(payload, opts): Promise<{ result: object, usage: { inputTokens: number, outputTokens: number } }>
+     *   },
      *   aiUsageService: { recordUsage(userId, tokens): Promise<void> },
      *   userRepository: { loadUserDevice(deviceId: string): Promise<object|null> },
      *   messaging: { send(message: object): Promise<any> },
@@ -59,7 +62,7 @@ class AgentLoopHandler {
         let result;
         let usage = null;
         try {
-            ({ result, usage } = await this.agentLoopService.run(job.commandText, { userId: job.userId, timezone: job.timezone }));
+            ({ result, usage } = await this._dispatchAgentLoop(job));
         } catch (err) {
             this.log.error('AI trigger — agentLoop 실패', { jobId, err });
             result = AiJobResult.failed('agent loop error');
@@ -83,6 +86,22 @@ class AgentLoopHandler {
         }
 
         await this._sendFcm(job, result);
+    }
+
+    // job.mode 에 따라 agentLoopService 의 run 또는 runConfirm 호출.
+    // 두 메서드 시그니처가 다르므로 dispatch 책임을 한 곳에 응집.
+    async _dispatchAgentLoop(job) {
+        if (job.mode === AiJob.MODE.CONFIRM) {
+            return this.agentLoopService.runConfirm(job.confirmPayload, {
+                userId: job.userId,
+                timezone: job.timezone,
+                commandText: job.commandText
+            });
+        }
+        return this.agentLoopService.run(job.commandText, {
+            userId: job.userId,
+            timezone: job.timezone
+        });
     }
 
     async _recordUsage(userId, usage, jobId) {

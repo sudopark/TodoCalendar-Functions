@@ -179,6 +179,90 @@ describe('AiController', () => {
     });
 
 
+    // MARK: - postCommandConfirm
+
+    describe('postCommandConfirm', () => {
+
+        function makeConfirmReq({
+            uid = 'user-1', deviceId = 'device-1',
+            commandText = '이거 삭제해', timezone = 'Asia/Seoul',
+            tool = 'delete_todo', args = { todo_id: 't1' }, confirmToken = 'tk'
+        } = {}) {
+            return {
+                auth: { uid },
+                header: (name) => name === 'device_id' ? deviceId : null,
+                body: {
+                    command_text: commandText, timezone,
+                    tool, args, confirm_token: confirmToken
+                }
+            };
+        }
+
+        it('정상 — 202 + job_id, createConfirmJob 인자에 confirmPayload 묶여 전달', async () => {
+            const req = makeConfirmReq();
+            const res = makeRes();
+
+            await controller.postCommandConfirm(req, res);
+
+            assert.equal(res.statusCode, 202);
+            assert.deepEqual(res.body, { job_id: 'job-123' });
+            assert.deepEqual(stubService.lastCreateConfirmJobArgs, {
+                userId: 'user-1',
+                deviceId: 'device-1',
+                commandText: '이거 삭제해',
+                timezone: 'Asia/Seoul',
+                confirmPayload: { tool: 'delete_todo', args: { todo_id: 't1' }, confirmToken: 'tk' }
+            });
+        });
+
+        it('device_id 헤더 누락 → 400', async () => {
+            const req = makeConfirmReq({ deviceId: null });
+            await assert.rejects(() => controller.postCommandConfirm(req, makeRes()), Errors.BadRequest);
+        });
+
+        it('command_text 누락 → 400', async () => {
+            const req = makeConfirmReq();
+            req.body.command_text = '';
+            await assert.rejects(() => controller.postCommandConfirm(req, makeRes()), Errors.BadRequest);
+        });
+
+        it('timezone 누락 → 400', async () => {
+            const req = makeConfirmReq();
+            delete req.body.timezone;
+            await assert.rejects(() => controller.postCommandConfirm(req, makeRes()), Errors.BadRequest);
+        });
+
+        it('timezone 이 invalid IANA → 400', async () => {
+            const req = makeConfirmReq({ timezone: 'Not/ATz' });
+            await assert.rejects(() => controller.postCommandConfirm(req, makeRes()), Errors.BadRequest);
+        });
+
+        it('tool 누락 → 400', async () => {
+            const req = makeConfirmReq();
+            delete req.body.tool;
+            await assert.rejects(() => controller.postCommandConfirm(req, makeRes()), Errors.BadRequest);
+        });
+
+        it('args 누락 → 400', async () => {
+            const req = makeConfirmReq();
+            delete req.body.args;
+            await assert.rejects(() => controller.postCommandConfirm(req, makeRes()), Errors.BadRequest);
+        });
+
+        it('args 가 array → 400 (object 가 아님)', async () => {
+            const req = makeConfirmReq();
+            req.body.args = ['t1'];
+            await assert.rejects(() => controller.postCommandConfirm(req, makeRes()), Errors.BadRequest);
+        });
+
+        it('confirm_token 누락 → 400', async () => {
+            const req = makeConfirmReq();
+            delete req.body.confirm_token;
+            await assert.rejects(() => controller.postCommandConfirm(req, makeRes()), Errors.BadRequest);
+        });
+    });
+
+
     // MARK: - getJob
 
     describe('getJob', () => {
