@@ -3,8 +3,11 @@ const Errors = require('../../models/Errors');
 
 const KNOWN_SERVICES = ['mcp'];
 
-function envSecretFor(service) {
-    return process.env[`OPENAPI_PAT_${service.toUpperCase()}`];
+function envSecretsFor(service) {
+    const upper = service.toUpperCase();
+    const primary = process.env[`OPENAPI_PAT_${upper}_PRIMARY`] ?? process.env[`OPENAPI_PAT_${upper}`];
+    const secondary = process.env[`OPENAPI_PAT_${upper}_SECONDARY`];
+    return [primary, secondary].filter((s) => typeof s === 'string' && s.length > 0);
 }
 
 function safeEqual(a, b) {
@@ -33,12 +36,13 @@ function patAuth(req, res, next) {
         throw new Errors.Base(401, 'InvalidCredentials', 'Invalid credentials');
     }
 
-    const expected = envSecretFor(service);
-    if (!expected) {
+    const expectedSecrets = envSecretsFor(service);
+    if (expectedSecrets.length === 0) {
         throw new Errors.Base(500, 'ServerMisconfigured', 'PAT secret not configured');
     }
 
-    if (!safeEqual(secret, expected)) {
+    const matched = expectedSecrets.some((expected) => safeEqual(secret, expected));
+    if (!matched) {
         throw new Errors.Base(401, 'InvalidCredentials', 'Invalid credentials');
     }
 
