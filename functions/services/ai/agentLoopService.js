@@ -116,6 +116,44 @@ class AgentLoopService {
         return AiJobResult.failed(`unknown finalize type: ${input.type}`, input.notification);
     }
 
+    _buildSystemBlocks(timezone) {
+        return [{
+            type: 'text',
+            text: this.systemPromptBuilder.build({ now: new Date(), timezone }),
+            cache_control: { type: 'ephemeral' }
+        }];
+    }
+
+    /**
+     * tools 의 마지막 entry 에 cache_control 마크 — Anthropic 이 system + tools 를
+     * 한 캐시 단위로 다루도록. 빈 array 는 그대로 반환.
+     */
+    _buildToolsWithCache(rawTools) {
+        if (rawTools.length === 0) return rawTools;
+        return [
+            ...rawTools.slice(0, -1),
+            { ...rawTools[rawTools.length - 1], cache_control: { type: 'ephemeral' } }
+        ];
+    }
+
+    _buildConfirmResult(tu, libResult, lang) {
+        const defaults = CONFIRM_DEFAULTS[lang];
+        return AiJobResult.confirm(
+            libResult.message || defaults.text,
+            { tool: tu.name, args: tu.input, confirmToken: libResult.confirmToken },
+            { title: getConfirmTitle(tu.name, lang), body: defaults.body }
+        );
+    }
+
+    _toolResultBlock(tuId, payload, isError) {
+        return {
+            type: 'tool_result',
+            tool_use_id: tuId,
+            content: _wrapToolResultContent(JSON.stringify(payload)),
+            ...(isError ? { is_error: true } : {})
+        };
+    }
+
     /**
      * @param {string} commandText
      * @param {{ userId: string, timezone: string }} context
@@ -130,23 +168,12 @@ class AgentLoopService {
     async run(commandText, { userId, timezone }) {
         const auth = { userId, scopes: this.scopes };
         const messages = [{ role: 'user', content: commandText }];
-        let sumOutputTokens = 0;
-        let lastInputTokens = 0;
-        const usage = () => ({ inputTokens: lastInputTokens, outputTokens: sumOutputTokens });
-        const systemBlocks = [{
-            type: 'text',
-            text: this.systemPromptBuilder.build({ now: new Date(), timezone }),
-            cache_control: { type: 'ephemeral' }
-        }];
+        const tokens = { input: 0, output: 0 };
+        const finish = (result) => ({ result, usage: { inputTokens: tokens.input, outputTokens: tokens.output } });
+
+        const systemBlocks = this._buildSystemBlocks(timezone);
         const registry = await this._registryFactory();
-        const rawTools = registry.anthropicTools;
-        // Mark the last tool entry with cache_control so Anthropic caches system + tools together.
-        const tools = rawTools.length > 0
-            ? [
-                ...rawTools.slice(0, -1),
-                { ...rawTools[rawTools.length - 1], cache_control: { type: 'ephemeral' } }
-            ]
-            : rawTools;
+        const tools = this._buildToolsWithCache(registry.anthropicTools);
 
         for (let iter = 0; iter < this.loopCap; iter++) {
             _markLastMessageForCache(messages);
@@ -158,63 +185,37 @@ class AgentLoopService {
                 maxTokens: 4096
             });
 
-            sumOutputTokens += (resp.usage?.output_tokens || 0);
-            lastInputTokens = (resp.usage?.input_tokens || 0);
-            // Anthropic input_tokens includes all accumulated prompt tokens for the current call.
-            // Summing input across turns would double-count. Use last call's input + cumulative output.
-            if (lastInputTokens + sumOutputTokens > this.tokenCap) {
-                return { result: AiJobResult.failed('token cap exceeded'), usage: usage() };
+            tokens.input = resp.usage?.input_tokens || 0;
+            tokens.output += resp.usage?.output_tokens || 0;
+            if (tokens.input + tokens.output > this.tokenCap) {
+                return finish(AiJobResult.failed('token cap exceeded'));
             }
 
             messages.push({ role: 'assistant', content: resp.content });
+
             const toolUses = resp.content.filter(c => c.type === 'tool_use');
+            if (toolUses.length === 0) return finish(AiJobResult.failed('no tool_use returned'));
+            if (toolUses.length > 1) return finish(AiJobResult.failed('multiple tool_uses in single turn'));
+            const tu = toolUses[0];
 
-            if (toolUses.length === 0) {
-                return { result: AiJobResult.failed('no tool_use returned'), usage: usage() };
+            if (registry.isFinalize(tu.name)) {
+                return finish(this._mapFinalizeToResult(tu.input));
             }
 
-            if (toolUses.length > 1) {
-                return { result: AiJobResult.failed('multiple tool_uses in single turn'), usage: usage() };
-            }
-
-            const toolResults = [];
-            for (const tu of toolUses) {
-                if (registry.isFinalize(tu.name)) {
-                    return { result: this._mapFinalizeToResult(tu.input), usage: usage() };
+            let toolResult;
+            try {
+                const libResult = await registry.execute(tu.name, tu.input, auth);
+                if (registry.isConfirmRequired(libResult)) {
+                    return finish(this._buildConfirmResult(tu, libResult, detectLanguage(commandText)));
                 }
-                try {
-                    const result = await registry.execute(tu.name, tu.input, auth);
-                    if (registry.isConfirmRequired(result)) {
-                        const lang = detectLanguage(commandText);
-                        const defaults = CONFIRM_DEFAULTS[lang];
-                        return {
-                            result: AiJobResult.confirm(
-                                result.message || defaults.text,
-                                { tool: tu.name, args: tu.input, confirmToken: result.confirmToken },
-                                { title: getConfirmTitle(tu.name, lang), body: defaults.body }
-                            ),
-                            usage: usage()
-                        };
-                    }
-                    toolResults.push({
-                        type: 'tool_result',
-                        tool_use_id: tu.id,
-                        content: _wrapToolResultContent(JSON.stringify(result))
-                    });
-                } catch (e) {
-                    toolResults.push({
-                        type: 'tool_result',
-                        tool_use_id: tu.id,
-                        content: _wrapToolResultContent(JSON.stringify({ code: e.code, status: e.status, message: e.message })),
-                        is_error: true
-                    });
-                }
+                toolResult = this._toolResultBlock(tu.id, libResult, false);
+            } catch (e) {
+                toolResult = this._toolResultBlock(tu.id, { code: e.code, status: e.status, message: e.message }, true);
             }
-
-            messages.push({ role: 'user', content: toolResults });
+            messages.push({ role: 'user', content: [toolResult] });
         }
 
-        return { result: AiJobResult.failed('loop cap exceeded'), usage: usage() };
+        return finish(AiJobResult.failed('loop cap exceeded'));
     }
 
     /**
