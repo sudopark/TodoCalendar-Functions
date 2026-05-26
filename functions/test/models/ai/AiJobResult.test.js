@@ -169,4 +169,22 @@ describe('AiJobResult', () => {
             assert.deepStrictEqual(result.mutations, []);
         });
     });
+
+    // ─── errorCode (#230) ─────────────────────────────────────────────────────
+    //
+    // lib ToolError.code 같은 분류용 원본 코드 — 사용자엔 워싱된 reason 노출하되
+    // 클라가 분류해서 다른 UX 분기에 쓸 수 있도록 별 필드로 보존.
+
+    describe('errorCode (#230)', () => {
+
+        it('failed() — errorCode 전달 시 노출', () => {
+            const result = AiJobResult.failed('확인 시간이 만료됐어요.', null, [], 'ConfirmExpired');
+            assert.strictEqual(result.errorCode, 'ConfirmExpired');
+        });
+
+        it('failed() — errorCode 미지정 시 필드 없음', () => {
+            const result = AiJobResult.failed('reason');
+            assert.strictEqual('errorCode' in result, false);
+        });
+    });
 });
