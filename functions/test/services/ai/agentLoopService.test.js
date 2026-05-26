@@ -586,6 +586,176 @@ describe('AgentLoopService', () => {
         assert.deepStrictEqual(usage, { inputTokens: 120, outputTokens: 25 });
     });
 
+    // ─── mutations 추적 (#228) ────────────────────────────────────────────────
+    //
+    // tool 이름 분류 기반. classifier 가 array 반환 (단일/복합), dedup first-seen.
+    // 4 종료 path + tool throw 시 박지 않음 + confirm_required 1차 호출 박지 않음.
+
+    describe('mutations 추적 (#228)', () => {
+
+        it('단일 매핑 — create_todo → [{todo, created}]', async () => {
+            const { service, anthropic, registry } = makeService();
+            registry.registerExecute('create_todo', { uuid: 't1' });
+            anthropic.enqueue(makeToolUseResponse('create_todo', { name: '회의' }));
+            anthropic.enqueue(makeToolUseResponse('finalize', { type: 'DONE', text: '완료' }));
+
+            const { result } = await service.run('회의 추가', { userId: 'u1', timezone: 'Asia/Seoul' });
+
+            assert.deepStrictEqual(result.mutations, [{ dataType: 'todo', op: 'created' }]);
+        });
+
+        it('복합 매핑 — complete_todo → [{todo, updated}, {done, created}]', async () => {
+            const { service, anthropic, registry } = makeService();
+            registry.registerExecute('complete_todo', { ok: true });
+            anthropic.enqueue(makeToolUseResponse('complete_todo', { todo_id: 't1' }));
+            anthropic.enqueue(makeToolUseResponse('finalize', { type: 'DONE', text: '완료' }));
+
+            const { result } = await service.run('완료', { userId: 'u1', timezone: 'Asia/Seoul' });
+
+            assert.deepStrictEqual(result.mutations, [
+                { dataType: 'todo', op: 'updated' },
+                { dataType: 'done', op: 'created' }
+            ]);
+        });
+
+        it('복합 매핑 — revert_done_todo → [{done, deleted}, {todo, created}]', async () => {
+            const { service, anthropic, registry } = makeService();
+            registry.registerExecute('revert_done_todo', { ok: true });
+            anthropic.enqueue(makeToolUseResponse('revert_done_todo', { done_id: 'd1' }));
+            anthropic.enqueue(makeToolUseResponse('finalize', { type: 'DONE', text: '복원' }));
+
+            const { result } = await service.run('되돌려', { userId: 'u1', timezone: 'Asia/Seoul' });
+
+            assert.deepStrictEqual(result.mutations, [
+                { dataType: 'done', op: 'deleted' },
+                { dataType: 'todo', op: 'created' }
+            ]);
+        });
+
+        it('매핑 외 (get_todos, finalize) — mutations 빈 array', async () => {
+            const { service, anthropic, registry } = makeService();
+            registry.registerExecute('get_todos', { items: [] });
+            anthropic.enqueue(makeToolUseResponse('get_todos', {}));
+            anthropic.enqueue(makeToolUseResponse('finalize', { type: 'DONE', text: '없어' }));
+
+            const { result } = await service.run('할일 보여줘', { userId: 'u1', timezone: 'Asia/Seoul' });
+
+            assert.deepStrictEqual(result.mutations, []);
+        });
+
+        it('dedup — 같은 (dataType, op) 조합 두 번 호출 시 entry 1개', async () => {
+            const { service, anthropic, registry } = makeService();
+            registry.registerExecute('create_todo', { uuid: 't1' });
+            anthropic.enqueue(makeToolUseResponse('create_todo', { name: 'A' }));
+            anthropic.enqueue(makeToolUseResponse('create_todo', { name: 'B' }));
+            anthropic.enqueue(makeToolUseResponse('finalize', { type: 'DONE', text: '두 개 추가' }));
+
+            const { result } = await service.run('두 개 추가', { userId: 'u1', timezone: 'Asia/Seoul' });
+
+            assert.deepStrictEqual(result.mutations, [{ dataType: 'todo', op: 'created' }]);
+        });
+
+        it('first-seen 순서 유지 — create_todo + create_schedule + create_tag', async () => {
+            const { service, anthropic, registry } = makeService();
+            registry.registerExecute('create_todo', { uuid: 't1' });
+            registry.registerExecute('create_schedule', { uuid: 's1' });
+            registry.registerExecute('create_tag', { uuid: 'g1' });
+            anthropic.enqueue(makeToolUseResponse('create_todo', {}));
+            anthropic.enqueue(makeToolUseResponse('create_schedule', {}));
+            anthropic.enqueue(makeToolUseResponse('create_tag', {}));
+            anthropic.enqueue(makeToolUseResponse('finalize', { type: 'DONE', text: '완료' }));
+
+            const { result } = await service.run('전부 추가', { userId: 'u1', timezone: 'Asia/Seoul' });
+
+            assert.deepStrictEqual(result.mutations, [
+                { dataType: 'todo', op: 'created' },
+                { dataType: 'schedule', op: 'created' },
+                { dataType: 'tag', op: 'created' }
+            ]);
+        });
+
+        it('tool throw — mutation 박지 않음 (실제 변경 발생 X)', async () => {
+            const { service, anthropic, registry } = makeService();
+            registry.registerExecute('create_todo', () => { throw new Error('boom'); });
+            anthropic.enqueue(makeToolUseResponse('create_todo', {}));
+            anthropic.enqueue(makeToolUseResponse('finalize', { type: 'FAILED', text: '실패' }));
+
+            const { result } = await service.run('추가', { userId: 'u1', timezone: 'Asia/Seoul' });
+
+            assert.deepStrictEqual(result.mutations, []);
+        });
+
+        it('성공 tool + throw tool 혼합 — 성공한 것만 박힘', async () => {
+            const { service, anthropic, registry } = makeService();
+            registry.registerExecute('create_todo', { uuid: 't1' });
+            registry.registerExecute('update_schedule', () => { throw new Error('fail'); });
+            anthropic.enqueue(makeToolUseResponse('create_todo', {}));
+            anthropic.enqueue(makeToolUseResponse('update_schedule', {}));
+            anthropic.enqueue(makeToolUseResponse('finalize', { type: 'DONE', text: '부분 완료' }));
+
+            const { result } = await service.run('두 개 처리', { userId: 'u1', timezone: 'Asia/Seoul' });
+
+            assert.deepStrictEqual(result.mutations, [{ dataType: 'todo', op: 'created' }]);
+        });
+
+        it('finalize FAILED path — 이전 turn 의 mutations 첨부', async () => {
+            const { service, anthropic, registry } = makeService();
+            registry.registerExecute('create_todo', { uuid: 't1' });
+            anthropic.enqueue(makeToolUseResponse('create_todo', {}));
+            anthropic.enqueue(makeToolUseResponse('finalize', { type: 'FAILED', text: '실패' }));
+
+            const { result } = await service.run('추가', { userId: 'u1', timezone: 'Asia/Seoul' });
+
+            assert.strictEqual(result.type, 'FAILED');
+            assert.deepStrictEqual(result.mutations, [{ dataType: 'todo', op: 'created' }]);
+        });
+
+        it('token cap path — 이전 turn 의 mutations 첨부', async () => {
+            const { service, anthropic, registry } = makeService({ tokenCap: 100 });
+            registry.registerExecute('create_todo', { uuid: 't1' });
+            anthropic.enqueue(makeToolUseResponse('create_todo', {}, { input_tokens: 30, output_tokens: 30 }));
+            anthropic.enqueue(makeToolUseResponse('finalize', { type: 'DONE', text: 'x' }, { input_tokens: 80, output_tokens: 50 }));
+
+            const { result } = await service.run('cmd', { userId: 'u1', timezone: 'Asia/Seoul' });
+
+            assert.strictEqual(result.type, 'FAILED');
+            assert.strictEqual(result.reason, 'token cap exceeded');
+            assert.deepStrictEqual(result.mutations, [{ dataType: 'todo', op: 'created' }]);
+        });
+
+        it('loop cap path — 이전 turn 의 mutations 첨부', async () => {
+            const { service, anthropic, registry } = makeService({ loopCap: 2 });
+            registry.registerExecute('create_todo', { uuid: 't1' });
+            registry.registerExecute('update_todo', { uuid: 't1' });
+            anthropic.enqueue(makeToolUseResponse('create_todo', {}));
+            anthropic.enqueue(makeToolUseResponse('update_todo', {}));
+
+            const { result } = await service.run('cmd', { userId: 'u1', timezone: 'Asia/Seoul' });
+
+            assert.strictEqual(result.type, 'FAILED');
+            assert.strictEqual(result.reason, 'loop cap exceeded');
+            assert.deepStrictEqual(result.mutations, [
+                { dataType: 'todo', op: 'created' },
+                { dataType: 'todo', op: 'updated' }
+            ]);
+        });
+
+        it('confirm 1차 path — 이전 turn 의 mutations 첨부, confirm tool 자체는 박지 않음', async () => {
+            const { service, anthropic, registry } = makeService();
+            registry.registerExecute('create_todo', { uuid: 't1' });
+            registry.registerExecute('delete_todo', { status: 'confirm_required', confirmToken: 'x' });
+            anthropic.enqueue(makeToolUseResponse('create_todo', {}));
+            anthropic.enqueue(makeToolUseResponse('delete_todo', { todo_id: 't1' }));
+
+            const { result } = await service.run('cmd', { userId: 'u1', timezone: 'Asia/Seoul' });
+
+            assert.strictEqual(result.type, 'CONFIRM');
+            // delete_todo 는 1차 confirm 요청이라 실 mutation 발생 X → 박지 않음.
+            // create_todo 만 박힘.
+            assert.deepStrictEqual(result.mutations, [{ dataType: 'todo', op: 'created' }]);
+        });
+    });
+
     // ─── runConfirm (CONFIRM 2차 호출) ─────────────────────────────────────────
 
     describe('runConfirm', () => {
@@ -672,6 +842,50 @@ describe('AgentLoopService', () => {
 
             assert.strictEqual(result.type, 'FAILED');
             assert.strictEqual(result.reason, 'unexpected confirm_required on confirm-mode');
+        });
+
+        // ─── runConfirm mutations 추적 (#228) ────────────────────────────────────
+        it('runConfirm 성공 — delete_todo → mutations = [{done: deleted}? no, todo: deleted]', async () => {
+            const { service, registry } = makeService();
+            registry.registerExecute('delete_todo', { ok: true });
+
+            const { result } = await service.runConfirm(
+                { tool: 'delete_todo', args: { todo_id: 't1' }, confirmToken: 'tk' },
+                { userId: 'u1', timezone: 'Asia/Seoul', commandText: '삭제' }
+            );
+
+            assert.strictEqual(result.type, 'DONE');
+            assert.deepStrictEqual(result.mutations, [{ dataType: 'todo', op: 'deleted' }]);
+        });
+
+        it('runConfirm — lib throw 시 mutations 빈 array (실제 변경 발생 X)', async () => {
+            const { service, registry } = makeService();
+            registry.registerExecute('delete_todo', () => {
+                const e = new Error('expired');
+                e.code = 'ConfirmExpired';
+                throw e;
+            });
+
+            const { result } = await service.runConfirm(
+                { tool: 'delete_todo', args: { todo_id: 't1' }, confirmToken: 'tk' },
+                { userId: 'u1', timezone: 'Asia/Seoul', commandText: '삭제' }
+            );
+
+            assert.strictEqual(result.type, 'FAILED');
+            assert.deepStrictEqual(result.mutations, []);
+        });
+
+        it('runConfirm — confirm_required 재반환 시 mutations 빈 array', async () => {
+            const { service, registry } = makeService();
+            registry.registerExecute('delete_todo', { status: 'confirm_required', confirmToken: 'x' });
+
+            const { result } = await service.runConfirm(
+                { tool: 'delete_todo', args: { todo_id: 't1' }, confirmToken: 'tk' },
+                { userId: 'u1', timezone: 'Asia/Seoul', commandText: '삭제' }
+            );
+
+            assert.strictEqual(result.type, 'FAILED');
+            assert.deepStrictEqual(result.mutations, []);
         });
 
         it('e.code 없는 generic Error throw → FAILED, reason="agent error"', async () => {

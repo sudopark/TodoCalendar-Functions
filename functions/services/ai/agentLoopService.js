@@ -83,6 +83,55 @@ const CONFIRM_DONE_TEXTS = {
     en: 'Done'
 };
 
+// #228 — tool 이름 → mutation 카테고리 array. key 는 lib tool.name 의 snake_case.
+// 한 tool 이 두 컬렉션 영향이면 entry 둘 (complete_todo / revert_done_todo).
+// 매핑 외 (get_*, finalize, unknown) 는 null — classifyTool 이 entry push 안 함.
+const TOOL_MUTATIONS = Object.freeze({
+    create_todo: [{ dataType: 'todo', op: 'created' }],
+    update_todo: [{ dataType: 'todo', op: 'updated' }],
+    replace_todo: [{ dataType: 'todo', op: 'updated' }],
+    complete_todo: [{ dataType: 'todo', op: 'updated' }, { dataType: 'done', op: 'created' }],
+    delete_todo: [{ dataType: 'todo', op: 'deleted' }],
+    update_done_todo: [{ dataType: 'done', op: 'updated' }],
+    revert_done_todo: [{ dataType: 'done', op: 'deleted' }, { dataType: 'todo', op: 'created' }],
+    delete_done_todo: [{ dataType: 'done', op: 'deleted' }],
+    create_schedule: [{ dataType: 'schedule', op: 'created' }],
+    update_schedule: [{ dataType: 'schedule', op: 'updated' }],
+    branch_schedule_repeating: [{ dataType: 'schedule', op: 'updated' }],
+    exclude_schedule_occurrence: [{ dataType: 'schedule', op: 'updated' }],
+    replace_schedule_occurrence: [{ dataType: 'schedule', op: 'updated' }],
+    delete_schedule: [{ dataType: 'schedule', op: 'deleted' }],
+    create_tag: [{ dataType: 'tag', op: 'created' }],
+    update_tag: [{ dataType: 'tag', op: 'updated' }],
+    delete_tag: [{ dataType: 'tag', op: 'deleted' }],
+    set_event_detail: [{ dataType: 'event_detail', op: 'updated' }],
+    delete_event_detail: [{ dataType: 'event_detail', op: 'deleted' }]
+});
+
+function _classifyTool(name) {
+    return TOOL_MUTATIONS[name] ?? null;
+}
+
+/**
+ * (dataType, op) 키 기준 first-seen dedup tracker. 같은 조합 두 번째부터 무시.
+ * Plain closure 한 곳 (run / runConfirm) 에만 쓰여 클래스 안 만듦.
+ */
+function _makeMutationTracker() {
+    const seen = new Set();
+    const list = [];
+    const add = (toolName) => {
+        const entries = _classifyTool(toolName);
+        if (!entries) return;
+        for (const e of entries) {
+            const key = `${e.dataType}:${e.op}`;
+            if (seen.has(key)) continue;
+            seen.add(key);
+            list.push(e);
+        }
+    };
+    return { add, snapshot: () => [...list] };
+}
+
 class AgentLoopService {
 
     /**
@@ -169,7 +218,13 @@ class AgentLoopService {
         const auth = { userId, scopes: this.scopes };
         const messages = [{ role: 'user', content: commandText }];
         const tokens = { input: 0, output: 0 };
-        const finish = (result) => ({ result, usage: { inputTokens: tokens.input, outputTokens: tokens.output } });
+        const tracker = _makeMutationTracker();
+        // finish — 모든 종결 path 공통. result 에 누적 mutations 박고 usage 합쳐 반환.
+        // mutate in place 라 AiJobResult factory 가 박은 빈 array 를 덮어씀.
+        const finish = (result) => {
+            result.mutations = tracker.snapshot();
+            return { result, usage: { inputTokens: tokens.input, outputTokens: tokens.output } };
+        };
 
         const systemBlocks = this._buildSystemBlocks(timezone);
         const registry = await this._registryFactory();
@@ -206,8 +261,12 @@ class AgentLoopService {
             try {
                 const libResult = await registry.execute(tu.name, tu.input, auth);
                 if (registry.isConfirmRequired(libResult)) {
+                    // confirm_required = 실 mutation 아직 발생 X (HMAC token 발급만)
+                    // → tracker 에 박지 않음. 이전 turn 들의 누적만 첨부.
                     return finish(this._buildConfirmResult(tu, libResult, detectLanguage(commandText)));
                 }
+                // 성공 시점에만 mutation 기록 (throw 경로는 박지 않음).
+                tracker.add(tu.name);
                 toolResult = this._toolResultBlock(tu.id, libResult, false);
             } catch (e) {
                 toolResult = this._toolResultBlock(tu.id, { code: e.code, status: e.status, message: e.message }, true);
@@ -235,16 +294,24 @@ class AgentLoopService {
         const lang = detectLanguage(commandText || '');
         const usage = { inputTokens: 0, outputTokens: 0 };
         const registry = await this._registryFactory();
+        const tracker = _makeMutationTracker();
+        const finish = (result) => {
+            result.mutations = tracker.snapshot();
+            return { result, usage };
+        };
 
         try {
             const result = await registry.execute(tool, { ...args, confirmToken }, auth);
             if (registry.isConfirmRequired(result)) {
-                return { result: AiJobResult.failed('unexpected confirm_required on confirm-mode'), usage };
+                // confirm 2차에서 다시 confirm_required 는 비정상 — mutation 발생 X
+                return finish(AiJobResult.failed('unexpected confirm_required on confirm-mode'));
             }
-            return { result: AiJobResult.done(CONFIRM_DONE_TEXTS[lang]), usage };
+            // 성공 시점에만 mutation 기록
+            tracker.add(tool);
+            return finish(AiJobResult.done(CONFIRM_DONE_TEXTS[lang]));
         } catch (e) {
             const reason = (e && e.code) ? e.code : 'agent error';
-            return { result: AiJobResult.failed(reason), usage };
+            return finish(AiJobResult.failed(reason));
         }
     }
 }
