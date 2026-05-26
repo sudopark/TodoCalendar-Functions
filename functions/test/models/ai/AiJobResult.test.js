@@ -128,4 +128,45 @@ describe('AiJobResult', () => {
             assert.strictEqual(AiJobResult.hasNotification(null), false);
         });
     });
+
+    // ─── mutations (#228) ─────────────────────────────────────────────────────
+    //
+    // 클라가 AI 작업 종료 후 어떤 데이터를 reload 할지 단서. tool 이름 분류 기반.
+    // 항상 array (빈 array 라도) — 클라가 일관 처리.
+
+    describe('mutations (#228)', () => {
+
+        it('done() — mutations 미지정 시 빈 array', () => {
+            const result = AiJobResult.done('텍스트');
+            assert.deepStrictEqual(result.mutations, []);
+        });
+
+        it('done() — mutations 전달 시 그대로 노출', () => {
+            const m = [{ dataType: 'todo', op: 'created' }];
+            const result = AiJobResult.done('텍스트', null, m);
+            assert.deepStrictEqual(result.mutations, m);
+        });
+
+        it('confirm() — mutations 전달 시 그대로 노출', () => {
+            const m = [{ dataType: 'todo', op: 'updated' }];
+            const result = AiJobResult.confirm('텍스트', { type: 'noop' }, null, m);
+            assert.deepStrictEqual(result.mutations, m);
+        });
+
+        it('confirm() — mutations 미지정 시 빈 array', () => {
+            const result = AiJobResult.confirm('텍스트', { type: 'noop' });
+            assert.deepStrictEqual(result.mutations, []);
+        });
+
+        it('failed() — mutations 전달 시 그대로 노출 (부분 mutation 케이스)', () => {
+            const m = [{ dataType: 'todo', op: 'created' }];
+            const result = AiJobResult.failed('loop cap exceeded', null, m);
+            assert.deepStrictEqual(result.mutations, m);
+        });
+
+        it('failed() — mutations 미지정 시 빈 array', () => {
+            const result = AiJobResult.failed('reason');
+            assert.deepStrictEqual(result.mutations, []);
+        });
+    });
 });
