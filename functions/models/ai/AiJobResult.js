@@ -52,18 +52,20 @@ const AiJobResult = {
     },
 
     /**
-     * @param {string} reason
+     * @param {string} reason  사용자 노출 텍스트 (워싱된 lang-aware 메시지)
      * @param {{ title: string, body: string } | null | undefined} notification
      * @param {Array<{dataType: string, op: string}> | undefined} mutations
+     * @param {string | undefined} errorCode  lib `ToolError.code` 등 디버그/분류용 원본 코드. 사용자엔 안 노출하되 클라가 분류 가능.
      * @returns {object}
      */
-    failed(reason, notification, mutations) {
+    failed(reason, notification, mutations, errorCode) {
         const n = sanitizeNotification(notification);
         return {
             type: 'FAILED',
             reason,
             ...(n ? { notification: n } : {}),
-            mutations: mutations ?? []
+            mutations: mutations ?? [],
+            ...(errorCode ? { errorCode } : {})
         };
     },
 
