@@ -102,15 +102,15 @@ describe('AgentLoopService', () => {
         const { result } = await service.run('할일 삭제해', { userId: 'u1', timezone: 'Asia/Seoul', lang: 'ko' });
 
         assert.strictEqual(result.type, 'CONFIRM');
-        assert.strictEqual(result.text, '확인이 필요한 작업이야');
+        assert.strictEqual(result.text, '확인이 필요한 작업이에요.');
         assert.deepStrictEqual(result.action, {
             tool: 'delete_todo',
             args: { todo_id: 't1' },
             confirmToken: 'tok123'
         });
         assert.deepStrictEqual(result.notification, {
-            title: '할일 삭제 확인',
-            body: '실행 전 확인이 필요해'
+            title: '할 일 삭제 확인',
+            body: '실행 전 확인이 필요해요.'
         });
     });
 
@@ -129,10 +129,10 @@ describe('AgentLoopService', () => {
         const { result } = await service.run('delete a todo', { userId: 'u1', timezone: 'Asia/Seoul' });
 
         assert.strictEqual(result.type, 'CONFIRM');
-        assert.strictEqual(result.text, 'Confirmation required for this action');
+        assert.strictEqual(result.text, 'Confirmation required for this action.');
         assert.deepStrictEqual(result.notification, {
             title: 'Confirm todo deletion',
-            body: 'Please confirm before proceeding'
+            body: 'Please confirm before proceeding.'
         });
     });
 
@@ -151,8 +151,8 @@ describe('AgentLoopService', () => {
         assert.strictEqual(result.type, 'CONFIRM');
         assert.strictEqual(result.text, '정말 삭제할 거야?');
         // notification.title 은 tool 별 매핑, body 는 항상 locale defaults (push 알림 wording 은 시스템 책임)
-        assert.strictEqual(result.notification.title, '할일 삭제 확인');
-        assert.strictEqual(result.notification.body, '실행 전 확인이 필요해');
+        assert.strictEqual(result.notification.title, '할 일 삭제 확인');
+        assert.strictEqual(result.notification.body, '실행 전 확인이 필요해요.');
     });
 
     it('confirm_required — 매핑 없는 tool 이면 locale defaults.title 으로 fallback', async () => {
@@ -167,7 +167,7 @@ describe('AgentLoopService', () => {
         const { result } = await service.run('미래 기능 실행해', { userId: 'u1', timezone: 'Asia/Seoul', lang: 'ko' });
 
         assert.strictEqual(result.type, 'CONFIRM');
-        assert.strictEqual(result.notification.title, '확인 필요');
+        assert.strictEqual(result.notification.title, '확인이 필요해요');
     });
 
     it('finalize tool FAILED 응답이면 AiJobResult.failed 반환', async () => {
@@ -205,7 +205,8 @@ describe('AgentLoopService', () => {
         const { result } = await service.run('할일 알려줘', { userId: 'u1', timezone: 'Asia/Seoul' });
 
         assert.strictEqual(result.type, 'FAILED');
-        assert.strictEqual(result.reason, 'loop cap exceeded');
+        assert.strictEqual(result.errorCode, 'loop_cap_exceeded');
+        assert.ok(result.reason.length > 0, 'user-facing reason 워싱 후 비어있지 않음');
     });
 
     it('tokenCap 초과 시 token cap exceeded 로 FAILED', async () => {
@@ -228,7 +229,7 @@ describe('AgentLoopService', () => {
         const { result } = await service.run('할일 알려줘', { userId: 'u1', timezone: 'Asia/Seoul' });
 
         assert.strictEqual(result.type, 'FAILED');
-        assert.strictEqual(result.reason, 'token cap exceeded');
+        assert.strictEqual(result.errorCode, 'token_cap_exceeded');
     });
 
     it('tool execute 가 ToolError throw 시 is_error tool_result 으로 self-recovery', async () => {
@@ -394,7 +395,7 @@ describe('AgentLoopService', () => {
         const { result } = await service.run('할일 삭제해', { userId: 'u1', timezone: 'Asia/Seoul' });
 
         assert.strictEqual(result.type, 'FAILED');
-        assert.strictEqual(result.reason, 'multiple tool_uses in single turn');
+        assert.strictEqual(result.errorCode, 'multiple_tool_uses');
     });
 
     it('createMessage 호출 시 messages 마지막 message 의 마지막 content block 에 cache_control 마크', async () => {
@@ -557,7 +558,7 @@ describe('AgentLoopService', () => {
         const { result, usage } = await service.run('할일 알려줘', { userId: 'u1', timezone: 'Asia/Seoul' });
 
         assert.strictEqual(result.type, 'FAILED');
-        assert.strictEqual(result.reason, 'token cap exceeded');
+        assert.strictEqual(result.errorCode, 'token_cap_exceeded');
         assert.deepStrictEqual(usage, { inputTokens: 200, outputTokens: 50 });
     });
 
@@ -582,7 +583,7 @@ describe('AgentLoopService', () => {
         const { result, usage } = await service.run('할일 알려줘', { userId: 'u1', timezone: 'Asia/Seoul' });
 
         assert.strictEqual(result.type, 'FAILED');
-        assert.strictEqual(result.reason, 'loop cap exceeded');
+        assert.strictEqual(result.errorCode, 'loop_cap_exceeded');
         assert.deepStrictEqual(usage, { inputTokens: 120, outputTokens: 25 });
     });
 
@@ -719,7 +720,7 @@ describe('AgentLoopService', () => {
             const { result } = await service.run('cmd', { userId: 'u1', timezone: 'Asia/Seoul' });
 
             assert.strictEqual(result.type, 'FAILED');
-            assert.strictEqual(result.reason, 'token cap exceeded');
+            assert.strictEqual(result.errorCode, 'token_cap_exceeded');
             assert.deepStrictEqual(result.mutations, [{ dataType: 'todo', op: 'created' }]);
         });
 
@@ -733,7 +734,7 @@ describe('AgentLoopService', () => {
             const { result } = await service.run('cmd', { userId: 'u1', timezone: 'Asia/Seoul' });
 
             assert.strictEqual(result.type, 'FAILED');
-            assert.strictEqual(result.reason, 'loop cap exceeded');
+            assert.strictEqual(result.errorCode, 'loop_cap_exceeded');
             assert.deepStrictEqual(result.mutations, [
                 { dataType: 'todo', op: 'created' },
                 { dataType: 'todo', op: 'updated' }
@@ -770,7 +771,7 @@ describe('AgentLoopService', () => {
             );
 
             assert.strictEqual(result.type, 'DONE');
-            assert.strictEqual(result.text, '요청한 작업을 완료했어');
+            assert.strictEqual(result.text, '요청하신 작업을 완료했어요.');
             assert.deepStrictEqual(usage, { inputTokens: 0, outputTokens: 0 });
             assert.deepStrictEqual(registry.lastExecute.args, { todo_id: 'todo-1', confirmToken: 'token-xyz' });
             assert.deepStrictEqual(registry.lastExecute.auth, { userId: 'u1', scopes: ['read:calendar', 'write:calendar'] });
@@ -805,7 +806,8 @@ describe('AgentLoopService', () => {
             );
 
             assert.strictEqual(result.type, 'FAILED');
-            assert.strictEqual(result.reason, 'ConfirmExpired');
+            assert.strictEqual(result.errorCode, 'ConfirmExpired');
+            assert.strictEqual(result.reason, '확인 시간이 만료됐어요. 다시 요청해 주세요.');
             assert.deepStrictEqual(usage, { inputTokens: 0, outputTokens: 0 });
         });
 
@@ -824,7 +826,8 @@ describe('AgentLoopService', () => {
             );
 
             assert.strictEqual(result.type, 'FAILED');
-            assert.strictEqual(result.reason, 'ConfirmArgsMismatch');
+            assert.strictEqual(result.errorCode, 'ConfirmArgsMismatch');
+            assert.strictEqual(result.reason, "Confirmation details don't match. Please start over.");
         });
 
         it('lib 가 confirm_required 다시 반환 (비정상) → FAILED', async () => {
@@ -841,7 +844,7 @@ describe('AgentLoopService', () => {
             );
 
             assert.strictEqual(result.type, 'FAILED');
-            assert.strictEqual(result.reason, 'unexpected confirm_required on confirm-mode');
+            assert.strictEqual(result.errorCode, 'unexpected_confirm_required');
         });
 
         // ─── runConfirm mutations 추적 (#228) ────────────────────────────────────
@@ -900,7 +903,9 @@ describe('AgentLoopService', () => {
             );
 
             assert.strictEqual(result.type, 'FAILED');
-            assert.strictEqual(result.reason, 'agent error');
+            // generic Error (e.code 없음) → user-facing reason 은 agentError 워딩, errorCode 는 undefined
+            assert.strictEqual(result.reason, '처리 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.');
+            assert.strictEqual(result.errorCode, undefined);
         });
     });
 

@@ -32,15 +32,21 @@ function _summarizeError(err) {
 // 다른 모듈에서 재사용 의도 없음 — handler 내부 private 상수.
 const FALLBACK_NOTIFICATION = Object.freeze({
     ko: Object.freeze({
-        DONE: Object.freeze({ title: 'AI 작업이 완료됐어요', body: '탭해서 결과를 확인해보세요' }),
-        CONFIRM: Object.freeze({ title: '확인이 필요해요', body: 'AI 가 작업 전 확인을 요청합니다' }),
-        FAILED: Object.freeze({ title: '처리에 실패했어요', body: '탭해서 자세히 확인해보세요' })
+        DONE: Object.freeze({ title: 'AI 작업이 완료됐어요', body: '탭해서 결과를 확인해 주세요' }),
+        CONFIRM: Object.freeze({ title: '확인이 필요해요', body: '작업 전 확인이 필요해요' }),
+        FAILED: Object.freeze({ title: '처리에 실패했어요', body: '탭해서 자세히 확인해 주세요' })
     }),
     en: Object.freeze({
         DONE: Object.freeze({ title: 'AI command completed', body: 'Tap to view the result' }),
-        CONFIRM: Object.freeze({ title: 'Confirmation required', body: 'AI is asking for confirmation' }),
+        CONFIRM: Object.freeze({ title: 'Confirmation required', body: 'Please confirm before proceeding' }),
         FAILED: Object.freeze({ title: 'AI command failed', body: 'Tap to view the result' })
     })
+});
+
+// agentLoop throw 시 user-facing reason. AgentLoopService 의 MESSAGES.agentError 와 같은 워딩.
+const AGENT_LOOP_ERROR_MESSAGE = Object.freeze({
+    ko: '처리 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.',
+    en: 'An error occurred. Please try again later.'
 });
 
 class AgentLoopHandler {
@@ -86,7 +92,9 @@ class AgentLoopHandler {
             ({ result, usage } = await this._dispatchAgentLoop(job));
         } catch (err) {
             this.log.error('AI trigger — agentLoop 실패', { jobId, error: _summarizeError(err) });
-            result = AiJobResult.failed('agent loop error');
+            // user-facing reason 은 워싱된 lang-aware 텍스트. errorCode 로 분류 정보 보존.
+            const lang = job.lang ?? 'en';
+            result = AiJobResult.failed(AGENT_LOOP_ERROR_MESSAGE[lang] ?? AGENT_LOOP_ERROR_MESSAGE.en, undefined, undefined, 'agent_loop_throw');
             // throw 경로는 usage 추출 불가 — 부분 사용 토큰이 있어도 손실 (acceptable loss).
             // 정밀도 필요 시 service 가 throw 대신 partial usage 동봉한 error 객체로 전환 필요.
         }
