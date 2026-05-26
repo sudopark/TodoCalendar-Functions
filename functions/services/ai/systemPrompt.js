@@ -2,7 +2,7 @@
 
 class SystemPromptBuilder {
 
-    build({ now, timezone }) {
+    build({ now, timezone, lang }) {
         // 'en-CA' locale 이 ISO 8601 날짜 포맷(YYYY-MM-DD) 을 반환한다.
         const dateStr = now.toLocaleDateString('en-CA', { timeZone: timezone });
 

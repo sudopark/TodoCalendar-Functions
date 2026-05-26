@@ -1,7 +1,6 @@
 'use strict';
 
 const AiJobResult = require('../../models/ai/AiJobResult');
-const { detectLanguage } = require('./language');
 
 /**
  * messages 배열의 마지막 message 마지막 content block 에 cache_control 마크.
@@ -165,10 +164,10 @@ class AgentLoopService {
         return AiJobResult.failed(`unknown finalize type: ${input.type}`, input.notification);
     }
 
-    _buildSystemBlocks(timezone) {
+    _buildSystemBlocks(timezone, lang) {
         return [{
             type: 'text',
-            text: this.systemPromptBuilder.build({ now: new Date(), timezone }),
+            text: this.systemPromptBuilder.build({ now: new Date(), timezone, lang }),
             cache_control: { type: 'ephemeral' }
         }];
     }
@@ -205,7 +204,7 @@ class AgentLoopService {
 
     /**
      * @param {string} commandText
-     * @param {{ userId: string, timezone: string }} context
+     * @param {{ userId: string, timezone: string, lang: 'ko'|'en' }} context
      * @returns {Promise<{ result: object, usage: { inputTokens: number, outputTokens: number } }>}
      *   result: AiJobResult plain object
      *   usage: 호출 누적 토큰 — caller (AgentLoopHandler) 가 일별 record 입력으로 사용.
@@ -214,9 +213,10 @@ class AgentLoopService {
      *          시 double count 됨). outputTokens 는 모든 turn 합산.
      *          throw 경로는 catch 안 함 → caller 가 0/0 으로 처리 (acceptable loss).
      */
-    async run(commandText, { userId, timezone }) {
+    async run(commandText, { userId, timezone, lang }) {
         const auth = { userId, scopes: this.scopes };
         const messages = [{ role: 'user', content: commandText }];
+        const resolvedLang = lang ?? 'en';
         const tokens = { input: 0, output: 0 };
         const tracker = _makeMutationTracker();
         // finish — 모든 종결 path 공통. result 에 누적 mutations 박고 usage 합쳐 반환.
@@ -226,7 +226,7 @@ class AgentLoopService {
             return { result, usage: { inputTokens: tokens.input, outputTokens: tokens.output } };
         };
 
-        const systemBlocks = this._buildSystemBlocks(timezone);
+        const systemBlocks = this._buildSystemBlocks(timezone, resolvedLang);
         const registry = await this._registryFactory();
         const tools = this._buildToolsWithCache(registry.anthropicTools);
 
@@ -263,7 +263,7 @@ class AgentLoopService {
                 if (registry.isConfirmRequired(libResult)) {
                     // confirm_required = 실 mutation 아직 발생 X (HMAC token 발급만)
                     // → tracker 에 박지 않음. 이전 turn 들의 누적만 첨부.
-                    return finish(this._buildConfirmResult(tu, libResult, detectLanguage(commandText)));
+                    return finish(this._buildConfirmResult(tu, libResult, resolvedLang));
                 }
                 // 성공 시점에만 mutation 기록 (throw 경로는 박지 않음).
                 tracker.add(tu.name);
@@ -289,9 +289,9 @@ class AgentLoopService {
      * @param {{ userId: string, timezone?: string, commandText?: string }} context  commandText 는 language 검출 전용
      * @returns {Promise<{ result: object, usage: { inputTokens: number, outputTokens: number } }>}
      */
-    async runConfirm({ tool, args, confirmToken }, { userId, commandText }) {
+    async runConfirm({ tool, args, confirmToken }, { userId, lang }) {
         const auth = { userId, scopes: this.scopes };
-        const lang = detectLanguage(commandText || '');
+        const resolvedLang = lang ?? 'en';
         const usage = { inputTokens: 0, outputTokens: 0 };
         const registry = await this._registryFactory();
         const tracker = _makeMutationTracker();
@@ -308,7 +308,7 @@ class AgentLoopService {
             }
             // 성공 시점에만 mutation 기록
             tracker.add(tool);
-            return finish(AiJobResult.done(CONFIRM_DONE_TEXTS[lang]));
+            return finish(AiJobResult.done(CONFIRM_DONE_TEXTS[resolvedLang]));
         } catch (e) {
             const reason = (e && e.code) ? e.code : 'agent error';
             return finish(AiJobResult.failed(reason));
