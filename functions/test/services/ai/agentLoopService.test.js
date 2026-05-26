@@ -205,7 +205,7 @@ describe('AgentLoopService', () => {
         const { result } = await service.run('할일 알려줘', { userId: 'u1', timezone: 'Asia/Seoul' });
 
         assert.strictEqual(result.type, 'FAILED');
-        assert.strictEqual(result.errorCode, 'loop_cap_exceeded');
+        assert.strictEqual(result.errorCode, 'LoopCapExceeded');
         assert.ok(result.reason.length > 0, 'user-facing reason 워싱 후 비어있지 않음');
     });
 
@@ -229,7 +229,7 @@ describe('AgentLoopService', () => {
         const { result } = await service.run('할일 알려줘', { userId: 'u1', timezone: 'Asia/Seoul' });
 
         assert.strictEqual(result.type, 'FAILED');
-        assert.strictEqual(result.errorCode, 'token_cap_exceeded');
+        assert.strictEqual(result.errorCode, 'TokenCapExceeded');
     });
 
     it('tool execute 가 ToolError throw 시 is_error tool_result 으로 self-recovery', async () => {
@@ -395,7 +395,7 @@ describe('AgentLoopService', () => {
         const { result } = await service.run('할일 삭제해', { userId: 'u1', timezone: 'Asia/Seoul' });
 
         assert.strictEqual(result.type, 'FAILED');
-        assert.strictEqual(result.errorCode, 'multiple_tool_uses');
+        assert.strictEqual(result.errorCode, 'MultipleToolUses');
     });
 
     it('createMessage 호출 시 messages 마지막 message 의 마지막 content block 에 cache_control 마크', async () => {
@@ -558,7 +558,7 @@ describe('AgentLoopService', () => {
         const { result, usage } = await service.run('할일 알려줘', { userId: 'u1', timezone: 'Asia/Seoul' });
 
         assert.strictEqual(result.type, 'FAILED');
-        assert.strictEqual(result.errorCode, 'token_cap_exceeded');
+        assert.strictEqual(result.errorCode, 'TokenCapExceeded');
         assert.deepStrictEqual(usage, { inputTokens: 200, outputTokens: 50 });
     });
 
@@ -583,7 +583,7 @@ describe('AgentLoopService', () => {
         const { result, usage } = await service.run('할일 알려줘', { userId: 'u1', timezone: 'Asia/Seoul' });
 
         assert.strictEqual(result.type, 'FAILED');
-        assert.strictEqual(result.errorCode, 'loop_cap_exceeded');
+        assert.strictEqual(result.errorCode, 'LoopCapExceeded');
         assert.deepStrictEqual(usage, { inputTokens: 120, outputTokens: 25 });
     });
 
@@ -720,7 +720,7 @@ describe('AgentLoopService', () => {
             const { result } = await service.run('cmd', { userId: 'u1', timezone: 'Asia/Seoul' });
 
             assert.strictEqual(result.type, 'FAILED');
-            assert.strictEqual(result.errorCode, 'token_cap_exceeded');
+            assert.strictEqual(result.errorCode, 'TokenCapExceeded');
             assert.deepStrictEqual(result.mutations, [{ dataType: 'todo', op: 'created' }]);
         });
 
@@ -734,7 +734,7 @@ describe('AgentLoopService', () => {
             const { result } = await service.run('cmd', { userId: 'u1', timezone: 'Asia/Seoul' });
 
             assert.strictEqual(result.type, 'FAILED');
-            assert.strictEqual(result.errorCode, 'loop_cap_exceeded');
+            assert.strictEqual(result.errorCode, 'LoopCapExceeded');
             assert.deepStrictEqual(result.mutations, [
                 { dataType: 'todo', op: 'created' },
                 { dataType: 'todo', op: 'updated' }
@@ -844,7 +844,7 @@ describe('AgentLoopService', () => {
             );
 
             assert.strictEqual(result.type, 'FAILED');
-            assert.strictEqual(result.errorCode, 'unexpected_confirm_required');
+            assert.strictEqual(result.errorCode, 'UnexpectedConfirmRequired');
         });
 
         // ─── runConfirm mutations 추적 (#228) ────────────────────────────────────
@@ -903,9 +903,9 @@ describe('AgentLoopService', () => {
             );
 
             assert.strictEqual(result.type, 'FAILED');
-            // generic Error (e.code 없음) → user-facing reason 은 agentError 워딩, errorCode 는 undefined
+            // generic Error (e.code 없음) → user-facing reason 은 agentError 워딩, errorCode 는 AGENT_ERROR fallback
             assert.strictEqual(result.reason, '처리 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.');
-            assert.strictEqual(result.errorCode, undefined);
+            assert.strictEqual(result.errorCode, 'AgentError');
         });
     });
 
