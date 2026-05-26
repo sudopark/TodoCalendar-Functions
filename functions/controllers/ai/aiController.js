@@ -1,5 +1,6 @@
 
 const Errors = require('../../models/Errors');
+const { detectLangFromAcceptLanguage } = require('../../services/ai/language');
 
 function isValidTimezone(tz) {
     if (typeof tz !== 'string' || !tz) return false;
@@ -38,8 +39,9 @@ class AiController {
             throw new Errors.BadRequest('timezone is invalid (must be a valid IANA timezone name)');
         }
 
+        const lang = detectLangFromAcceptLanguage(req.header('accept-language'));
         const userId = req.auth.uid;
-        const jobId = await this.jobService.createJob({ userId, deviceId, commandText, timezone });
+        const jobId = await this.jobService.createJob({ userId, deviceId, commandText, timezone, lang });
         res.status(202).send({ job_id: jobId });
     }
 
@@ -68,11 +70,10 @@ class AiController {
         }
         const commandText = rawCommandText.trim();
 
+        // confirm path 의 timezone 은 optional — runConfirm 본체에서 사용 X.
+        // 박혀 오면 형식만 검증해 job doc 에 저장.
         const timezone = req.body.timezone;
-        if (!timezone) {
-            throw new Errors.BadRequest('timezone is required');
-        }
-        if (!isValidTimezone(timezone)) {
+        if (timezone !== undefined && timezone !== null && !isValidTimezone(timezone)) {
             throw new Errors.BadRequest('timezone is invalid (must be a valid IANA timezone name)');
         }
 
@@ -91,12 +92,14 @@ class AiController {
             throw new Errors.BadRequest('confirm_token is required');
         }
 
+        const lang = detectLangFromAcceptLanguage(req.header('accept-language'));
         const userId = req.auth.uid;
         const jobId = await this.jobService.createConfirmJob({
             userId,
             deviceId,
             commandText,
-            timezone,
+            timezone: timezone ?? null,
+            lang,
             confirmPayload: { tool, args, confirmToken }
         });
         res.status(202).send({ job_id: jobId });

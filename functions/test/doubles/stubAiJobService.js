@@ -17,15 +17,15 @@ class StubAiJobService {
         this._jobs[job.jobId] = job;
     }
 
-    async createJob({ userId, deviceId, commandText, timezone }) {
+    async createJob({ userId, deviceId, commandText, timezone, lang }) {
         if (this.shouldFail) throw { message: 'service failed' };
-        this.lastCreateJobArgs = { userId, deviceId, commandText, timezone };
+        this.lastCreateJobArgs = { userId, deviceId, commandText, timezone, lang };
         return this._nextJobId;
     }
 
-    async createConfirmJob({ userId, deviceId, commandText, timezone, confirmPayload }) {
+    async createConfirmJob({ userId, deviceId, commandText, timezone, lang, confirmPayload }) {
         if (this.shouldFail) throw { message: 'service failed' };
-        this.lastCreateConfirmJobArgs = { userId, deviceId, commandText, timezone, confirmPayload };
+        this.lastCreateConfirmJobArgs = { userId, deviceId, commandText, timezone, lang, confirmPayload };
         return this._nextJobId;
     }
 

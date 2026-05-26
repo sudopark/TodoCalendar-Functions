@@ -3,12 +3,13 @@
 const { toISOString } = require('./_timestamp');
 
 class AiJob {
-    constructor({ jobId, userId, deviceId, commandText, timezone, mode, confirmPayload, status, result, createdAt, updatedAt, expireAt }) {
+    constructor({ jobId, userId, deviceId, commandText, timezone, lang, mode, confirmPayload, status, result, createdAt, updatedAt, expireAt }) {
         this.jobId = jobId;
         this.userId = userId;
         this.deviceId = deviceId;
         this.commandText = commandText;
         this.timezone = timezone;
+        this.lang = lang ?? 'en';
         this.mode = mode ?? AiJob.MODE.COMMAND;
         this.confirmPayload = confirmPayload ?? null;
         this.status = status;
@@ -19,13 +20,15 @@ class AiJob {
     }
 
     static fromData(jobId, data) {
-        // mode / confirmPayload 는 #158 에서 추가됨. 그 이전 doc 은 mode 'command' 로 backward-compatible.
+        // mode / confirmPayload 는 #158 에서 추가됨. lang 은 #230 에서 추가됨.
+        // 그 이전 doc 은 backward-compatible default (mode='command', lang='en').
         return new AiJob({
             jobId,
             userId: data.userId,
             deviceId: data.deviceId,
             commandText: data.commandText,
             timezone: data.timezone,
+            lang: data.lang ?? 'en',
             mode: data.mode ?? AiJob.MODE.COMMAND,
             confirmPayload: data.confirmPayload ?? null,
             status: data.status,
@@ -43,6 +46,7 @@ class AiJob {
             device_id: this.deviceId,
             command_text: this.commandText,
             timezone: this.timezone,
+            lang: this.lang,
             mode: this.mode,
             confirm_payload: this.confirmPayload,
             status: this.status,

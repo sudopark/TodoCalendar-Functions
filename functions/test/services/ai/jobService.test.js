@@ -78,6 +78,16 @@ describe('JobService', () => {
             assert.strictEqual(data.mode, AiJob.MODE.COMMAND);
             assert.strictEqual(data.confirmPayload, null);
         });
+
+        it('lang 인자 — 박힌 값 그대로 doc 저장 (controller 가 Accept-Language 로 결정해 전달)', async () => {
+            await service.createJob({ userId: 'u', deviceId: 'd', commandText: 'cmd', timezone: 'Asia/Seoul', lang: 'ko' });
+            assert.strictEqual(stubRepo.lastPutPayload.data.lang, 'ko');
+        });
+
+        it('lang 누락 — default 영어 저장', async () => {
+            await service.createJob({ userId: 'u', deviceId: 'd', commandText: 'cmd', timezone: 'Asia/Seoul' });
+            assert.strictEqual(stubRepo.lastPutPayload.data.lang, 'en');
+        });
     });
 
     // ------------------------------------------------------------------ //
@@ -121,6 +131,14 @@ describe('JobService', () => {
             const a = await service.createConfirmJob({ userId: 'u', deviceId: 'd', commandText: 'cmd', timezone: 'UTC', confirmPayload: payload });
             const b = await service.createConfirmJob({ userId: 'u', deviceId: 'd', commandText: 'cmd', timezone: 'UTC', confirmPayload: payload });
             assert.notStrictEqual(a, b);
+        });
+
+        it('lang 인자 — confirm job 에 그대로 저장', async () => {
+            await service.createConfirmJob({
+                userId: 'u', deviceId: 'd', commandText: '삭제', timezone: 'Asia/Seoul', lang: 'ko',
+                confirmPayload: { tool: 'delete_todo', args: { todo_id: 't1' }, confirmToken: 'tk' }
+            });
+            assert.strictEqual(stubRepo.lastPutPayload.data.lang, 'ko');
         });
     });
 

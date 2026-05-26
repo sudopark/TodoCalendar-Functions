@@ -14,10 +14,10 @@ class JobService {
      * createdAt / updatedAt 은 jobRepository 가 serverTimestamp 로 채움 — 본 서비스는
      * 시간 필드를 만들지 않음. expireAt 만 24h 후 Date 로 caller 가 결정.
      *
-     * @param {{ userId: string, deviceId: string, commandText: string, timezone: string }} params
+     * @param {{ userId: string, deviceId: string, commandText: string, timezone: string, lang: 'ko'|'en' }} params
      * @returns {Promise<string>} jobId
      */
-    async createJob({ userId, deviceId, commandText, timezone }) {
+    async createJob({ userId, deviceId, commandText, timezone, lang }) {
         const jobId = crypto.randomUUID();
         const expireAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
@@ -26,6 +26,7 @@ class JobService {
             deviceId,
             commandText,
             timezone,
+            lang: lang ?? 'en',
             mode: AiJob.MODE.COMMAND,
             confirmPayload: null,
             status: AiJob.STATUS.PENDING,
@@ -40,10 +41,10 @@ class JobService {
     /**
      * CONFIRM 2차 호출용 job 발행. 새 jobId 발급 — 1차 jobId 와 독립.
      *
-     * @param {{ userId, deviceId, commandText, timezone, confirmPayload: { tool, args, confirmToken } }} params
+     * @param {{ userId, deviceId, commandText, timezone, lang, confirmPayload: { tool, args, confirmToken } }} params
      * @returns {Promise<string>} jobId
      */
-    async createConfirmJob({ userId, deviceId, commandText, timezone, confirmPayload }) {
+    async createConfirmJob({ userId, deviceId, commandText, timezone, lang, confirmPayload }) {
         const jobId = crypto.randomUUID();
         const expireAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
@@ -52,6 +53,7 @@ class JobService {
             deviceId,
             commandText,
             timezone,
+            lang: lang ?? 'en',
             mode: AiJob.MODE.CONFIRM,
             confirmPayload,
             status: AiJob.STATUS.PENDING,

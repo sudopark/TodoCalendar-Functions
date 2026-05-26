@@ -3,7 +3,6 @@
 const defaultLogger = require('firebase-functions/logger');
 const AiJob = require('../../models/ai/AiJob');
 const AiJobResult = require('../../models/ai/AiJobResult');
-const { detectLanguage } = require('../../services/ai/language');
 
 // Cloud Logging sanitize (#160). err 를 그대로 logger.error 2nd arg 에 박으면
 // Anthropic SDK / firebase-admin / Firestore 에러의 stack, response headers,
@@ -29,7 +28,7 @@ function _summarizeError(err) {
 
 // status 별 fallback notification — result.notification 이 비어 있을 때 사용.
 // Agent Loop 이 컨텍스트 기반 맞춤 메시지를 못 만들 때만 진입하는 path.
-// 언어는 job.commandText 의 한글 포함 여부로 결정 (services/ai/language detectLanguage).
+// 언어는 job.lang (Accept-Language 헤더에서 controller 가 결정 → Firestore 저장).
 // 다른 모듈에서 재사용 의도 없음 — handler 내부 private 상수.
 const FALLBACK_NOTIFICATION = Object.freeze({
     ko: Object.freeze({
@@ -116,13 +115,13 @@ class AgentLoopHandler {
         if (job.mode === AiJob.MODE.CONFIRM) {
             return this.agentLoopService.runConfirm(job.confirmPayload, {
                 userId: job.userId,
-                timezone: job.timezone,
-                commandText: job.commandText
+                lang: job.lang
             });
         }
         return this.agentLoopService.run(job.commandText, {
             userId: job.userId,
-            timezone: job.timezone
+            timezone: job.timezone,
+            lang: job.lang
         });
     }
 
@@ -154,10 +153,10 @@ class AgentLoopHandler {
             return;
         }
 
-        const lang = detectLanguage(job.commandText);
+        const lang = job.lang ?? 'en';
         const notification = AiJobResult.hasNotification(result)
             ? result.notification
-            : FALLBACK_NOTIFICATION[lang][result.type];
+            : FALLBACK_NOTIFICATION[lang]?.[result.type] ?? FALLBACK_NOTIFICATION.en[result.type];
 
         if (!notification) {
             this.log.warn('AI trigger — notification 없음 (알 수 없는 status)', { jobId: job.jobId, status: result.type });

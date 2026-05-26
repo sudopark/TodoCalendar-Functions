@@ -99,7 +99,7 @@ describe('AgentLoopService', () => {
 
         anthropic.enqueue(makeToolUseResponse('delete_todo', { todo_id: 't1' }));
 
-        const { result } = await service.run('할일 삭제해', { userId: 'u1', timezone: 'Asia/Seoul' });
+        const { result } = await service.run('할일 삭제해', { userId: 'u1', timezone: 'Asia/Seoul', lang: 'ko' });
 
         assert.strictEqual(result.type, 'CONFIRM');
         assert.strictEqual(result.text, '확인이 필요한 작업이야');
@@ -146,7 +146,7 @@ describe('AgentLoopService', () => {
 
         anthropic.enqueue(makeToolUseResponse('delete_todo', { todo_id: 't1' }));
 
-        const { result } = await service.run('할일 삭제', { userId: 'u1', timezone: 'Asia/Seoul' });
+        const { result } = await service.run('할일 삭제', { userId: 'u1', timezone: 'Asia/Seoul', lang: 'ko' });
 
         assert.strictEqual(result.type, 'CONFIRM');
         assert.strictEqual(result.text, '정말 삭제할 거야?');
@@ -164,7 +164,7 @@ describe('AgentLoopService', () => {
 
         anthropic.enqueue(makeToolUseResponse('future_tool', { some_arg: 'x' }));
 
-        const { result } = await service.run('미래 기능 실행해', { userId: 'u1', timezone: 'Asia/Seoul' });
+        const { result } = await service.run('미래 기능 실행해', { userId: 'u1', timezone: 'Asia/Seoul', lang: 'ko' });
 
         assert.strictEqual(result.type, 'CONFIRM');
         assert.strictEqual(result.notification.title, '확인 필요');
@@ -766,7 +766,7 @@ describe('AgentLoopService', () => {
 
             const { result, usage } = await service.runConfirm(
                 { tool: 'delete_todo', args: { todo_id: 'todo-1' }, confirmToken: 'token-xyz' },
-                { userId: 'u1', timezone: 'Asia/Seoul', commandText: '이거 삭제해' }
+                { userId: 'u1', lang: 'ko' }
             );
 
             assert.strictEqual(result.type, 'DONE');
@@ -776,13 +776,13 @@ describe('AgentLoopService', () => {
             assert.deepStrictEqual(registry.lastExecute.auth, { userId: 'u1', scopes: ['read:calendar', 'write:calendar'] });
         });
 
-        it('영어 commandText → DONE text 영어 (language 분기)', async () => {
+        it('lang=en → DONE text 영어', async () => {
             const { service, registry } = makeService();
             registry.registerExecute('delete_todo', { status: 'ok' });
 
             const { result } = await service.runConfirm(
                 { tool: 'delete_todo', args: { todo_id: 't1' }, confirmToken: 'tk' },
-                { userId: 'u1', timezone: 'UTC', commandText: 'delete this todo' }
+                { userId: 'u1', lang: 'en' }
             );
 
             assert.strictEqual(result.type, 'DONE');
@@ -801,7 +801,7 @@ describe('AgentLoopService', () => {
 
             const { result, usage } = await service.runConfirm(
                 { tool: 'delete_todo', args: { todo_id: 't1' }, confirmToken: 'tk' },
-                { userId: 'u1', timezone: 'Asia/Seoul', commandText: '삭제' }
+                { userId: 'u1', lang: 'ko' }
             );
 
             assert.strictEqual(result.type, 'FAILED');
@@ -820,7 +820,7 @@ describe('AgentLoopService', () => {
 
             const { result } = await service.runConfirm(
                 { tool: 'delete_schedule', args: { schedule_id: 's1' }, confirmToken: 'tk' },
-                { userId: 'u1', timezone: 'Asia/Seoul', commandText: 'delete' }
+                { userId: 'u1', lang: 'en' }
             );
 
             assert.strictEqual(result.type, 'FAILED');
@@ -837,7 +837,7 @@ describe('AgentLoopService', () => {
 
             const { result } = await service.runConfirm(
                 { tool: 'delete_todo', args: { todo_id: 't1' }, confirmToken: 'tk' },
-                { userId: 'u1', timezone: 'Asia/Seoul', commandText: 'delete' }
+                { userId: 'u1', lang: 'en' }
             );
 
             assert.strictEqual(result.type, 'FAILED');
@@ -851,7 +851,7 @@ describe('AgentLoopService', () => {
 
             const { result } = await service.runConfirm(
                 { tool: 'delete_todo', args: { todo_id: 't1' }, confirmToken: 'tk' },
-                { userId: 'u1', timezone: 'Asia/Seoul', commandText: '삭제' }
+                { userId: 'u1', lang: 'ko' }
             );
 
             assert.strictEqual(result.type, 'DONE');
@@ -868,7 +868,7 @@ describe('AgentLoopService', () => {
 
             const { result } = await service.runConfirm(
                 { tool: 'delete_todo', args: { todo_id: 't1' }, confirmToken: 'tk' },
-                { userId: 'u1', timezone: 'Asia/Seoul', commandText: '삭제' }
+                { userId: 'u1', lang: 'ko' }
             );
 
             assert.strictEqual(result.type, 'FAILED');
@@ -881,7 +881,7 @@ describe('AgentLoopService', () => {
 
             const { result } = await service.runConfirm(
                 { tool: 'delete_todo', args: { todo_id: 't1' }, confirmToken: 'tk' },
-                { userId: 'u1', timezone: 'Asia/Seoul', commandText: '삭제' }
+                { userId: 'u1', lang: 'ko' }
             );
 
             assert.strictEqual(result.type, 'FAILED');
@@ -896,7 +896,7 @@ describe('AgentLoopService', () => {
 
             const { result } = await service.runConfirm(
                 { tool: 'delete_todo', args: { todo_id: 't1' }, confirmToken: 'tk' },
-                { userId: 'u1', timezone: 'Asia/Seoul', commandText: '삭제' }
+                { userId: 'u1', lang: 'ko' }
             );
 
             assert.strictEqual(result.type, 'FAILED');
