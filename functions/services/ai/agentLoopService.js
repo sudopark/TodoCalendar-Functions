@@ -1,6 +1,7 @@
 'use strict';
 
 const AiJobResult = require('../../models/ai/AiJobResult');
+const AiErrorCode = require('../../models/ai/AiErrorCode');
 
 /**
  * messages 배열의 마지막 message 마지막 content block 에 cache_control 마크.
@@ -192,8 +193,8 @@ class AgentLoopService {
         if (input.type === 'DONE') return AiJobResult.done(input.text, input.notification);
         if (input.type === 'FAILED') return AiJobResult.failed(input.text, input.notification);
 
-        // 알 수 없는 type — 사용자엔 generic, errorCode 로 원본 type 보존.
-        return AiJobResult.failed(_msg(lang, 'internalError'), input.notification, undefined, `unknown_finalize_${input.type}`);
+        // 알 수 없는 type — 사용자엔 generic, errorCode 로 분류 신호.
+        return AiJobResult.failed(_msg(lang, 'internalError'), input.notification, undefined, AiErrorCode.UnknownFinalize);
     }
 
     _buildSystemBlocks(timezone, lang) {
@@ -275,14 +276,14 @@ class AgentLoopService {
             tokens.input = resp.usage?.input_tokens || 0;
             tokens.output += resp.usage?.output_tokens || 0;
             if (tokens.input + tokens.output > this.tokenCap) {
-                return finish(AiJobResult.failed(_msg(resolvedLang, 'tokenCapExceeded'), undefined, undefined, 'token_cap_exceeded'));
+                return finish(AiJobResult.failed(_msg(resolvedLang, 'tokenCapExceeded'), undefined, undefined, AiErrorCode.TokenCapExceeded));
             }
 
             messages.push({ role: 'assistant', content: resp.content });
 
             const toolUses = resp.content.filter(c => c.type === 'tool_use');
-            if (toolUses.length === 0) return finish(AiJobResult.failed(_msg(resolvedLang, 'internalError'), undefined, undefined, 'no_tool_use'));
-            if (toolUses.length > 1) return finish(AiJobResult.failed(_msg(resolvedLang, 'internalError'), undefined, undefined, 'multiple_tool_uses'));
+            if (toolUses.length === 0) return finish(AiJobResult.failed(_msg(resolvedLang, 'internalError'), undefined, undefined, AiErrorCode.NoToolUse));
+            if (toolUses.length > 1) return finish(AiJobResult.failed(_msg(resolvedLang, 'internalError'), undefined, undefined, AiErrorCode.MultipleToolUses));
             const tu = toolUses[0];
 
             if (registry.isFinalize(tu.name)) {
@@ -306,7 +307,7 @@ class AgentLoopService {
             messages.push({ role: 'user', content: [toolResult] });
         }
 
-        return finish(AiJobResult.failed(_msg(resolvedLang, 'loopCapExceeded'), undefined, undefined, 'loop_cap_exceeded'));
+        return finish(AiJobResult.failed(_msg(resolvedLang, 'loopCapExceeded'), undefined, undefined, AiErrorCode.LoopCapExceeded));
     }
 
     /**
@@ -336,14 +337,15 @@ class AgentLoopService {
             const result = await registry.execute(tool, { ...args, confirmToken }, auth);
             if (registry.isConfirmRequired(result)) {
                 // confirm 2차에서 다시 confirm_required 는 비정상 — mutation 발생 X
-                return finish(AiJobResult.failed(_msg(resolvedLang, 'confirmRetry'), undefined, undefined, 'unexpected_confirm_required'));
+                return finish(AiJobResult.failed(_msg(resolvedLang, 'confirmRetry'), undefined, undefined, AiErrorCode.UnexpectedConfirmRequired));
             }
             // 성공 시점에만 mutation 기록
             tracker.add(tool);
             return finish(AiJobResult.done(_msg(resolvedLang, 'confirmDone')));
         } catch (e) {
+            // e.code 가 알려진 lib ToolError 면 그 값 그대로 errorCode, 아니면 generic AgentError.
             const key = ERROR_CODE_TO_KEY[e?.code] ?? 'agentError';
-            const errorCode = e?.code;
+            const errorCode = e?.code ?? AiErrorCode.AgentError;
             return finish(AiJobResult.failed(_msg(resolvedLang, key), undefined, undefined, errorCode));
         }
     }

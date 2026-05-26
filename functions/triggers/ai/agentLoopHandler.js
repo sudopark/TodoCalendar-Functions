@@ -3,6 +3,8 @@
 const defaultLogger = require('firebase-functions/logger');
 const AiJob = require('../../models/ai/AiJob');
 const AiJobResult = require('../../models/ai/AiJobResult');
+const AiErrorCode = require('../../models/ai/AiErrorCode');
+const AiError = require('../../models/ai/AiError');
 
 // Cloud Logging sanitize (#160). err 를 그대로 logger.error 2nd arg 에 박으면
 // Anthropic SDK / firebase-admin / Firestore 에러의 stack, response headers,
@@ -93,8 +95,10 @@ class AgentLoopHandler {
         } catch (err) {
             this.log.error('AI trigger — agentLoop 실패', { jobId, error: _summarizeError(err) });
             // user-facing reason 은 워싱된 lang-aware 텍스트. errorCode 로 분류 정보 보존.
+            // service 가 명시적 AiError 로 throw 했다면 그 code 보존, 외부 SDK throw 는 generic fallback.
             const lang = job.lang ?? 'en';
-            result = AiJobResult.failed(AGENT_LOOP_ERROR_MESSAGE[lang] ?? AGENT_LOOP_ERROR_MESSAGE.en, undefined, undefined, 'agent_loop_throw');
+            const code = err instanceof AiError ? err.code : AiErrorCode.AgentLoopThrow;
+            result = AiJobResult.failed(AGENT_LOOP_ERROR_MESSAGE[lang] ?? AGENT_LOOP_ERROR_MESSAGE.en, undefined, undefined, code);
             // throw 경로는 usage 추출 불가 — 부분 사용 토큰이 있어도 손실 (acceptable loss).
             // 정밀도 필요 시 service 가 throw 대신 partial usage 동봉한 error 객체로 전환 필요.
         }
