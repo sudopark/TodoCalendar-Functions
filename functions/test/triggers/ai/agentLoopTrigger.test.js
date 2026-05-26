@@ -22,6 +22,7 @@ const BASE_JOB_DATA = {
     deviceId: 'device-1',
     commandText: '내일 회의 잡아줘',
     timezone: 'Asia/Seoul',
+    lang: 'ko',
     status: AiJob.STATUS.PENDING,
     result: null,
     expireAt: new Date(Date.now() + 86400_000)
@@ -29,7 +30,8 @@ const BASE_JOB_DATA = {
 
 const EN_JOB_DATA = {
     ...BASE_JOB_DATA,
-    commandText: 'schedule a meeting tomorrow'
+    commandText: 'schedule a meeting tomorrow',
+    lang: 'en'
 };
 
 const BASE_DEVICE = {
@@ -155,10 +157,10 @@ describe('AgentLoopHandler', () => {
         assert.strictEqual(payload.data.jobId, 'job-1');
         assert.strictEqual(payload.data.status, 'DONE');
 
-        // handler 가 agentLoopService.run 에 commandText 와 {userId, timezone} 을 정확히 전달하는지 검증 (재발 방지)
+        // handler 가 agentLoopService.run 에 commandText 와 {userId, timezone, lang} 을 정확히 전달하는지 검증 (재발 방지)
         assert.deepStrictEqual(agentLoopService.lastRunArgs, {
             commandText: BASE_JOB_DATA.commandText,
-            opts: { userId: BASE_JOB_DATA.userId, timezone: BASE_JOB_DATA.timezone }
+            opts: { userId: BASE_JOB_DATA.userId, timezone: BASE_JOB_DATA.timezone, lang: BASE_JOB_DATA.lang }
         });
     });
 
@@ -518,7 +520,7 @@ describe('AgentLoopHandler', () => {
         assert.strictEqual(agentLoopService.allRunConfirmArgs.length, 1, 'runConfirm 1회');
         assert.deepStrictEqual(agentLoopService.lastRunConfirmArgs, {
             payload: confirmPayload,
-            opts: { userId: BASE_JOB_DATA.userId, timezone: BASE_JOB_DATA.timezone, commandText: BASE_JOB_DATA.commandText }
+            opts: { userId: BASE_JOB_DATA.userId, lang: BASE_JOB_DATA.lang }
         });
         assert.strictEqual(messaging.sendCalled, 1, 'FCM 정상 발송');
     });

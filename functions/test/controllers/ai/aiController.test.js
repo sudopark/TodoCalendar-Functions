@@ -16,10 +16,14 @@ function makeRes() {
     };
 }
 
-function makePostReq({ uid = 'user-1', deviceId = 'device-1', commandText = '오늘 할일 추가해줘', timezone = 'Asia/Seoul' } = {}) {
+function makePostReq({ uid = 'user-1', deviceId = 'device-1', commandText = '오늘 할일 추가해줘', timezone = 'Asia/Seoul', acceptLanguage = null } = {}) {
     return {
         auth: { uid },
-        header: (name) => name === 'device_id' ? deviceId : null,
+        header: (name) => {
+            if (name === 'device_id') return deviceId;
+            if (name === 'accept-language') return acceptLanguage;
+            return null;
+        },
         body: { command_text: commandText, timezone }
     };
 }
@@ -75,8 +79,27 @@ describe('AiController', () => {
                 userId: 'user-1',
                 deviceId: 'device-1',
                 commandText: '오늘 할일 추가해줘',
-                timezone: 'Asia/Seoul'
+                timezone: 'Asia/Seoul',
+                lang: 'en'
             });
+        });
+
+        it('Accept-Language: ko-KR 헤더가 있으면 lang=ko 전달', async () => {
+            const req = makePostReq({ acceptLanguage: 'ko-KR,ko;q=0.9,en;q=0.8' });
+            const res = makeRes();
+
+            await controller.postCommand(req, res);
+
+            assert.equal(stubService.lastCreateJobArgs.lang, 'ko');
+        });
+
+        it('Accept-Language 헤더 없으면 lang=en (default)', async () => {
+            const req = makePostReq({ acceptLanguage: null });
+            const res = makeRes();
+
+            await controller.postCommand(req, res);
+
+            assert.equal(stubService.lastCreateJobArgs.lang, 'en');
         });
 
         it('device_id 헤더 누락 → 400 BadRequest', async () => {
@@ -186,11 +209,16 @@ describe('AiController', () => {
         function makeConfirmReq({
             uid = 'user-1', deviceId = 'device-1',
             commandText = '이거 삭제해', timezone = 'Asia/Seoul',
-            tool = 'delete_todo', args = { todo_id: 't1' }, confirmToken = 'tk'
+            tool = 'delete_todo', args = { todo_id: 't1' }, confirmToken = 'tk',
+            acceptLanguage = null
         } = {}) {
             return {
                 auth: { uid },
-                header: (name) => name === 'device_id' ? deviceId : null,
+                header: (name) => {
+                    if (name === 'device_id') return deviceId;
+                    if (name === 'accept-language') return acceptLanguage;
+                    return null;
+                },
                 body: {
                     command_text: commandText, timezone,
                     tool, args, confirm_token: confirmToken
@@ -211,8 +239,16 @@ describe('AiController', () => {
                 deviceId: 'device-1',
                 commandText: '이거 삭제해',
                 timezone: 'Asia/Seoul',
+                lang: 'en',
                 confirmPayload: { tool: 'delete_todo', args: { todo_id: 't1' }, confirmToken: 'tk' }
             });
+        });
+
+        it('Accept-Language: ko 헤더가 있으면 lang=ko 전달', async () => {
+            const req = makeConfirmReq({ acceptLanguage: 'ko' });
+            await controller.postCommandConfirm(req, makeRes());
+
+            assert.equal(stubService.lastCreateConfirmJobArgs.lang, 'ko');
         });
 
         it('device_id 헤더 누락 → 400', async () => {
@@ -226,13 +262,16 @@ describe('AiController', () => {
             await assert.rejects(() => controller.postCommandConfirm(req, makeRes()), Errors.BadRequest);
         });
 
-        it('timezone 누락 → 400', async () => {
+        it('timezone 누락 — optional 이라 정상 통과 (createConfirmJob 에 timezone=null)', async () => {
             const req = makeConfirmReq();
             delete req.body.timezone;
-            await assert.rejects(() => controller.postCommandConfirm(req, makeRes()), Errors.BadRequest);
+            const res = makeRes();
+            await controller.postCommandConfirm(req, res);
+            assert.equal(res.statusCode, 202);
+            assert.equal(stubService.lastCreateConfirmJobArgs.timezone, null);
         });
 
-        it('timezone 이 invalid IANA → 400', async () => {
+        it('timezone 이 invalid IANA → 400 (박혀 왔다면 형식 검증)', async () => {
             const req = makeConfirmReq({ timezone: 'Not/ATz' });
             await assert.rejects(() => controller.postCommandConfirm(req, makeRes()), Errors.BadRequest);
         });
