@@ -20,14 +20,16 @@ const AiJobResult = {
     /**
      * @param {string} text
      * @param {{ title: string, body: string } | null | undefined} notification
+     * @param {Array<{dataType: string, op: string}> | undefined} mutations  #228 — 항상 array (빈 array 라도)
      * @returns {object}
      */
-    done(text, notification) {
+    done(text, notification, mutations) {
         const n = sanitizeNotification(notification);
         return {
             type: 'DONE',
             text,
-            ...(n ? { notification: n } : {})
+            ...(n ? { notification: n } : {}),
+            mutations: mutations ?? []
         };
     },
 
@@ -35,29 +37,33 @@ const AiJobResult = {
      * @param {string} text
      * @param {object} action
      * @param {{ title: string, body: string } | null | undefined} notification
+     * @param {Array<{dataType: string, op: string}> | undefined} mutations
      * @returns {object}
      */
-    confirm(text, action, notification) {
+    confirm(text, action, notification, mutations) {
         const n = sanitizeNotification(notification);
         return {
             type: 'CONFIRM',
             text,
             action,
-            ...(n ? { notification: n } : {})
+            ...(n ? { notification: n } : {}),
+            mutations: mutations ?? []
         };
     },
 
     /**
      * @param {string} reason
      * @param {{ title: string, body: string } | null | undefined} notification
+     * @param {Array<{dataType: string, op: string}> | undefined} mutations
      * @returns {object}
      */
-    failed(reason, notification) {
+    failed(reason, notification, mutations) {
         const n = sanitizeNotification(notification);
         return {
             type: 'FAILED',
             reason,
-            ...(n ? { notification: n } : {})
+            ...(n ? { notification: n } : {}),
+            mutations: mutations ?? []
         };
     },
 
