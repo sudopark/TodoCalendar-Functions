@@ -53,6 +53,12 @@ tags:
     description: "openAPI event details for external callers. Auth: PAT + signed user JWT + scope."
   - name: OpenAPI Foremost
     description: "openAPI foremost event for external callers. Auth: PAT + signed user JWT + scope."
+  - name: aiFrontAPI
+    description: "AI 자연어 명령 진입점 (/v1/ai/*). 비동기 Job 발행 → Firestore trigger 에서 Agent Loop 실행 → FCM push. 자세한 spec: docs/spec/aiFront.md"
+  - name: OAuth 2.1 AS
+    description: "OAuth 2.1 Authorization Server (/v1/oauth/*). Dynamic client registration (RFC 7591), authorization code + PKCE, token 발급/revocation. Firebase Auth 미적용. 자세한 spec: docs/spec/oauth.md"
+  - name: OAuth Metadata
+    description: "OAuth metadata (/.well-known/*). RFC 8414 authorization-server + RFC 7517 JWKS. 정적 public 데이터, Cache-Control: public, max-age=600."
 
 security:
   - BearerAuth: []
@@ -2773,6 +2779,335 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
+  # ──────────────── aiFrontAPI (/v1/ai) ────────────────
+  /v1/ai/command:
+    post:
+      tags: [aiFrontAPI]
+      summary: Submit AI natural-language command (1차 호출)
+      description: |
+        자연어 명령을 받아 `ai_jobs/{jobId}` doc 을 만들고 jobId 즉시 반환 (202).
+        Agent Loop 은 Firestore trigger 에서 비동기 실행 — 결과는 `ai_jobs/{jobId}` doc 의
+        `status` / `result` 필드 watch 또는 FCM push 로 받는다.
+
+        `lang` 은 `Accept-Language` 헤더에서 자동 결정 (`ko` / `en`). 누락/unsupported → `en`.
+      parameters:
+        - name: device_id
+          in: header
+          required: true
+          schema:
+            type: string
+          description: FCM 등록된 device 식별자
+        - name: Accept-Language
+          in: header
+          required: false
+          schema:
+            type: string
+            example: ko-KR,ko;q=0.9,en;q=0.8
+          description: 응답 메시지 / notification 워딩 언어 결정 (`ko` 또는 `en`). 누락 시 `en`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [command_text, timezone]
+              properties:
+                command_text:
+                  type: string
+                  description: 사용자 자연어 명령
+                  example: "내일 오후 3시 회의 잡아줘"
+                timezone:
+                  type: string
+                  description: IANA timezone (예 Asia/Seoul). 상대 날짜/시간 해석에 사용.
+                  example: Asia/Seoul
+      responses:
+        '202':
+          description: Job 발행 완료. jobId 반환.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  job_id:
+                    type: string
+                    example: "8c2f1e9d-..."
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /v1/ai/command/confirm:
+    post:
+      tags: [aiFrontAPI]
+      summary: Submit AI confirm 2차 호출
+      description: |
+        1차 호출이 CONFIRM 반환 시 사용자 승인 후 `action` 통째로 박아 재호출.
+        Claude API 호출 없이 lib tool 1회만 실행 — 실제 mutation 수행.
+
+        `command_text` 는 confirm path 에서 사용되지 않아 body 에서 받지 않음.
+        `timezone` 도 사용되지 않아 optional.
+      parameters:
+        - name: device_id
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: Accept-Language
+          in: header
+          required: false
+          schema:
+            type: string
+            example: ko-KR
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tool, args, confirm_token]
+              properties:
+                tool:
+                  type: string
+                  description: 1차 응답 `action.tool` 그대로
+                  example: delete_schedule
+                args:
+                  type: object
+                  description: 1차 응답 `action.args` 그대로
+                  example: { schedule_id: "abc" }
+                confirm_token:
+                  type: string
+                  description: 1차 응답 `action.confirmToken` (HMAC, 5분 TTL)
+                timezone:
+                  type: string
+                  description: optional, IANA timezone
+      responses:
+        '202':
+          description: Confirm job 발행 완료. 새 jobId (1차와 독립).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  job_id:
+                    type: string
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /v1/ai/jobs/{id}:
+    get:
+      tags: [aiFrontAPI]
+      summary: Job 단건 조회
+      description: 본인 job 만 조회 가능 (다른 user 의 jobId → 403).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: AiJob 직렬화 응답
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiJob'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1/ai/usage:
+    get:
+      tags: [aiFrontAPI]
+      summary: 오늘 토큰 사용량 조회
+      description: |
+        UTC 기준 dateKey 의 일별 사용량. doc 미존재 시 0/0/null 빈 응답.
+        timezone 과 무관한 단일 정책 (record/조회 일관성).
+      responses:
+        '200':
+          description: AiUsage 응답
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiUsage'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  # ──────────────── OAuth 2.1 AS (/v1/oauth) + Metadata (/.well-known) ────────────────
+  # 외부 OAuth client 에 access_token 발급. Firebase Auth 미적용. PKCE S256 mandatory.
+  # 자세한 spec: docs/spec/oauth.md
+  /.well-known/oauth-authorization-server:
+    get:
+      tags: [OAuth Metadata]
+      summary: AS metadata (RFC 8414)
+      description: |
+        Authorization Server metadata. issuer / endpoint URL / supported grants / response_types /
+        code_challenge_methods 등 노출. 정적 public — `Cache-Control: public, max-age=600`.
+      security: []
+      responses:
+        '200':
+          description: AS metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthorizationServerMetadata'
+
+  /.well-known/jwks.json:
+    get:
+      tags: [OAuth Metadata]
+      summary: JWKS (RFC 7517)
+      description: |
+        Access token (RS256) 서명 public key set. `kid` 는 JWK thumbprint (RFC 7638) 로 자동 산출.
+        정적 public — `Cache-Control: public, max-age=600`.
+      security: []
+      responses:
+        '200':
+          description: JWKS
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JWKSet'
+
+  /v1/oauth/register:
+    post:
+      tags: [OAuth 2.1 AS]
+      summary: Dynamic client registration (RFC 7591)
+      description: |
+        외부 OAuth client 등록. 같은 `(ip, client_name, redirect_uris)` 조합으로 1시간 이내 재요청 시
+        dedup 으로 기존 client 반환 (`client_id_issued_at` 은 최초 시각).
+        Rate limit: per-minute + per-hour.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OAuthClientRegistrationRequest'
+      responses:
+        '201':
+          description: Client 등록 (신규 또는 dedup hit)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OAuthClientRegistrationResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '429':
+          description: Rate limit exceeded
+
+  /v1/oauth/authorize:
+    get:
+      tags: [OAuth 2.1 AS]
+      summary: Authorization endpoint (RFC 6749)
+      description: |
+        Authorization code flow 진입. 사용자 미인증이면 consent UI 로 302 redirect.
+        PKCE S256 mandatory (`code_challenge` / `code_challenge_method=S256`).
+        Resource indicator (RFC 8707) 도 검증 (`resource`).
+      security: []
+      parameters:
+        - { name: response_type, in: query, required: true, schema: { type: string, enum: [code] } }
+        - { name: client_id, in: query, required: true, schema: { type: string } }
+        - { name: redirect_uri, in: query, required: true, schema: { type: string, format: uri } }
+        - { name: scope, in: query, required: false, schema: { type: string } }
+        - { name: state, in: query, required: false, schema: { type: string } }
+        - { name: code_challenge, in: query, required: true, schema: { type: string } }
+        - { name: code_challenge_method, in: query, required: true, schema: { type: string, enum: [S256] } }
+        - { name: resource, in: query, required: false, schema: { type: string } }
+      responses:
+        '302':
+          description: Consent UI 로 redirect 또는 redirect_uri 로 code 전달
+        '400':
+          description: Invalid params → error 페이지로 redirect (`<consent_base>/error?reason=...`)
+
+  /v1/oauth/consent/{id}:
+    get:
+      tags: [OAuth 2.1 AS]
+      summary: Consent session 조회 (consent UI 가 호출)
+      description: Consent UI 가 사용자에게 노출할 client/scope 정보 조회.
+      security: []
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: Consent session info
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1/oauth/consent/callback:
+    post:
+      tags: [OAuth 2.1 AS]
+      summary: Consent UI 의 승인/거부 callback
+      description: 사용자가 consent UI 에서 결정한 결과를 받아 authorization code 발급 또는 거부.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [consent_id, approved]
+              properties:
+                consent_id: { type: string }
+                approved: { type: boolean }
+      responses:
+        '200':
+          description: redirect_uri (code 포함) 반환
+        '400': { $ref: '#/components/responses/BadRequest' }
+
+  /v1/oauth/token:
+    post:
+      tags: [OAuth 2.1 AS]
+      summary: Token endpoint (RFC 6749)
+      description: |
+        access_token (JWT, RS256, 2h) + refresh_token (opaque, 30d, rotation + reuse detect) 발급.
+        지원 grant_type: `authorization_code`, `refresh_token`.
+        Reuse detect — 이미 revoked 된 refresh 재사용 시 family 전체 revoke (탈취 차단).
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [grant_type, client_id]
+              properties:
+                grant_type:
+                  type: string
+                  enum: [authorization_code, refresh_token]
+                client_id: { type: string }
+                code: { type: string, description: "authorization_code grant 시 필수" }
+                redirect_uri: { type: string }
+                code_verifier: { type: string, description: "PKCE verifier" }
+                refresh_token: { type: string, description: "refresh_token grant 시 필수" }
+      responses:
+        '200':
+          description: Token 응답
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '400':
+          description: Invalid grant / invalid request
+
+  /v1/oauth/revoke:
+    post:
+      tags: [OAuth 2.1 AS]
+      summary: Token revocation (RFC 7009)
+      description: |
+        Refresh token 회수. 응답은 **항상 200** (RFC §2.2 — not-found / 이미 revoked /
+        잘못된 type 모두 silent).
+        MVP 는 refresh_token 만 실제 회수. access_token (JWT stateless) 은 no-op — 자연 만료 2시간.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token: { type: string }
+                token_type_hint:
+                  type: string
+                  enum: [access_token, refresh_token]
+      responses:
+        '200':
+          description: 항상 200 (RFC §2.2)
+
 components:
   securitySchemes:
     BearerAuth:
@@ -3220,6 +3555,233 @@ components:
         nextPageCursor:
           type: string
           nullable: true
+
+    # ──────────────── aiFrontAPI schemas ────────────────
+    Mutation:
+      type: object
+      description: AI 작업이 영향을 준 데이터 카테고리. 클라가 reload 대상 결정에 사용.
+      properties:
+        dataType:
+          type: string
+          enum: [todo, done, schedule, tag, event_detail]
+        op:
+          type: string
+          enum: [created, updated, deleted]
+      required: [dataType, op]
+
+    AiErrorCode:
+      type: string
+      description: |
+        `AiJobResult.failed` 의 `errorCode` 분류 키. PascalCase 통일.
+        자세한 의미 + 권장 UX 는 docs/spec/aiFront.md
+      enum:
+        - TokenCapExceeded
+        - LoopCapExceeded
+        - NoToolUse
+        - MultipleToolUses
+        - UnexpectedConfirmRequired
+        - AgentLoopThrow
+        - UnknownFinalize
+        - AgentError
+        - ConfirmExpired
+        - ConfirmArgsMismatch
+
+    AiJobResultNotification:
+      type: object
+      description: FCM push payload 의 notification 부분. result.notification 없을 시 lang 별 fallback.
+      properties:
+        title: { type: string }
+        body: { type: string }
+      required: [title, body]
+
+    AiJobResultDone:
+      type: object
+      properties:
+        type: { type: string, enum: [DONE] }
+        text: { type: string, description: "사용자 노출 메시지 (lang 따라 워싱)" }
+        notification:
+          $ref: '#/components/schemas/AiJobResultNotification'
+        mutations:
+          type: array
+          items: { $ref: '#/components/schemas/Mutation' }
+      required: [type, text, mutations]
+
+    AiJobResultConfirm:
+      type: object
+      properties:
+        type: { type: string, enum: [CONFIRM] }
+        text: { type: string }
+        action:
+          type: object
+          description: 클라가 2차 호출 body 에 그대로 박는 페이로드.
+          properties:
+            tool: { type: string }
+            args: { type: object }
+            confirmToken: { type: string, description: "HMAC token, 5분 TTL" }
+          required: [tool, args, confirmToken]
+        notification:
+          $ref: '#/components/schemas/AiJobResultNotification'
+        mutations:
+          type: array
+          items: { $ref: '#/components/schemas/Mutation' }
+      required: [type, text, action, mutations]
+
+    AiJobResultFailed:
+      type: object
+      properties:
+        type: { type: string, enum: [FAILED] }
+        reason: { type: string, description: "사용자 노출 메시지 (lang 따라 워싱)" }
+        notification:
+          $ref: '#/components/schemas/AiJobResultNotification'
+        mutations:
+          type: array
+          items: { $ref: '#/components/schemas/Mutation' }
+        errorCode:
+          $ref: '#/components/schemas/AiErrorCode'
+      required: [type, reason, mutations]
+
+    AiJobResult:
+      description: Job 종결 결과. `type` 으로 분기.
+      oneOf:
+        - $ref: '#/components/schemas/AiJobResultDone'
+        - $ref: '#/components/schemas/AiJobResultConfirm'
+        - $ref: '#/components/schemas/AiJobResultFailed'
+      discriminator:
+        propertyName: type
+        mapping:
+          DONE: '#/components/schemas/AiJobResultDone'
+          CONFIRM: '#/components/schemas/AiJobResultConfirm'
+          FAILED: '#/components/schemas/AiJobResultFailed'
+
+    AiJob:
+      type: object
+      description: ai_jobs/{jobId} doc 의 직렬화 응답.
+      properties:
+        job_id: { type: string }
+        user_id: { type: string }
+        device_id: { type: string }
+        command_text: { type: string, nullable: true, description: "confirm mode 면 null" }
+        timezone: { type: string, nullable: true }
+        lang: { type: string, enum: [ko, en] }
+        mode: { type: string, enum: [command, confirm] }
+        confirm_payload:
+          type: object
+          nullable: true
+        status:
+          type: string
+          enum: [PENDING, RUNNING, DONE, CONFIRM, FAILED]
+        result:
+          allOf:
+            - $ref: '#/components/schemas/AiJobResult'
+          nullable: true
+          description: 종결 시점에 박힘. terminal status (DONE/CONFIRM/FAILED) 까지 null.
+        created_at: { type: string }
+        updated_at: { type: string }
+
+    AiUsage:
+      type: object
+      description: UTC 기준 dateKey 의 일별 토큰 사용량. doc 미존재 시 0/0/null.
+      properties:
+        date_key:
+          type: string
+          description: UTC 기준 YYYY-MM-DD
+          example: "2026-05-28"
+        input_tokens: { type: integer, example: 12500 }
+        output_tokens: { type: integer, example: 3200 }
+        last_updated_at:
+          type: string
+          nullable: true
+
+    # ──────────────── OAuth 2.1 AS schemas ────────────────
+    OAuthClientRegistrationRequest:
+      type: object
+      description: RFC 7591 dynamic client registration request.
+      required: [redirect_uris]
+      properties:
+        client_name: { type: string }
+        redirect_uris:
+          type: array
+          items: { type: string, format: uri }
+        grant_types:
+          type: array
+          items: { type: string }
+        response_types:
+          type: array
+          items: { type: string }
+        scope: { type: string }
+        token_endpoint_auth_method: { type: string }
+
+    OAuthClientRegistrationResponse:
+      type: object
+      properties:
+        client_id: { type: string }
+        client_secret: { type: string, nullable: true }
+        client_id_issued_at:
+          type: integer
+          description: 최초 등록 시각 Unix epoch. dedup hit 시 과거 timestamp.
+        redirect_uris:
+          type: array
+          items: { type: string }
+        client_name: { type: string }
+
+    TokenResponse:
+      type: object
+      description: |
+        RFC 6749 token endpoint 응답. access_token JWT (RS256, 2h) + refresh_token (opaque, 30d).
+        refresh 는 rotation + reuse detect — 재사용 시 family 전체 revoke.
+      properties:
+        access_token: { type: string }
+        token_type: { type: string, example: Bearer }
+        expires_in: { type: integer, example: 7200 }
+        refresh_token: { type: string }
+        scope: { type: string }
+      required: [access_token, token_type, expires_in]
+
+    AuthorizationServerMetadata:
+      type: object
+      description: RFC 8414 Authorization Server metadata.
+      properties:
+        issuer: { type: string }
+        authorization_endpoint: { type: string }
+        token_endpoint: { type: string }
+        registration_endpoint: { type: string }
+        revocation_endpoint: { type: string }
+        jwks_uri: { type: string }
+        scopes_supported:
+          type: array
+          items: { type: string }
+        response_types_supported:
+          type: array
+          items: { type: string }
+        grant_types_supported:
+          type: array
+          items: { type: string }
+        code_challenge_methods_supported:
+          type: array
+          items: { type: string, enum: [S256] }
+        token_endpoint_auth_methods_supported:
+          type: array
+          items: { type: string }
+
+    JWK:
+      type: object
+      description: RFC 7517 JSON Web Key. `kid` 는 RFC 7638 thumbprint.
+      properties:
+        kty: { type: string, example: RSA }
+        use: { type: string, example: sig }
+        alg: { type: string, example: RS256 }
+        kid: { type: string }
+        "n": { type: string }
+        "e": { type: string }
+      required: [kty, kid]
+
+    JWKSet:
+      type: object
+      properties:
+        keys:
+          type: array
+          items: { $ref: '#/components/schemas/JWK' }
+      required: [keys]
 
   responses:
     BadRequest:
