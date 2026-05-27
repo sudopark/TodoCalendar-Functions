@@ -183,7 +183,7 @@ sequenceDiagram
     Trig->>Hand: handle event
     Hand->>JobSvc: transitionToRunning jobId
     JobSvc->>FS: tx PENDING to RUNNING
-    Hand->>Agent: runConfirm with tool, args, confirmToken, userId, commandText
+    Hand->>Agent: runConfirm with tool, args, confirmToken, userId, lang
     Note over Agent: Claude API 호출 없음, systemPrompt 빌드 없음
     Agent->>Reg: execute tool, args plus confirmToken, auth
     Reg->>Lib: tool execute auth, args plus confirmToken
@@ -228,8 +228,6 @@ sequenceDiagram
     Usage-->>Ctrl: usage or empty dateKey
     Ctrl-->>App: 200 with dateKey, inputTokens, outputTokens, lastUpdatedAt
 ```
-
----
 
 ---
 
@@ -428,4 +426,4 @@ Content-Type: application/json
 - **token cap**: `lastInputTokens + sumOutputTokens > tokenCap (50000)` 즉시 FAILED.
   Anthropic 의 `input_tokens` 은 매 호출에 누적 prefix 전체를 보고하므로 sum 하지 않고
   마지막 값만 비교 (double count 방지).
-- **loop cap**: 한 job 당 최대 `loopCap (10)` turn. 초과 시 FAILED("loop cap exceeded").
+- **loop cap**: 한 job 당 최대 `loopCap (10)` turn. 초과 시 FAILED + `errorCode: 'LoopCapExceeded'`.
