@@ -63,7 +63,7 @@
 | Method | Path | Body | Headers | Response |
 |---|---|---|---|---|
 | POST | `/v1/ai/command` | `{ command_text, timezone }` | `Authorization`, `device_id`, `Accept-Language?` | `202 { job_id }` |
-| POST | `/v1/ai/command/confirm` | `{ command_text, tool, args, confirm_token, timezone? }` | `Authorization`, `device_id`, `Accept-Language?` | `202 { job_id }` |
+| POST | `/v1/ai/command/confirm` | `{ tool, args, confirm_token, timezone? }` | `Authorization`, `device_id`, `Accept-Language?` | `202 { job_id }` |
 | GET | `/v1/ai/jobs/:id` | — | `Authorization` | `200 AiJob.toJSON()` |
 | GET | `/v1/ai/usage` | — | `Authorization` | `200 AiUsage.toJSON()` (오늘 사용량) |
 
@@ -173,8 +173,8 @@ sequenceDiagram
     participant Lib as todocalendar-tools
     participant OAPI as openAPI
     participant FCM as Messaging
-    App->>Ctrl: POST /v1/ai/command/confirm with command_text, timezone, tool, args, confirm_token
-    Ctrl->>Ctrl: validate tool and args object and confirm_token and timezone
+    App->>Ctrl: POST /v1/ai/command/confirm with tool, args, confirm_token, timezone optional
+    Ctrl->>Ctrl: validate tool and args object and confirm_token
     Ctrl->>JobSvc: createConfirmJob with userId and confirmPayload
     JobSvc->>FS: put jobId, status PENDING, mode confirm
     JobSvc-->>Ctrl: jobId
@@ -319,7 +319,7 @@ PENDING ──(trigger 발화)──▶ RUNNING ──┬─▶ DONE
 
 ### 2차 호출 — CONFIRM 확인 후
 
-1차 응답의 `action` 을 그대로 박는다. `command_text` 와 `Accept-Language` 는 1차에서 쓴 값 재사용 권장.
+1차 응답의 `action` 을 그대로 박는다. `Accept-Language` 는 1차에서 쓴 값 재사용 권장 (응답 워딩 일관).
 
 ```http
 POST /v1/ai/command/confirm
@@ -329,14 +329,16 @@ Accept-Language: ko-KR
 Content-Type: application/json
 
 {
-  "command_text": "회의 삭제해줘",
   "tool": "delete_schedule",
   "args": { "schedule_id": "abc" },
   "confirm_token": "<1차 응답의 action.confirmToken>"
 }
 ```
 
-`timezone` 은 박지 않아도 됨 (optional). 응답은 1차와 동일하게 `{ job_id }` — 새 jobId 발급되어 1차 jobId 와 독립. 같은 흐름으로 `ai_jobs/{newJobId}` 결과 대기.
+- `command_text` 는 confirm path 에서 안 씀 — body 에서 제외.
+- `timezone` 도 박지 않아도 됨 (optional).
+
+응답은 1차와 동일하게 `{ job_id }` — 새 jobId 발급되어 1차 jobId 와 독립. 같은 흐름으로 `ai_jobs/{newJobId}` 결과 대기.
 
 ### `mutations` 처리
 

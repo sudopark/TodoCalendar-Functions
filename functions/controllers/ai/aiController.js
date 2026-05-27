@@ -64,14 +64,11 @@ class AiController {
             throw new Errors.BadRequest('device_id header is required');
         }
 
-        const rawCommandText = req.body.command_text;
-        if (!rawCommandText || !rawCommandText.trim()) {
-            throw new Errors.BadRequest('command_text is required');
-        }
-        const commandText = rawCommandText.trim();
+        // confirm path body:
+        //  - command_text: 클라가 보내지 않음. lang 은 Accept-Language 로, 그 외 confirm path
+        //    가 commandText 를 쓰지 않으므로 body 에서 제외 (#230 후속 정리).
+        //  - timezone: optional — runConfirm 본체에서 사용 X. 박혀 오면 형식만 검증.
 
-        // confirm path 의 timezone 은 optional — runConfirm 본체에서 사용 X.
-        // 박혀 오면 형식만 검증해 job doc 에 저장.
         const timezone = req.body.timezone;
         if (timezone !== undefined && timezone !== null && !isValidTimezone(timezone)) {
             throw new Errors.BadRequest('timezone is invalid (must be a valid IANA timezone name)');
@@ -97,7 +94,6 @@ class AiController {
         const jobId = await this.jobService.createConfirmJob({
             userId,
             deviceId,
-            commandText,
             timezone: timezone ?? null,
             lang,
             confirmPayload: { tool, args, confirmToken }
