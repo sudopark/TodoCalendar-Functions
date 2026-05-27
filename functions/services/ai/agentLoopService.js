@@ -319,7 +319,7 @@ class AgentLoopService {
      * usage 는 항상 0/0 (Claude 호출 없음) — handler 의 record 분기 일관성 유지용.
      *
      * @param {{ tool: string, args: object, confirmToken: string }} payload
-     * @param {{ userId: string, timezone?: string, commandText?: string }} context  commandText 는 language 검출 전용
+     * @param {{ userId: string, lang: 'ko'|'en' }} context  lang 은 응답 메시지 (`confirmDone` / error reasons) 워딩 결정
      * @returns {Promise<{ result: object, usage: { inputTokens: number, outputTokens: number } }>}
      */
     async runConfirm({ tool, args, confirmToken }, { userId, lang }) {
