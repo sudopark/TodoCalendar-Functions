@@ -99,7 +99,7 @@ describe('JobService', () => {
         it('mode=confirm + confirmPayload 가 plain object 로 박히고 새 jobId 반환', async () => {
             const before = Date.now();
             const jobId = await service.createConfirmJob({
-                userId: 'u', deviceId: 'd', commandText: '삭제',
+                userId: 'u', deviceId: 'd',
                 timezone: 'Asia/Seoul',
                 confirmPayload: { tool: 'delete_todo', args: { todo_id: 't1' }, confirmToken: 'tk' }
             });
@@ -113,12 +113,13 @@ describe('JobService', () => {
 
             assert.strictEqual(data.userId, 'u');
             assert.strictEqual(data.deviceId, 'd');
-            assert.strictEqual(data.commandText, '삭제');
             assert.strictEqual(data.timezone, 'Asia/Seoul');
             assert.strictEqual(data.mode, AiJob.MODE.CONFIRM);
             assert.deepStrictEqual(data.confirmPayload, { tool: 'delete_todo', args: { todo_id: 't1' }, confirmToken: 'tk' });
             assert.strictEqual(data.status, AiJob.STATUS.PENDING);
             assert.strictEqual(data.result, null);
+            // confirm job 은 commandText 안 받음 (#230 후속 정리)
+            assert.strictEqual('commandText' in data, false);
 
             assert.ok(data.expireAt instanceof Date);
             const expected24hLater = before + 24 * 60 * 60 * 1000;
@@ -128,14 +129,14 @@ describe('JobService', () => {
 
         it('두 번 호출하면 서로 다른 jobId 반환', async () => {
             const payload = { tool: 'delete_todo', args: { todo_id: 't1' }, confirmToken: 'tk' };
-            const a = await service.createConfirmJob({ userId: 'u', deviceId: 'd', commandText: 'cmd', timezone: 'UTC', confirmPayload: payload });
-            const b = await service.createConfirmJob({ userId: 'u', deviceId: 'd', commandText: 'cmd', timezone: 'UTC', confirmPayload: payload });
+            const a = await service.createConfirmJob({ userId: 'u', deviceId: 'd', timezone: 'UTC', confirmPayload: payload });
+            const b = await service.createConfirmJob({ userId: 'u', deviceId: 'd', timezone: 'UTC', confirmPayload: payload });
             assert.notStrictEqual(a, b);
         });
 
         it('lang 인자 — confirm job 에 그대로 저장', async () => {
             await service.createConfirmJob({
-                userId: 'u', deviceId: 'd', commandText: '삭제', timezone: 'Asia/Seoul', lang: 'ko',
+                userId: 'u', deviceId: 'd', timezone: 'Asia/Seoul', lang: 'ko',
                 confirmPayload: { tool: 'delete_todo', args: { todo_id: 't1' }, confirmToken: 'tk' }
             });
             assert.strictEqual(stubRepo.lastPutPayload.data.lang, 'ko');

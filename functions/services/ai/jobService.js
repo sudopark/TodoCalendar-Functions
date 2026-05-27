@@ -41,17 +41,19 @@ class JobService {
     /**
      * CONFIRM 2차 호출용 job 발행. 새 jobId 발급 — 1차 jobId 와 독립.
      *
-     * @param {{ userId, deviceId, commandText, timezone, lang, confirmPayload: { tool, args, confirmToken } }} params
+     * commandText 는 confirm path 에서 사용되지 않아 받지 않음 (#230 후속 정리).
+     * lang 결정은 Accept-Language 헤더 → controller. 응답 메시지 워딩에 그것만 사용.
+     *
+     * @param {{ userId, deviceId, timezone, lang, confirmPayload: { tool, args, confirmToken } }} params
      * @returns {Promise<string>} jobId
      */
-    async createConfirmJob({ userId, deviceId, commandText, timezone, lang, confirmPayload }) {
+    async createConfirmJob({ userId, deviceId, timezone, lang, confirmPayload }) {
         const jobId = crypto.randomUUID();
         const expireAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
         const data = {
             userId,
             deviceId,
-            commandText,
             timezone,
             lang: lang ?? 'en',
             mode: AiJob.MODE.CONFIRM,

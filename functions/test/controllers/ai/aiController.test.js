@@ -208,7 +208,7 @@ describe('AiController', () => {
 
         function makeConfirmReq({
             uid = 'user-1', deviceId = 'device-1',
-            commandText = '이거 삭제해', timezone = 'Asia/Seoul',
+            timezone = 'Asia/Seoul',
             tool = 'delete_todo', args = { todo_id: 't1' }, confirmToken = 'tk',
             acceptLanguage = null
         } = {}) {
@@ -220,13 +220,13 @@ describe('AiController', () => {
                     return null;
                 },
                 body: {
-                    command_text: commandText, timezone,
+                    timezone,
                     tool, args, confirm_token: confirmToken
                 }
             };
         }
 
-        it('정상 — 202 + job_id, createConfirmJob 인자에 confirmPayload 묶여 전달', async () => {
+        it('정상 — 202 + job_id, createConfirmJob 인자에 confirmPayload 묶여 전달 (commandText 안 받음)', async () => {
             const req = makeConfirmReq();
             const res = makeRes();
 
@@ -237,7 +237,6 @@ describe('AiController', () => {
             assert.deepEqual(stubService.lastCreateConfirmJobArgs, {
                 userId: 'user-1',
                 deviceId: 'device-1',
-                commandText: '이거 삭제해',
                 timezone: 'Asia/Seoul',
                 lang: 'en',
                 confirmPayload: { tool: 'delete_todo', args: { todo_id: 't1' }, confirmToken: 'tk' }
@@ -256,10 +255,14 @@ describe('AiController', () => {
             await assert.rejects(() => controller.postCommandConfirm(req, makeRes()), Errors.BadRequest);
         });
 
-        it('command_text 누락 → 400', async () => {
+        it('command_text 박혀 와도 무시 — confirm body 에서 안 씀, lang 은 Accept-Language 로', async () => {
             const req = makeConfirmReq();
-            req.body.command_text = '';
-            await assert.rejects(() => controller.postCommandConfirm(req, makeRes()), Errors.BadRequest);
+            req.body.command_text = '클라가 잘못 박은 값';
+            const res = makeRes();
+            await controller.postCommandConfirm(req, res);
+            assert.equal(res.statusCode, 202);
+            // createConfirmJob 인자에 commandText 키 자체가 없어야 함
+            assert.strictEqual('commandText' in stubService.lastCreateConfirmJobArgs, false);
         });
 
         it('timezone 누락 — optional 이라 정상 통과 (createConfirmJob 에 timezone=null)', async () => {
