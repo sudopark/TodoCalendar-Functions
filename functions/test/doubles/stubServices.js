@@ -351,6 +351,7 @@ class StubForemostEventService {
     constructor() {
         this.shouldFail = false;
         this.foremostResult = { event_id: 'evt1', is_todo: false, event: { uuid: 'evt1' } };
+        this.lastUpdatePayload = null;
     }
 
     async getForemostEvent(userId) {
@@ -359,6 +360,7 @@ class StubForemostEventService {
     }
 
     async updateForemostEvent(userId, payload) {
+        this.lastUpdatePayload = payload;
         if (this.shouldFail) throw { message: 'service failed' };
         return this.foremostResult;
     }

@@ -43,6 +43,7 @@ const doneTodoOpenRouter = require('./routes/openapi/doneTodoOpenRoutes');
 const scheduleOpenRouter = require('./routes/openapi/scheduleOpenRoutes');
 const tagOpenRouter = require('./routes/openapi/tagOpenRoutes');
 const eventDetailOpenRouter = require('./routes/openapi/eventDetailOpenRoutes');
+const foremostOpenRouter = require('./routes/openapi/foremostOpenRoutes');
 const patAuth = require('./middlewares/openapi/patAuth');
 const signedUserAuth = require('./middlewares/openapi/signedUserAuth');
 
@@ -117,6 +118,7 @@ app.use('/v2/open/todos', openApiAuth, todoOpenRouter);
 app.use('/v2/open/schedules', openApiAuth, scheduleOpenRouter);
 app.use('/v2/open/tags', openApiAuth, tagOpenRouter);
 app.use('/v2/open/event_details', openApiAuth, eventDetailOpenRouter);
+app.use('/v2/open/foremost', openApiAuth, foremostOpenRouter);
 
 // OAuth 2.1 Authorization Server (#189) — RFC 8414 metadata + JWKS + endpoints
 // register/token 가 먼저 mount (path 우선순위). authorize/consent 는 /v1/oauth 아래 묶음.
