@@ -108,7 +108,7 @@ router.post('/', WRITE, ...);
 
 ## Endpoint 목록
 
-base prefix `/v2/open` 아래 다섯 그룹. 마운트 순서상 `dones` 가 `todos` 보다 먼저
+base prefix `/v2/open` 아래 여섯 그룹. 마운트 순서상 `dones` 가 `todos` 보다 먼저
 등록되어, `/todos/dones/...` 가 `/todos/` prefix 매칭에 흡수되지 않도록 한다.
 
 ### `todos`
@@ -169,9 +169,23 @@ base prefix `/v2/open` 아래 다섯 그룹. 마운트 순서상 `dones` 가 `to
 | PUT | `/v2/open/event_details/done/:id` | write |
 | DELETE | `/v2/open/event_details/done/:id` | write |
 
+### `foremost`
+
+serviceAPI `/v1/foremost/event` 와 동등. 사용자당 단일 foremost event (todo 또는 schedule) 지정/조회/해제.
+
+| Method | Path | Scope |
+|---|---|---|
+| GET | `/v2/open/foremost/event` | read |
+| PUT | `/v2/open/foremost/event` | write |
+| DELETE | `/v2/open/foremost/event` | write |
+
+- `GET` — 현재 foremost event. 미지정 시 빈 객체 `{}`.
+- `PUT` — body `{ event_id, is_todo }` 로 지정/교체. `is_todo` 는 boolean (serviceAPI 의 string 관용 파싱 없음). 누락 시 400. 응답 201 + `ForemostEvent`.
+- `DELETE` — 해제. 응답 200 + `{ status: 'ok' }`.
+
 각 endpoint 의 요청 body / 응답 모델은 swagger 정의 (`functions/swagger.yaml`) 와 도메인 모델
-(`models/Todo`, `models/Schedule`, `models/EventTag`, `models/DoneTodo`, `models/EventDetail`) 을
-재사용한다. 인증/스코프 외 라우팅·검증·응답 형식은 도메인 layer 와 동일.
+(`models/Todo`, `models/Schedule`, `models/EventTag`, `models/DoneTodo`, `models/EventDetail`,
+`models/ForemostEvent`) 을 재사용한다. 인증/스코프 외 라우팅·검증·응답 형식은 도메인 layer 와 동일.
 
 ## 에러 응답 형식
 
