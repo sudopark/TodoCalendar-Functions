@@ -3583,6 +3583,7 @@ components:
         - AgentLoopThrow
         - UnknownFinalize
         - AgentError
+        - DailyLimitExceeded
         - ConfirmExpired
         - ConfirmArgsMismatch
 
@@ -3680,17 +3681,24 @@ components:
 
     AiUsage:
       type: object
-      description: UTC 기준 dateKey 의 일별 토큰 사용량. doc 미존재 시 0/0/null.
+      description: UTC 기준 dateKey 의 일별 토큰 사용량 + 일일 한도. doc 미존재 시 input/output 0, updated_at null.
       properties:
-        date_key:
+        date:
           type: string
           description: UTC 기준 YYYY-MM-DD
-          example: "2026-05-28"
-        input_tokens: { type: integer, example: 12500 }
-        output_tokens: { type: integer, example: 3200 }
-        last_updated_at:
+          example: "2026-05-30"
+        input_tokens: { type: integer, example: 1250 }
+        output_tokens: { type: integer, example: 320 }
+        updated_at:
           type: string
           nullable: true
+        daily_limit:
+          type: integer
+          description: |
+            본 유저의 오늘 일일 토큰 한도 (input + output 합산 기준).
+            #157 MVP 는 무료 단일 5000, 추후 #166 에서 plan 별 분기.
+          example: 5000
+      required: [date, input_tokens, output_tokens, daily_limit]
 
     # ──────────────── OAuth 2.1 AS schemas ────────────────
     OAuthClientRegistrationRequest:

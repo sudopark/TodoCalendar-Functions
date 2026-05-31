@@ -65,12 +65,13 @@
 | POST | `/v1/ai/command` | `{ command_text, timezone }` | `Authorization`, `device_id`, `Accept-Language?` | `202 { job_id }` |
 | POST | `/v1/ai/command/confirm` | `{ tool, args, confirm_token, timezone? }` | `Authorization`, `device_id`, `Accept-Language?` | `202 { job_id }` |
 | GET | `/v1/ai/jobs/:id` | — | `Authorization` | `200 AiJob.toJSON()` |
-| GET | `/v1/ai/usage` | — | `Authorization` | `200 AiUsage.toJSON()` (오늘 사용량) |
+| GET | `/v1/ai/usage` | — | `Authorization` | `200 AiUsage.toJSON() + { daily_limit }` (오늘 사용량 + 일일 한도) |
 
 - 모두 Firebase Auth 필수 (`Authorization: Bearer <ID token>`).
 - `timezone` 은 IANA 형식 (`Asia/Seoul` 등). **1차 (command) 는 required, 2차 (confirm) 는 optional** — confirm path 는 systemPrompt 빌드를 안 거쳐 timezone 무관.
 - `Accept-Language` 헤더에서 `ko` / `en` 자동 결정 → `job.lang` 저장. 누락 / unsupported → `en` default. 표준 q-factor / region tag (`ko-KR`) 처리.
 - 누락 / invalid → 400.
+- `POST /v1/ai/command` 은 일일 토큰 한도 (`daily_limit`) 초과 시 controller 가 agent loop 진입 전 차단 → `202 { job_id }` 그대로 + Firestore 의 해당 job 은 즉시 `FAILED` (`errorCode: DailyLimitExceeded`). `/confirm` 은 한도 적용 X (#157).
 
 ## Firestore Collections
 
@@ -364,6 +365,7 @@ Content-Type: application/json
 |---|---|---|
 | `TokenCapExceeded` | 한 요청의 토큰 한도 초과 | "더 짧게 다시 요청해 주세요" 안내 |
 | `LoopCapExceeded` | Agent Loop 단계 한도 초과 | "더 단순한 요청" 안내 |
+| `DailyLimitExceeded` | 일일 토큰 한도 소진 (#157) — 본 케이스만 controller 가 agent loop 진입 전 차단해 즉시 FAILED | "내일 다시" 안내 + 한도 임박 시 사전 표시 (`GET /usage` 의 `daily_limit` 활용) |
 | `NoToolUse`, `MultipleToolUses`, `UnknownFinalize` | 내부 처리 오류 | "다시 시도해 주세요" generic |
 | `ConfirmExpired` | confirm token 5분 TTL 만료 | "다시 요청해 주세요" → 1차부터 재시작 |
 | `ConfirmArgsMismatch` | confirm token 의 args 가 변조됨 | "처음부터 다시" 안내 |
@@ -389,14 +391,17 @@ Content-Type: application/json
 
 ```json
 {
-  "date_key": "2026-05-27",
-  "input_tokens": 12500,
-  "output_tokens": 3200,
-  "last_updated_at": "..."
+  "date": "2026-05-30",
+  "input_tokens": 1250,
+  "output_tokens": 320,
+  "updated_at": "2026-05-30T10:00:00.000Z",
+  "daily_limit": 5000
 }
 ```
 
-`date_key` 는 **UTC 기준 YYYY-MM-DD** — 클라 timezone 과 별개 (서버 단일 정책으로 record / 조회 일관성 유지). doc 미존재 시 0/0/null 빈 응답.
+- `date` 는 **UTC 기준 YYYY-MM-DD** — 클라 timezone 과 별개 (서버 단일 정책으로 record / 조회 일관성 유지). doc 미존재 시 input/output `0`, `updated_at` `null`.
+- `daily_limit` 는 본 유저의 오늘 일일 토큰 한도 (input + output 합산 기준). #157 MVP 는 무료 단일 `5000`, 추후 #166 에서 plan 별 분기. 클라는 `(input_tokens + output_tokens) / daily_limit` 로 게이지 / 잔여 표시 가능.
+- 한도 소진 후 `POST /v1/ai/command` 호출 시 controller 가 agent loop 진입 전 차단 → 즉시 FAILED job 응답 (errorCode `DailyLimitExceeded`). `POST /v1/ai/command/confirm` 은 한도 적용 X (1차 confirm 흐름 보호 + tool 1회라 토큰 낮음).
 
 ### `GET /v1/ai/jobs/:id` — 단건 조회 (폴링 fallback)
 

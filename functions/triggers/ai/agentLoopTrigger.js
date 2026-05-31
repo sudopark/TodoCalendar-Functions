@@ -45,10 +45,15 @@ const agentLoopService = new AgentLoopService({
     scopes: ['read:calendar', 'write:calendar']
 });
 
+// aiUsageService 인스턴스 단일화 — JobService.createJob 의 한도 체크 의존성 (#157) 과
+// AgentLoopHandler 의 usage record 의존성을 같은 instance 로 공유해 composition root
+// 정합성 유지.
+const aiUsageService = new AiUsageService({ repository: new AiUsageRepository() });
+
 const handler = new AgentLoopHandler({
-    jobService: new JobService(new JobRepository()),
+    jobService: new JobService(new JobRepository(), aiUsageService),
     agentLoopService,
-    aiUsageService: new AiUsageService({ repository: new AiUsageRepository() }),
+    aiUsageService,
     userRepository: new UserRepository(),
     messaging: getMessaging()
     // logger 생략 → AgentLoopHandler 내부에서 firebase-functions/logger 사용
