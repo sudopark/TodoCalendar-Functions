@@ -46,6 +46,17 @@ routes/ → controllers/ → services/ → repositories/
 - **Services** (`services/`): Business logic. Services receive their dependencies injected; never instantiate repositories themselves.
 - **Repositories** (`repositories/`): Firestore read/write. Return domain model instances (e.g., `Todo.fromData(snapshot.id, snapshot.data())`). Firebase Admin SDK is initialized once in `index.js`.
 
+#### 정책/카테고리 값은 코드 상수 X — 구조화 데이터로 분리
+
+plan·tier·요금·한도·정책 같이 확장될 카테고리 값은 service 안 상수로 박지 말고 **`services/<도메인>/data/<name>.json`** 으로 분리한다. 이유:
+- 카테고리 추가 시 코드 변경 없이 데이터만 갱신 (향후 admin UI / Firestore / Remote Config 이전 trivial).
+- 다른 영역(사용량 조회 API, 결제 페이지, 운영 대시보드 등)에서 같은 정의를 재참조 가능 — 단일 source.
+- service 는 데이터 require 만 하고 그 값에 따른 로직만 가진다.
+
+예: AI plan 별 daily 토큰 한도를 `services/ai/data/aiPlans.json` 으로 두고 `aiUsageService.getDailyLimit(userId)` 가 plan 조회 → 한도 lookup (PR #?, issue #157). 추후 plan 추가는 JSON 갱신만으로.
+
+같은 패턴이 적합한 후보: 결제 tier, 권한 role, feature flag 의 정적 정의, 외부 webhook routing 매핑 등.
+
 ### API Versioning
 
 Routes are registered under `/v1/` and `/v2/` prefixes. A `setVersion` middleware sets `req.apiVersion` so services can branch on version where needed (e.g., tag delete behavior differs between v1 and v2).

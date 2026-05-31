@@ -89,7 +89,8 @@ const MESSAGES = Object.freeze({
         agentError: '처리 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.',
         confirmExpired: '확인 시간이 만료됐어요. 다시 요청해 주세요.',
         confirmArgsMismatch: '확인 정보가 일치하지 않아요. 처음부터 다시 시도해 주세요.',
-        confirmDone: '요청하신 작업을 완료했어요.'
+        confirmDone: '요청하신 작업을 완료했어요.',
+        dailyLimitExceeded: '오늘 사용 가능한 한도를 모두 사용했어요. 내일 다시 시도해 주세요.'
     }),
     en: Object.freeze({
         internalError: 'Something went wrong. Please try again.',
@@ -99,7 +100,8 @@ const MESSAGES = Object.freeze({
         agentError: 'An error occurred. Please try again later.',
         confirmExpired: 'Confirmation expired. Please request again.',
         confirmArgsMismatch: "Confirmation details don't match. Please start over.",
-        confirmDone: 'Done'
+        confirmDone: 'Done',
+        dailyLimitExceeded: "You've reached today's usage limit. Please try again tomorrow."
     })
 });
 
