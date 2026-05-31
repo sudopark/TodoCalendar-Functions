@@ -90,7 +90,8 @@ const MESSAGES = Object.freeze({
         confirmExpired: '확인 시간이 만료됐어요. 다시 요청해 주세요.',
         confirmArgsMismatch: '확인 정보가 일치하지 않아요. 처음부터 다시 시도해 주세요.',
         confirmDone: '요청하신 작업을 완료했어요.',
-        dailyLimitExceeded: '오늘 사용 가능한 한도를 모두 사용했어요. 내일 다시 시도해 주세요.'
+        dailyLimitExceeded: '오늘 사용 가능한 한도를 모두 사용했어요. 내일 다시 시도해 주세요.',
+        timeout: '응답이 너무 오래 걸려 처리를 중단했어요. 잠시 후 다시 시도해 주세요.'
     }),
     en: Object.freeze({
         internalError: 'Something went wrong. Please try again.',
@@ -101,7 +102,8 @@ const MESSAGES = Object.freeze({
         confirmExpired: 'Confirmation expired. Please request again.',
         confirmArgsMismatch: "Confirmation details don't match. Please start over.",
         confirmDone: 'Done',
-        dailyLimitExceeded: "You've reached today's usage limit. Please try again tomorrow."
+        dailyLimitExceeded: "You've reached today's usage limit. Please try again tomorrow.",
+        timeout: 'The request took too long and was canceled. Please try again later.'
     })
 });
 
@@ -144,6 +146,14 @@ function _classifyTool(name) {
     return TOOL_MUTATIONS[name] ?? null;
 }
 
+// fetch 의 AbortError / DOMException name='AbortError' 를 잡는다.
+// SDK 내부의 isAbortError 도 같은 기준 (`@anthropic-ai/sdk/src/internal/errors.ts`).
+// `ac.abort()` 는 동기라 abort 경로에선 항상 `ac.signal.aborted === true` 가 함께
+// 잡힘. 호출처는 `_isAbortError(e) || ac.signal.aborted` OR 패턴으로 양쪽 보호.
+function _isAbortError(err) {
+    return !!err && (err.name === 'AbortError' || err.code === 'ABORT_ERR');
+}
+
 /**
  * (dataType, op) 키 기준 first-seen dedup tracker. 같은 조합 두 번째부터 무시.
  * Plain closure 한 곳 (run / runConfirm) 에만 쓰여 클래스 안 만듦.
@@ -173,16 +183,27 @@ class AgentLoopService {
      *   systemPromptBuilder: { build({ now: Date, timezone: string }): string },
      *   loopCap?: number,
      *   tokenCap?: number,
-     *   scopes?: string[]
+     *   scopes?: string[],
+     *   budgetMs?: number,
+     *   confirmBudgetMs?: number
      * }} options
+     *
+     * budgetMs / confirmBudgetMs — wall-clock watchdog (#232). loopCap / tokenCap 가
+     * 닿지 못하는 outlier (Anthropic rate limit 지연, slow response, lib HTTP stall)
+     * 가 Firebase Functions 9분 hard timeout 까지 끌고 가 process 강제 종료 → job
+     * status RUNNING 영구 고착되는 흐름을 차단. 기본값은 평균 latency × loopCap 여유:
+     *   - run: 60s (10 turn × 평균 5s + 여유)
+     *   - runConfirm: 30s (lib openAPI 단일 호출이라 충분)
      */
-    constructor({ anthropic, registryFactory, systemPromptBuilder, loopCap, tokenCap, scopes }) {
+    constructor({ anthropic, registryFactory, systemPromptBuilder, loopCap, tokenCap, scopes, budgetMs, confirmBudgetMs }) {
         this.anthropic = anthropic;
         this._registryFactory = registryFactory;
         this.systemPromptBuilder = systemPromptBuilder;
         this.loopCap = loopCap ?? 10;
         this.tokenCap = tokenCap ?? 50000;
         this.scopes = scopes ?? ['read:calendar', 'write:calendar'];
+        this.budgetMs = budgetMs ?? 60000;
+        this.confirmBudgetMs = confirmBudgetMs ?? 30000;
     }
 
     /**
@@ -260,56 +281,74 @@ class AgentLoopService {
             result.mutations = tracker.snapshot();
             return { result, usage: { inputTokens: tokens.input, outputTokens: tokens.output } };
         };
+        const timeoutResult = () => AiJobResult.failed(_msg(resolvedLang, 'timeout'), undefined, undefined, AiErrorCode.Timeout);
 
-        const systemBlocks = this._buildSystemBlocks(timezone, resolvedLang);
-        const registry = await this._registryFactory();
-        const tools = this._buildToolsWithCache(registry.anthropicTools);
+        const ac = new AbortController();
+        const budgetTimer = setTimeout(() => ac.abort(), this.budgetMs);
 
-        for (let iter = 0; iter < this.loopCap; iter++) {
-            _markLastMessageForCache(messages);
-            const resp = await this.anthropic.createMessage({
-                system: systemBlocks,
-                messages,
-                tools,
-                toolChoice: { type: 'any' },
-                maxTokens: 4096
-            });
+        try {
+            const systemBlocks = this._buildSystemBlocks(timezone, resolvedLang);
+            const registry = await this._registryFactory();
+            const tools = this._buildToolsWithCache(registry.anthropicTools);
 
-            tokens.input = resp.usage?.input_tokens || 0;
-            tokens.output += resp.usage?.output_tokens || 0;
-            if (tokens.input + tokens.output > this.tokenCap) {
-                return finish(AiJobResult.failed(_msg(resolvedLang, 'tokenCapExceeded'), undefined, undefined, AiErrorCode.TokenCapExceeded));
-            }
+            for (let iter = 0; iter < this.loopCap; iter++) {
+                if (ac.signal.aborted) return finish(timeoutResult());
 
-            messages.push({ role: 'assistant', content: resp.content });
-
-            const toolUses = resp.content.filter(c => c.type === 'tool_use');
-            if (toolUses.length === 0) return finish(AiJobResult.failed(_msg(resolvedLang, 'internalError'), undefined, undefined, AiErrorCode.NoToolUse));
-            if (toolUses.length > 1) return finish(AiJobResult.failed(_msg(resolvedLang, 'internalError'), undefined, undefined, AiErrorCode.MultipleToolUses));
-            const tu = toolUses[0];
-
-            if (registry.isFinalize(tu.name)) {
-                return finish(this._mapFinalizeToResult(tu.input, resolvedLang));
-            }
-
-            let toolResult;
-            try {
-                const libResult = await registry.execute(tu.name, tu.input, auth);
-                if (registry.isConfirmRequired(libResult)) {
-                    // confirm_required = 실 mutation 아직 발생 X (HMAC token 발급만)
-                    // → tracker 에 박지 않음. 이전 turn 들의 누적만 첨부.
-                    return finish(this._buildConfirmResult(tu, libResult, resolvedLang));
+                _markLastMessageForCache(messages);
+                let resp;
+                try {
+                    resp = await this.anthropic.createMessage({
+                        system: systemBlocks,
+                        messages,
+                        tools,
+                        toolChoice: { type: 'any' },
+                        maxTokens: 4096,
+                        signal: ac.signal
+                    });
+                } catch (e) {
+                    if (_isAbortError(e) || ac.signal.aborted) return finish(timeoutResult());
+                    throw e;
                 }
-                // 성공 시점에만 mutation 기록 (throw 경로는 박지 않음).
-                tracker.add(tu.name);
-                toolResult = this._toolResultBlock(tu.id, libResult, false);
-            } catch (e) {
-                toolResult = this._toolResultBlock(tu.id, { code: e.code, status: e.status, message: e.message }, true);
-            }
-            messages.push({ role: 'user', content: [toolResult] });
-        }
 
-        return finish(AiJobResult.failed(_msg(resolvedLang, 'loopCapExceeded'), undefined, undefined, AiErrorCode.LoopCapExceeded));
+                tokens.input = resp.usage?.input_tokens || 0;
+                tokens.output += resp.usage?.output_tokens || 0;
+                if (tokens.input + tokens.output > this.tokenCap) {
+                    return finish(AiJobResult.failed(_msg(resolvedLang, 'tokenCapExceeded'), undefined, undefined, AiErrorCode.TokenCapExceeded));
+                }
+
+                messages.push({ role: 'assistant', content: resp.content });
+
+                const toolUses = resp.content.filter(c => c.type === 'tool_use');
+                if (toolUses.length === 0) return finish(AiJobResult.failed(_msg(resolvedLang, 'internalError'), undefined, undefined, AiErrorCode.NoToolUse));
+                if (toolUses.length > 1) return finish(AiJobResult.failed(_msg(resolvedLang, 'internalError'), undefined, undefined, AiErrorCode.MultipleToolUses));
+                const tu = toolUses[0];
+
+                if (registry.isFinalize(tu.name)) {
+                    return finish(this._mapFinalizeToResult(tu.input, resolvedLang));
+                }
+
+                let toolResult;
+                try {
+                    const libResult = await registry.execute(tu.name, tu.input, auth);
+                    if (registry.isConfirmRequired(libResult)) {
+                        // confirm_required = 실 mutation 아직 발생 X (HMAC token 발급만)
+                        // → tracker 에 박지 않음. 이전 turn 들의 누적만 첨부.
+                        return finish(this._buildConfirmResult(tu, libResult, resolvedLang));
+                    }
+                    // 성공 시점에만 mutation 기록 (throw 경로는 박지 않음).
+                    tracker.add(tu.name);
+                    toolResult = this._toolResultBlock(tu.id, libResult, false);
+                } catch (e) {
+                    if (_isAbortError(e) || ac.signal.aborted) return finish(timeoutResult());
+                    toolResult = this._toolResultBlock(tu.id, { code: e.code, status: e.status, message: e.message }, true);
+                }
+                messages.push({ role: 'user', content: [toolResult] });
+            }
+
+            return finish(AiJobResult.failed(_msg(resolvedLang, 'loopCapExceeded'), undefined, undefined, AiErrorCode.LoopCapExceeded));
+        } finally {
+            clearTimeout(budgetTimer);
+        }
     }
 
     /**
@@ -335,20 +374,42 @@ class AgentLoopService {
             return { result, usage };
         };
 
+        // wall-clock budget (#232). lib `todocalendar-tools` execute 는 (auth, args)
+        // 시그니처라 AbortSignal 미지원 — Promise.race 로 wall-clock 만 강제. abort
+        // 후에도 underlying HTTP 는 계속 돌아 background 에 실 mutation 이 일어날
+        // 가능성 있음 (별 이슈에서 lib 측 signal 지원 추가). 우리 process 는 FAILED
+        // Timeout 으로 즉시 종결해 job status RUNNING 고착만은 방지.
+        let budgetTimer;
+        const timeoutPromise = new Promise((resolve) => {
+            budgetTimer = setTimeout(() => resolve({ __timeout: true }), this.confirmBudgetMs);
+        });
+
         try {
-            const result = await registry.execute(tool, { ...args, confirmToken }, auth);
-            if (registry.isConfirmRequired(result)) {
+            const result = await Promise.race([
+                registry.execute(tool, { ...args, confirmToken }, auth)
+                    .then((r) => ({ ok: r }), (err) => ({ err })),
+                timeoutPromise
+            ]);
+
+            if (result.__timeout) {
+                return finish(AiJobResult.failed(_msg(resolvedLang, 'timeout'), undefined, undefined, AiErrorCode.Timeout));
+            }
+            if (result.err) {
+                const e = result.err;
+                const key = ERROR_CODE_TO_KEY[e?.code] ?? 'agentError';
+                const errorCode = e?.code ?? AiErrorCode.AgentError;
+                return finish(AiJobResult.failed(_msg(resolvedLang, key), undefined, undefined, errorCode));
+            }
+            const libResult = result.ok;
+            if (registry.isConfirmRequired(libResult)) {
                 // confirm 2차에서 다시 confirm_required 는 비정상 — mutation 발생 X
                 return finish(AiJobResult.failed(_msg(resolvedLang, 'confirmRetry'), undefined, undefined, AiErrorCode.UnexpectedConfirmRequired));
             }
             // 성공 시점에만 mutation 기록
             tracker.add(tool);
             return finish(AiJobResult.done(_msg(resolvedLang, 'confirmDone')));
-        } catch (e) {
-            // e.code 가 알려진 lib ToolError 면 그 값 그대로 errorCode, 아니면 generic AgentError.
-            const key = ERROR_CODE_TO_KEY[e?.code] ?? 'agentError';
-            const errorCode = e?.code ?? AiErrorCode.AgentError;
-            return finish(AiJobResult.failed(_msg(resolvedLang, key), undefined, undefined, errorCode));
+        } finally {
+            clearTimeout(budgetTimer);
         }
     }
 }

@@ -32,6 +32,8 @@ function makeService(overrides = {}) {
     const loopCap = overrides.loopCap ?? 10;
     const tokenCap = overrides.tokenCap ?? 50000;
     const scopes = overrides.scopes ?? ['read:calendar', 'write:calendar'];
+    const budgetMs = overrides.budgetMs;
+    const confirmBudgetMs = overrides.confirmBudgetMs;
 
     return {
         service: new AgentLoopService({
@@ -40,7 +42,9 @@ function makeService(overrides = {}) {
             systemPromptBuilder,
             loopCap,
             tokenCap,
-            scopes
+            scopes,
+            budgetMs,
+            confirmBudgetMs
         }),
         anthropic,
         registry
@@ -906,6 +910,132 @@ describe('AgentLoopService', () => {
             // generic Error (e.code 없음) → user-facing reason 은 agentError 워딩, errorCode 는 AGENT_ERROR fallback
             assert.strictEqual(result.reason, '처리 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.');
             assert.strictEqual(result.errorCode, 'AgentError');
+        });
+    });
+
+    // ─── wall-clock budget (#232) ───────────────────────────────────────────────
+    //
+    // loopCap / tokenCap 가 잡지 못하는 outlier (Anthropic rate limit 지연, slow
+    // response, lib HTTP stall) 를 setTimeout watchdog + AbortController 로 차단.
+    // Firebase Functions 9분 hard timeout 전에 자체 종결 → job RUNNING 영구 고착 방지.
+
+    describe('budget timer / AbortController (#232)', () => {
+
+        // 활성 timer 카운터 — leak 검증용. setTimeout/clearTimeout 을 patch 해
+        // 살아있는 handle 개수를 추적. afterEach 로 원상복구.
+        let activeTimers;
+        let originalSetTimeout;
+        let originalClearTimeout;
+
+        beforeEach(() => {
+            activeTimers = new Set();
+            originalSetTimeout = global.setTimeout;
+            originalClearTimeout = global.clearTimeout;
+            global.setTimeout = (fn, ms, ...rest) => {
+                const id = originalSetTimeout((...args) => {
+                    activeTimers.delete(id);
+                    fn(...args);
+                }, ms, ...rest);
+                activeTimers.add(id);
+                return id;
+            };
+            global.clearTimeout = (id) => {
+                activeTimers.delete(id);
+                return originalClearTimeout(id);
+            };
+        });
+
+        afterEach(() => {
+            global.setTimeout = originalSetTimeout;
+            global.clearTimeout = originalClearTimeout;
+        });
+
+        it('budget 안 정상 종료 → 기존 동작 회귀 없음 + timer leak 없음', async () => {
+            const { service, anthropic } = makeService({ budgetMs: 5000 });
+            anthropic.enqueue(makeToolUseResponse('finalize', { type: 'DONE', text: '완료' }));
+
+            const { result } = await service.run('cmd', { userId: 'u1', timezone: 'Asia/Seoul' });
+
+            assert.strictEqual(result.type, 'DONE');
+            assert.strictEqual(activeTimers.size, 0, 'finally clearTimeout 으로 watchdog timer 가 정리되어 있어야 함');
+        });
+
+        it('createMessage 호출에 AbortSignal 이 전달됨', async () => {
+            const { service, anthropic } = makeService({ budgetMs: 5000 });
+            anthropic.enqueue(makeToolUseResponse('finalize', { type: 'DONE', text: '완료' }));
+
+            await service.run('cmd', { userId: 'u1', timezone: 'Asia/Seoul' });
+
+            assert.ok(anthropic.lastSignal, 'createMessage 의 signal 인자가 forward 되어야 함');
+            assert.strictEqual(typeof anthropic.lastSignal.aborted, 'boolean');
+        });
+
+        it('budget 초과 — Anthropic 호출이 abort 되면 FAILED + errorCode=Timeout', async () => {
+            // responseDelayMs=200 인데 budgetMs=20 → abort 가 먼저
+            const anthropic = new FakeAnthropicClient({ responseDelayMs: 200 });
+            const { service } = makeService({ anthropic, budgetMs: 20 });
+            // queue 에 응답 enqueue 해두지만 delay 안에 abort 발생 → 응답 꺼내기 전에 abort
+            anthropic.enqueue(makeToolUseResponse('finalize', { type: 'DONE', text: '완료' }));
+
+            const { result } = await service.run('cmd', { userId: 'u1', timezone: 'Asia/Seoul', lang: 'ko' });
+
+            assert.strictEqual(result.type, 'FAILED');
+            assert.strictEqual(result.errorCode, 'Timeout');
+            assert.strictEqual(result.reason, '응답이 너무 오래 걸려 처리를 중단했어요. 잠시 후 다시 시도해 주세요.');
+            assert.strictEqual(activeTimers.size, 0, 'abort path 도 finally clearTimeout 으로 정리');
+        });
+
+        it('budget 초과 (en) — en timeout 워딩', async () => {
+            const anthropic = new FakeAnthropicClient({ responseDelayMs: 200 });
+            const { service } = makeService({ anthropic, budgetMs: 20 });
+            anthropic.enqueue(makeToolUseResponse('finalize', { type: 'DONE', text: 'ok' }));
+
+            const { result } = await service.run('cmd', { userId: 'u1', timezone: 'Asia/Seoul', lang: 'en' });
+
+            assert.strictEqual(result.errorCode, 'Timeout');
+            assert.strictEqual(result.reason, 'The request took too long and was canceled. Please try again later.');
+        });
+
+        it('throw 가 abort 와 무관하면 그대로 propagate (기존 동작 유지)', async () => {
+            // queue 비어있을 때 fake 가 throw → abort 와 무관 → catch 에서 re-throw
+            const { service } = makeService({ budgetMs: 5000 });
+
+            await assert.rejects(
+                () => service.run('cmd', { userId: 'u1', timezone: 'Asia/Seoul' }),
+                /stub queue empty/
+            );
+            assert.strictEqual(activeTimers.size, 0, 'throw path 도 finally clearTimeout 으로 정리');
+        });
+
+        it('runConfirm — budget 초과 시 FAILED + errorCode=Timeout, mutations 빈 array', async () => {
+            const { service, registry } = makeService({ confirmBudgetMs: 20 });
+            // execute 가 영원히 hang
+            registry.registerExecute('delete_todo', () => new Promise(() => {}));
+
+            const { result, usage } = await service.runConfirm(
+                { tool: 'delete_todo', args: { todo_id: 't1' }, confirmToken: 'tk' },
+                { userId: 'u1', lang: 'ko' }
+            );
+
+            assert.strictEqual(result.type, 'FAILED');
+            assert.strictEqual(result.errorCode, 'Timeout');
+            assert.strictEqual(result.reason, '응답이 너무 오래 걸려 처리를 중단했어요. 잠시 후 다시 시도해 주세요.');
+            assert.deepStrictEqual(result.mutations, []);
+            assert.deepStrictEqual(usage, { inputTokens: 0, outputTokens: 0 });
+            assert.strictEqual(activeTimers.size, 0, 'budget timer 정리됨');
+        });
+
+        it('runConfirm — budget 안 정상 종료 시 timer leak 없음', async () => {
+            const { service, registry } = makeService({ confirmBudgetMs: 5000 });
+            registry.registerExecute('delete_todo', { ok: true });
+
+            const { result } = await service.runConfirm(
+                { tool: 'delete_todo', args: { todo_id: 't1' }, confirmToken: 'tk' },
+                { userId: 'u1', lang: 'ko' }
+            );
+
+            assert.strictEqual(result.type, 'DONE');
+            assert.strictEqual(activeTimers.size, 0);
         });
     });
 

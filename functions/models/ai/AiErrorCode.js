@@ -25,6 +25,7 @@ const AiErrorCode = Object.freeze({
     UnknownFinalize: 'UnknownFinalize',
     AgentError: 'AgentError',
     DailyLimitExceeded: 'DailyLimitExceeded',
+    Timeout: 'Timeout',
 
     // lib `ToolError.code` 그대로 — `todocalendar-tools` 가 throw 시 e.code 값
     ConfirmExpired: 'ConfirmExpired',

@@ -59,11 +59,14 @@ class FakeAnthropicClient {
      *   when the queue is empty. Used in E2E (emulator) where test process ≠
      *   function process and enqueue is not possible. Default: false (throw on empty queue).
      */
-    constructor({ markerFallback = false } = {}) {
+    constructor({ markerFallback = false, responseDelayMs = 0 } = {}) {
         this._markerFallback = markerFallback;
+        this._responseDelayMs = responseDelayMs;
         this._queue = [];
         this.lastCreateMessageArgs = null;
         this.allCreateMessageArgs = [];
+        this.lastSignal = null;
+        this.allSignals = [];
     }
 
     enqueue(responseObj) {
@@ -71,9 +74,31 @@ class FakeAnthropicClient {
     }
 
     async createMessage(args) {
-        const snapshot = structuredClone(args);
+        const { signal, ...rest } = args;
+        const snapshot = structuredClone(rest);
         this.lastCreateMessageArgs = snapshot;
         this.allCreateMessageArgs.push(snapshot);
+        this.lastSignal = signal ?? null;
+        this.allSignals.push(signal ?? null);
+
+        if (this._responseDelayMs > 0) {
+            await new Promise((resolve, reject) => {
+                const timer = setTimeout(resolve, this._responseDelayMs);
+                if (signal) {
+                    const onAbort = () => {
+                        clearTimeout(timer);
+                        const err = new Error('Request was aborted.');
+                        err.name = 'AbortError';
+                        reject(err);
+                    };
+                    if (signal.aborted) {
+                        onAbort();
+                        return;
+                    }
+                    signal.addEventListener('abort', onAbort, { once: true });
+                }
+            });
+        }
 
         if (this._queue.length > 0) {
             return this._queue.shift();
@@ -82,7 +107,7 @@ class FakeAnthropicClient {
         if (this._markerFallback) {
             // Fallback for E2E: emulator function process cannot share state with test process,
             // so use command-text markers to produce deterministic fixture responses.
-            return resolveMarkerResponse(args.messages ?? []);
+            return resolveMarkerResponse(rest.messages ?? []);
         }
 
         throw new Error('stub queue empty');

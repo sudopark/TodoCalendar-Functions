@@ -42,7 +42,11 @@ const agentLoopService = new AgentLoopService({
     systemPromptBuilder: new SystemPromptBuilder(),
     loopCap: 10,
     tokenCap: 50000,
-    scopes: ['read:calendar', 'write:calendar']
+    scopes: ['read:calendar', 'write:calendar'],
+    // wall-clock budget (#232). Firebase Functions timeoutSeconds=540 (9분 hard limit)
+    // 가까이 끌려가 process 강제 종료 → job RUNNING 고착되는 흐름 차단.
+    budgetMs: 60000,
+    confirmBudgetMs: 30000
 });
 
 // aiUsageService 인스턴스 단일화 — JobService.createJob 의 한도 체크 의존성 (#157) 과
