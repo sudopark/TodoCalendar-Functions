@@ -119,4 +119,47 @@ describe('AiUsageService', () => {
             assert.strictEqual(usage.updatedAt, null);
         });
     });
+
+    // ------------------------------------------------------------------ //
+    // getDailyLimit / isOverDailyLimit  (#157)
+    // ------------------------------------------------------------------ //
+
+    describe('getDailyLimit', () => {
+
+        it('무료 유저 단일 상수 반환', async () => {
+            const service = makeService({ now: '2026-05-22T10:00:00.000Z' });
+            const limit = await service.getDailyLimit('user-1');
+            assert.strictEqual(limit, 5000);
+        });
+    });
+
+    describe('isOverDailyLimit', () => {
+
+        it('사용량 없음 → false', async () => {
+            const service = makeService({ now: '2026-05-22T10:00:00.000Z' });
+            const over = await service.isOverDailyLimit('user-no-history');
+            assert.strictEqual(over, false);
+        });
+
+        it('input+output 합산이 한도 미만 → false', async () => {
+            const service = makeService({ now: '2026-05-22T10:00:00.000Z' });
+            await service.recordUsage('user-1', { inputTokens: 2000, outputTokens: 2999 });
+            const over = await service.isOverDailyLimit('user-1');
+            assert.strictEqual(over, false);
+        });
+
+        it('input+output 합산이 한도와 정확히 일치 → true (한도 소진 = 다음 호출 불가)', async () => {
+            const service = makeService({ now: '2026-05-22T10:00:00.000Z' });
+            await service.recordUsage('user-1', { inputTokens: 2500, outputTokens: 2500 });
+            const over = await service.isOverDailyLimit('user-1');
+            assert.strictEqual(over, true);
+        });
+
+        it('input+output 합산이 한도 초과 → true', async () => {
+            const service = makeService({ now: '2026-05-22T10:00:00.000Z' });
+            await service.recordUsage('user-1', { inputTokens: 5000, outputTokens: 1 });
+            const over = await service.isOverDailyLimit('user-1');
+            assert.strictEqual(over, true);
+        });
+    });
 });

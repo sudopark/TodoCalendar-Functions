@@ -13,6 +13,8 @@ class StubAiUsageService {
     constructor() {
         this._usageByUser = new Map();   // userId → AiUsage
         this._defaultDateKey = '2026-05-22';
+        this._dailyLimit = 5000;
+        this._overByUser = new Map();    // userId → boolean override; 미설정 시 false
 
         this.shouldFailGetTodayUsage = false;
         this.shouldFailRecordUsage = false;
@@ -20,6 +22,21 @@ class StubAiUsageService {
         // recorders
         this.allRecordCalls = [];
         this.lastRecordCall = null;
+        this.lastIsOverDailyLimitUserId = null;
+    }
+
+    /**
+     * 테스트 셋업용 — getDailyLimit 반환 값을 조정.
+     */
+    setDailyLimit(limit) {
+        this._dailyLimit = limit;
+    }
+
+    /**
+     * 테스트 셋업용 — isOverDailyLimit 반환 값을 user 별로 override.
+     */
+    setOverDailyLimit(userId, isOver) {
+        this._overByUser.set(userId, isOver);
     }
 
     /**
@@ -48,6 +65,15 @@ class StubAiUsageService {
             throw { message: 'stub getTodayUsage failed' };
         }
         return this._usageByUser.get(userId) ?? AiUsage.empty(this._defaultDateKey);
+    }
+
+    async getDailyLimit(_userId) {
+        return this._dailyLimit;
+    }
+
+    async isOverDailyLimit(userId) {
+        this.lastIsOverDailyLimitUserId = userId;
+        return this._overByUser.get(userId) ?? false;
     }
 }
 
