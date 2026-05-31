@@ -7,9 +7,9 @@ const AiUsageService = require('../../services/ai/aiUsageService');
 const AiController = require('../../controllers/ai/aiController');
 
 const jobRepository = new JobRepository();
-const jobService = new JobService(jobRepository);
 const aiUsageRepository = new AiUsageRepository();
 const aiUsageService = new AiUsageService({ repository: aiUsageRepository });
+const jobService = new JobService(jobRepository, aiUsageService);
 const controller = new AiController(jobService, aiUsageService);
 
 const router = express.Router();

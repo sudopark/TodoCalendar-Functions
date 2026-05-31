@@ -140,7 +140,7 @@ describe('AgentLoopHandler', () => {
 
     it('정상 발화 — result.notification 없을 때 fallback DONE 카피로 FCM 발송', async () => {
         const repo = seededRepo();
-        const jobService = new JobService(repo);
+        const jobService = new JobService(repo, makeAiUsageService());
         const agentLoopService = makeAgentLoopService(AiJobResult.done('stub done')); // no notification
         const messaging = makeMessaging();
         const userRepo = makeUserRepository(BASE_DEVICE);
@@ -166,7 +166,7 @@ describe('AgentLoopHandler', () => {
 
     it('정상 발화 — result.notification 있으면 그 값으로 FCM 발송', async () => {
         const repo = seededRepo();
-        const jobService = new JobService(repo);
+        const jobService = new JobService(repo, makeAiUsageService());
         const customNotification = { title: '커스텀 제목', body: '커스텀 본문' };
         const agentLoopService = makeAgentLoopService(AiJobResult.done('stub done', customNotification));
         const messaging = makeMessaging();
@@ -184,7 +184,7 @@ describe('AgentLoopHandler', () => {
 
     it('같은 job 두 번째 발화 — transition CAS 실패로 agentLoop / FCM 모두 skip', async () => {
         const repo = seededRepo();
-        const jobService = new JobService(repo);
+        const jobService = new JobService(repo, makeAiUsageService());
         let runCalled = 0;
         const agentLoopService = {
             async run() { runCalled += 1; return { result: AiJobResult.done('x'), usage: { inputTokens: 0, outputTokens: 0 } }; }
@@ -203,7 +203,7 @@ describe('AgentLoopHandler', () => {
 
     it('device 미존재 — completeWith 까지는 호출, FCM skip + warn 로그', async () => {
         const repo = seededRepo();
-        const jobService = new JobService(repo);
+        const jobService = new JobService(repo, makeAiUsageService());
         const agentLoopService = makeAgentLoopService();
         const messaging = makeMessaging();
         const userRepo = makeUserRepository(null); // device 없음
@@ -220,7 +220,7 @@ describe('AgentLoopHandler', () => {
 
     it('device.userId 가 job.userId 와 다르면 (기기 재할당) FCM skip + warn 로그', async () => {
         const repo = seededRepo();
-        const jobService = new JobService(repo);
+        const jobService = new JobService(repo, makeAiUsageService());
         const agentLoopService = makeAgentLoopService();
         const messaging = makeMessaging();
         const mismatchDevice = { ...BASE_DEVICE, userId: 'other-user' };
@@ -238,7 +238,7 @@ describe('AgentLoopHandler', () => {
 
     it('result.type 이 CONFIRM 일 때 FCM 에 fallback CONFIRM 카피 사용', async () => {
         const repo = seededRepo();
-        const jobService = new JobService(repo);
+        const jobService = new JobService(repo, makeAiUsageService());
         const agentLoopService = makeAgentLoopService(AiJobResult.confirm('stub confirm', { stub: true })); // no notification
         const messaging = makeMessaging();
         const userRepo = makeUserRepository(BASE_DEVICE);
@@ -254,7 +254,7 @@ describe('AgentLoopHandler', () => {
 
     it('result.type 이 FAILED 일 때 FCM 에 fallback FAILED 카피 사용', async () => {
         const repo = seededRepo();
-        const jobService = new JobService(repo);
+        const jobService = new JobService(repo, makeAiUsageService());
         const agentLoopService = makeAgentLoopService(AiJobResult.failed('stub failed')); // no notification
         const messaging = makeMessaging();
         const userRepo = makeUserRepository(BASE_DEVICE);
@@ -270,7 +270,7 @@ describe('AgentLoopHandler', () => {
 
     it('result.notification 의 title 이 빈 문자열이면 hasNotification false → fallback 사용', async () => {
         const repo = seededRepo();
-        const jobService = new JobService(repo);
+        const jobService = new JobService(repo, makeAiUsageService());
         const partialNotification = { title: '', body: '본문은 있음' };
         const agentLoopService = makeAgentLoopService(AiJobResult.done('stub done', partialNotification));
         const messaging = makeMessaging();
@@ -286,7 +286,7 @@ describe('AgentLoopHandler', () => {
 
     it('FCM 발송 중 네트워크 오류로 throw 가 발생해도 핸들러는 정상 종료', async () => {
         const repo = seededRepo();
-        const jobService = new JobService(repo);
+        const jobService = new JobService(repo, makeAiUsageService());
         const agentLoopService = makeAgentLoopService();
         const failMessaging = {
             async send() { throw new Error('FCM network error'); }
@@ -302,7 +302,7 @@ describe('AgentLoopHandler', () => {
 
     it('agentLoopService.run 이 throw 하면 RUNNING 고착 대신 FAILED 로 종결 + FCM 발송', async () => {
         const repo = seededRepo();
-        const jobService = new JobService(repo);
+        const jobService = new JobService(repo, makeAiUsageService());
         const throwingLoop = {
             async run(_commandText, _opts) { throw new Error('claude api timeout'); }
         };
@@ -327,7 +327,7 @@ describe('AgentLoopHandler', () => {
 
     it('DONE result.notification 이 없고 commandText 가 영어이면 영어 fallback 적용', async () => {
         const repo = seededRepo('job-1', EN_JOB_DATA);
-        const jobService = new JobService(repo);
+        const jobService = new JobService(repo, makeAiUsageService());
         const agentLoopService = makeAgentLoopService(AiJobResult.done('stub done')); // no notification
         const messaging = makeMessaging();
         const userRepo = makeUserRepository(BASE_DEVICE);
@@ -344,7 +344,7 @@ describe('AgentLoopHandler', () => {
 
     it('CONFIRM result.notification 이 없고 commandText 가 영어이면 영어 fallback 적용', async () => {
         const repo = seededRepo('job-1', EN_JOB_DATA);
-        const jobService = new JobService(repo);
+        const jobService = new JobService(repo, makeAiUsageService());
         const agentLoopService = makeAgentLoopService(AiJobResult.confirm('stub confirm', { stub: true }));
         const messaging = makeMessaging();
         const userRepo = makeUserRepository(BASE_DEVICE);
@@ -361,7 +361,7 @@ describe('AgentLoopHandler', () => {
 
     it('FAILED result.notification 이 없고 commandText 가 영어이면 영어 fallback 적용', async () => {
         const repo = seededRepo('job-1', EN_JOB_DATA);
-        const jobService = new JobService(repo);
+        const jobService = new JobService(repo, makeAiUsageService());
         const agentLoopService = makeAgentLoopService(AiJobResult.failed('stub failed'));
         const messaging = makeMessaging();
         const userRepo = makeUserRepository(BASE_DEVICE);
@@ -399,7 +399,7 @@ describe('AgentLoopHandler', () => {
 
     it('DONE 결과로 종결되면 aiUsageService.recordUsage 가 job.userId 와 usage 토큰으로 호출됨', async () => {
         const repo = seededRepo();
-        const jobService = new JobService(repo);
+        const jobService = new JobService(repo, makeAiUsageService());
         const agentLoopService = makeAgentLoopService(
             AiJobResult.done('stub done'),
             { inputTokens: 1200, outputTokens: 340 }
@@ -421,7 +421,7 @@ describe('AgentLoopHandler', () => {
 
     it('CONFIRM 결과로 종결되어도 동일하게 usage record 호출', async () => {
         const repo = seededRepo();
-        const jobService = new JobService(repo);
+        const jobService = new JobService(repo, makeAiUsageService());
         const agentLoopService = makeAgentLoopService(
             AiJobResult.confirm('stub confirm', { stub: true }),
             { inputTokens: 500, outputTokens: 60 }
@@ -442,7 +442,7 @@ describe('AgentLoopHandler', () => {
 
     it('FAILED 결과 (finalize 또는 cap 초과) 종결 시에도 usage record 호출', async () => {
         const repo = seededRepo();
-        const jobService = new JobService(repo);
+        const jobService = new JobService(repo, makeAiUsageService());
         const agentLoopService = makeAgentLoopService(
             AiJobResult.failed('stub failed'),
             { inputTokens: 800, outputTokens: 200 }
@@ -463,7 +463,7 @@ describe('AgentLoopHandler', () => {
 
     it('agentLoopService.run 이 throw 한 경로에서는 usage record 호출되지 않음 (partial usage 손실)', async () => {
         const repo = seededRepo();
-        const jobService = new JobService(repo);
+        const jobService = new JobService(repo, makeAiUsageService());
         const throwingLoop = {
             async run(_commandText, _opts) { throw new Error('claude api timeout'); }
         };
@@ -480,7 +480,7 @@ describe('AgentLoopHandler', () => {
 
     it('aiUsageService.recordUsage 가 throw 해도 후속 FCM 발송은 정상 진행', async () => {
         const repo = seededRepo();
-        const jobService = new JobService(repo);
+        const jobService = new JobService(repo, makeAiUsageService());
         const agentLoopService = makeAgentLoopService(
             AiJobResult.done('stub done'),
             { inputTokens: 100, outputTokens: 30 }
@@ -507,7 +507,7 @@ describe('AgentLoopHandler', () => {
             confirmPayload
         };
         const repo = seededRepo('job-cf', confirmJobData);
-        const jobService = new JobService(repo);
+        const jobService = new JobService(repo, makeAiUsageService());
         const agentLoopService = makeAgentLoopService(AiJobResult.done('done'));
         const messaging = makeMessaging();
         const userRepo = makeUserRepository(BASE_DEVICE);
@@ -527,7 +527,7 @@ describe('AgentLoopHandler', () => {
 
     it('mode=command (default) job → run 호출, runConfirm 호출 X — 기존 흐름 회귀 가드', async () => {
         const repo = seededRepo();
-        const jobService = new JobService(repo);
+        const jobService = new JobService(repo, makeAiUsageService());
         const agentLoopService = makeAgentLoopService(AiJobResult.done('done'));
         const messaging = makeMessaging();
         const userRepo = makeUserRepository(BASE_DEVICE);
@@ -570,7 +570,7 @@ describe('AgentLoopHandler', () => {
 
         it('agentLoop throw 경로 — err 의 stack / headers / response / request 제외, code/status/message 만 로깅', async () => {
             const repo = seededRepo();
-            const jobService = new JobService(repo);
+            const jobService = new JobService(repo, makeAiUsageService());
             const fatErr = makeFatErr();
             const throwingLoop = { async run() { throw fatErr; } };
             const messaging = makeMessaging();
@@ -587,7 +587,7 @@ describe('AgentLoopHandler', () => {
 
         it('aiUsage record throw 경로 — 동일 sanitize 적용', async () => {
             const repo = seededRepo();
-            const jobService = new JobService(repo);
+            const jobService = new JobService(repo, makeAiUsageService());
             const agentLoopService = makeAgentLoopService(
                 AiJobResult.done('stub done'),
                 { inputTokens: 100, outputTokens: 30 }
@@ -609,7 +609,7 @@ describe('AgentLoopHandler', () => {
 
         it('FCM send throw 경로 — 동일 sanitize 적용', async () => {
             const repo = seededRepo();
-            const jobService = new JobService(repo);
+            const jobService = new JobService(repo, makeAiUsageService());
             const agentLoopService = makeAgentLoopService();
             const fatErr = makeFatErr();
             const failMessaging = { async send() { throw fatErr; } };
@@ -626,7 +626,7 @@ describe('AgentLoopHandler', () => {
 
         it('매우 긴 message 는 길이 캡 적용 후 로깅', async () => {
             const repo = seededRepo();
-            const jobService = new JobService(repo);
+            const jobService = new JobService(repo, makeAiUsageService());
             const hugeMsg = 'X'.repeat(2000);
             const hugeErr = Object.assign(new Error(hugeMsg), { code: 'huge', status: 500 });
             const throwingLoop = { async run() { throw hugeErr; } };
@@ -644,7 +644,7 @@ describe('AgentLoopHandler', () => {
 
         it('non-Error 입력 (string throw) 도 안전 fallback', async () => {
             const repo = seededRepo();
-            const jobService = new JobService(repo);
+            const jobService = new JobService(repo, makeAiUsageService());
             const throwingLoop = { async run() { throw 'plain string error'; } };
             const messaging = makeMessaging();
             const userRepo = makeUserRepository(BASE_DEVICE);

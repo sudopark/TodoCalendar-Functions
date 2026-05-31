@@ -357,7 +357,7 @@ describe('AiController', () => {
 
     describe('getUsage', () => {
 
-        it('오늘 사용량 존재 — 200 + AiUsage.toJSON 응답', async () => {
+        it('오늘 사용량 존재 — 200 + AiUsage.toJSON + daily_limit 머지 응답', async () => {
             stubUsageService.seedUsage('user-1', {
                 inputTokens: 1234,
                 outputTokens: 567,
@@ -374,7 +374,8 @@ describe('AiController', () => {
                 date: '2026-05-22',
                 input_tokens: 1234,
                 output_tokens: 567,
-                updated_at: '2026-05-22T10:00:00.000Z'
+                updated_at: '2026-05-22T10:00:00.000Z',
+                daily_limit: 5000
             });
         });
 
@@ -390,6 +391,23 @@ describe('AiController', () => {
             assert.equal(res.body.output_tokens, 0);
             assert.equal(res.body.updated_at, null);
             assert.ok(typeof res.body.date === 'string', 'date 필드는 비어있지 않음');
+        });
+
+        it('응답에 daily_limit 노출', async () => {
+            stubUsageService.setDailyLimit(7777);
+            stubUsageService.seedUsage('user-1', {
+                inputTokens: 100, outputTokens: 50,
+                updatedAt: new Date('2026-05-22T10:00:00.000Z'), dateKey: '2026-05-22'
+            });
+            const req = { auth: { uid: 'user-1' } };
+            const res = makeRes();
+
+            await controller.getUsage(req, res);
+
+            assert.equal(res.statusCode, 200);
+            assert.equal(res.body.daily_limit, 7777);
+            assert.equal(res.body.input_tokens, 100);
+            assert.equal(res.body.output_tokens, 50);
         });
     });
 });

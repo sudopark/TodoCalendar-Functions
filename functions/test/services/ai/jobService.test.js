@@ -4,6 +4,7 @@
 const assert = require('assert');
 const JobService = require('../../../services/ai/jobService');
 const StubAiJobRepository = require('../../doubles/stubAiJobRepository');
+const StubAiUsageService = require('../../doubles/stubAiUsageService');
 const AiJob = require('../../../models/ai/AiJob');
 const AiJobResult = require('../../../models/ai/AiJobResult');
 
@@ -11,10 +12,12 @@ describe('JobService', () => {
 
     let service;
     let stubRepo;
+    let stubUsageService;
 
     beforeEach(() => {
         stubRepo = new StubAiJobRepository();
-        service = new JobService(stubRepo);
+        stubUsageService = new StubAiUsageService();
+        service = new JobService(stubRepo, stubUsageService);
     });
 
     // ------------------------------------------------------------------ //
@@ -140,6 +143,81 @@ describe('JobService', () => {
                 confirmPayload: { tool: 'delete_todo', args: { todo_id: 't1' }, confirmToken: 'tk' }
             });
             assert.strictEqual(stubRepo.lastPutPayload.data.lang, 'ko');
+        });
+    });
+
+    // ------------------------------------------------------------------ //
+    // createJob 의 일일 한도 사전 차단 분기  (#157)
+    // ------------------------------------------------------------------ //
+
+    describe('createJob — 일일 한도 사전 차단', () => {
+
+        it('한도 미달 — 기존 PENDING 흐름 (status=PENDING / result=null)', async () => {
+            // stubUsageService 기본값 = isOverDailyLimit false
+            const jobId = await service.createJob({
+                userId: 'u', deviceId: 'd', commandText: 'cmd', timezone: 'Asia/Seoul', lang: 'ko'
+            });
+            assert.ok(typeof jobId === 'string');
+            const { data } = stubRepo.lastPutPayload;
+            assert.strictEqual(data.status, AiJob.STATUS.PENDING);
+            assert.strictEqual(data.result, null);
+        });
+
+        it('한도 초과 — status=FAILED / errorCode=DailyLimitExceeded 가 박혀 jobId 반환 (PENDING 거치지 않음)', async () => {
+            stubUsageService.setOverDailyLimit('u', true);
+
+            const before = Date.now();
+            const jobId = await service.createJob({
+                userId: 'u', deviceId: 'd', commandText: 'cmd', timezone: 'Asia/Seoul', lang: 'ko'
+            });
+            const after = Date.now();
+
+            assert.ok(typeof jobId === 'string' && jobId.length > 0);
+
+            const { jobId: storedJobId, data } = stubRepo.lastPutPayload;
+            assert.strictEqual(storedJobId, jobId);
+            assert.strictEqual(Object.getPrototypeOf(data), Object.prototype);
+
+            assert.strictEqual(data.userId, 'u');
+            assert.strictEqual(data.deviceId, 'd');
+            assert.strictEqual(data.commandText, 'cmd');
+            assert.strictEqual(data.timezone, 'Asia/Seoul');
+            assert.strictEqual(data.lang, 'ko');
+            assert.strictEqual(data.mode, AiJob.MODE.COMMAND);
+            assert.strictEqual(data.confirmPayload, null);
+            assert.strictEqual(data.status, AiJob.STATUS.FAILED);
+
+            assert.strictEqual(data.result.type, 'FAILED');
+            assert.strictEqual(data.result.errorCode, 'DailyLimitExceeded');
+            assert.ok(typeof data.result.reason === 'string' && data.result.reason.length > 0);
+            // 한국어 워딩 (존댓말) 검증
+            assert.ok(data.result.reason.includes('한도'), `ko reason 에 '한도' 포함 (got: ${data.result.reason})`);
+
+            assert.ok(data.expireAt instanceof Date);
+            const expected24hLater = before + 24 * 60 * 60 * 1000;
+            const drift = data.expireAt.getTime() - expected24hLater;
+            assert.ok(drift >= 0 && drift <= (after - before) + 1000);
+        });
+
+        it('한도 초과 + lang 누락 → en reason', async () => {
+            stubUsageService.setOverDailyLimit('u', true);
+            await service.createJob({
+                userId: 'u', deviceId: 'd', commandText: 'cmd', timezone: 'Asia/Seoul'
+            });
+            const { data } = stubRepo.lastPutPayload;
+            assert.strictEqual(data.lang, 'en');
+            assert.ok(data.result.reason.toLowerCase().includes('limit'), `en reason 에 'limit' 포함 (got: ${data.result.reason})`);
+        });
+
+        it('createConfirmJob 은 한도 적용 X — 한도 초과여도 PENDING / status=PENDING 그대로', async () => {
+            stubUsageService.setOverDailyLimit('u', true);
+            await service.createConfirmJob({
+                userId: 'u', deviceId: 'd', timezone: 'Asia/Seoul', lang: 'ko',
+                confirmPayload: { tool: 'delete_todo', args: { todo_id: 't1' }, confirmToken: 'tk' }
+            });
+            const { data } = stubRepo.lastPutPayload;
+            assert.strictEqual(data.status, AiJob.STATUS.PENDING);
+            assert.strictEqual(data.result, null);
         });
     });
 

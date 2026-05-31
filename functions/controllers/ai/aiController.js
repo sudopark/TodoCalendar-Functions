@@ -102,8 +102,12 @@ class AiController {
     }
 
     async getUsage(req, res) {
-        const usage = await this.aiUsageService.getTodayUsage(req.auth.uid);
-        res.status(200).send(usage.toJSON());
+        const userId = req.auth.uid;
+        const [usage, dailyLimit] = await Promise.all([
+            this.aiUsageService.getTodayUsage(userId),
+            this.aiUsageService.getDailyLimit(userId)
+        ]);
+        res.status(200).send({ ...usage.toJSON(), daily_limit: dailyLimit });
     }
 }
 
