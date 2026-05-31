@@ -51,6 +51,8 @@ tags:
     description: "openAPI done todos for external callers. Auth: PAT + signed user JWT + scope."
   - name: OpenAPI EventDetails
     description: "openAPI event details for external callers. Auth: PAT + signed user JWT + scope."
+  - name: OpenAPI Foremost
+    description: "openAPI foremost event for external callers. Auth: PAT + signed user JWT + scope."
 
 security:
   - BearerAuth: []
@@ -2213,6 +2215,68 @@ paths:
               schema:
                 $ref: '#/components/schemas/StatusOk'
         '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  # ──────────────── OpenAPI Foremost (/v2/open/foremost) ────────────────
+  /v2/open/foremost/event:
+    get:
+      tags: [OpenAPI Foremost]
+      summary: "[openAPI] Get foremost event"
+      description: "현재 foremost event. 미지정 시 빈 객체 {}."
+      security:
+        - OpenApiPat: []
+          OpenApiUserToken: []
+      responses:
+        '200':
+          description: Foremost event (또는 미지정 시 빈 객체)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForemostEvent'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    put:
+      tags: [OpenAPI Foremost]
+      summary: "[openAPI] Set foremost event"
+      security:
+        - OpenApiPat: []
+          OpenApiUserToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [event_id, is_todo]
+              properties:
+                event_id:
+                  type: string
+                is_todo:
+                  type: boolean
+      responses:
+        '201':
+          description: Foremost event set
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForemostEvent'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    delete:
+      tags: [OpenAPI Foremost]
+      summary: "[openAPI] Remove foremost event"
+      security:
+        - OpenApiPat: []
+          OpenApiUserToken: []
+      responses:
+        '200':
+          description: Foremost event removed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusOk'
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
