@@ -157,10 +157,10 @@ describe('AgentLoopHandler', () => {
         assert.strictEqual(payload.data.jobId, 'job-1');
         assert.strictEqual(payload.data.status, 'DONE');
 
-        // handler 가 agentLoopService.run 에 commandText 와 {userId, timezone, lang} 을 정확히 전달하는지 검증 (재발 방지)
+        // handler 가 agentLoopService.run 에 commandText 와 {userId, timezone, lang, jobId} 을 정확히 전달하는지 검증 (재발 방지)
         assert.deepStrictEqual(agentLoopService.lastRunArgs, {
             commandText: BASE_JOB_DATA.commandText,
-            opts: { userId: BASE_JOB_DATA.userId, timezone: BASE_JOB_DATA.timezone, lang: BASE_JOB_DATA.lang }
+            opts: { userId: BASE_JOB_DATA.userId, timezone: BASE_JOB_DATA.timezone, lang: BASE_JOB_DATA.lang, jobId: 'job-1' }
         });
     });
 

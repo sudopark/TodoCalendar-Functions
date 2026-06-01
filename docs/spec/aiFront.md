@@ -63,7 +63,7 @@
 | Method | Path | Body | Headers | Response |
 |---|---|---|---|---|
 | POST | `/v1/ai/command` | `{ command_text, timezone }` | `Authorization`, `device_id`, `Accept-Language?` | `202 { job_id }` |
-| POST | `/v1/ai/command/confirm` | `{ tool, args, confirm_token, timezone? }` | `Authorization`, `device_id`, `Accept-Language?` | `202 { job_id }` |
+| POST | `/v1/ai/command/confirm` | `{ parent_job_id, tool, args, confirm_token, timezone? }` | `Authorization`, `device_id`, `Accept-Language?` | `202 { job_id }` |
 | GET | `/v1/ai/jobs/:id` | — | `Authorization` | `200 AiJob.toJSON()` |
 | GET | `/v1/ai/usage` | — | `Authorization` | `200 AiUsage.toJSON() + { daily_limit }` (오늘 사용량 + 일일 한도) |
 
@@ -174,10 +174,11 @@ sequenceDiagram
     participant Lib as todocalendar-tools
     participant OAPI as openAPI
     participant FCM as Messaging
-    App->>Ctrl: POST /v1/ai/command/confirm with tool, args, confirm_token, timezone optional
-    Ctrl->>Ctrl: validate tool and args object and confirm_token
-    Ctrl->>JobSvc: createConfirmJob with userId and confirmPayload
-    JobSvc->>FS: put jobId, status PENDING, mode confirm
+    App->>Ctrl: POST /v1/ai/command/confirm with parent_job_id, tool, args, confirm_token, timezone optional
+    Ctrl->>Ctrl: validate parent_job_id and tool and args object and confirm_token
+    Ctrl->>JobSvc: createConfirmJob with userId, parentJobId, confirmPayload
+    JobSvc->>FS: load parentJobId, verify userId, copy commandText
+    JobSvc->>FS: put jobId, status PENDING, mode confirm, commandText from parent
     JobSvc-->>Ctrl: jobId
     Ctrl-->>App: 202 job_id
     Note over FS,Trig: onCreate 발화
@@ -293,7 +294,8 @@ PENDING ──(trigger 발화)──▶ RUNNING ──┬─▶ DONE
   "action": {
     "tool": "delete_schedule",
     "args": { "schedule_id": "abc" },
-    "confirmToken": "<HMAC token>"
+    "confirmToken": "<HMAC token>",
+    "parentJobId": "<현재 1차 job 의 jobId>"
   },
   "notification": { "title": "일정 삭제 확인", "body": "..." },
   "mutations": [...]
@@ -315,7 +317,7 @@ PENDING ──(trigger 발화)──▶ RUNNING ──┬─▶ DONE
 | `type` | 클라가 할 일 |
 |---|---|
 | `DONE` | `text` 사용자에게 표시 (toast / chat 등). **`mutations` 보고 영향받은 도메인 list/cache invalidate**. |
-| `CONFIRM` | `text` 로 confirm UI 표시. **사용자가 승인하면 `action` 통째로 2차 호출 body 에 박아 `POST /v1/ai/command/confirm`** 호출. 거부 시 그냥 폐기. 1차 응답에 `mutations` 가 박혀 있을 수 있음 (이전 turn 의 변경) → list reload. |
+| `CONFIRM` | `text` 로 confirm UI 표시. **사용자가 승인하면 `action` 통째로 2차 호출 body 에 박아 `POST /v1/ai/command/confirm`** 호출 (`action.parentJobId` 는 body 의 `parent_job_id` 자리로). 거부 시 그냥 폐기. 1차 응답에 `mutations` 가 박혀 있을 수 있음 (이전 turn 의 변경) → list reload. |
 | `FAILED` | `reason` 사용자에게 표시. **`errorCode` 보고 분류 / 다른 UX 분기**. `mutations` 도 박혀 있을 수 있음 (부분 mutation) → reload. |
 
 ### 2차 호출 — CONFIRM 확인 후
@@ -330,13 +332,15 @@ Accept-Language: ko-KR
 Content-Type: application/json
 
 {
+  "parent_job_id": "<1차 응답의 action.parentJobId>",
   "tool": "delete_schedule",
   "args": { "schedule_id": "abc" },
   "confirm_token": "<1차 응답의 action.confirmToken>"
 }
 ```
 
-- `command_text` 는 confirm path 에서 안 씀 — body 에서 제외.
+- `parent_job_id` 는 1차 command job 의 jobId. 서버가 이걸로 parent 를 load 해 권한 검증 후 parent 의 `commandText` 를 confirm job 의 `command_text` 로 복사 (#238). 클라가 confirm job 단독 조회만으로도 원본 자연어 명령을 파악 가능. `action.parentJobId` 가 같은 값이라 클라는 action 통째로 받아 그대로 박으면 됨.
+- `command_text` 는 body 에서 받지 않음 — parent 의 값이 진실의 source.
 - `timezone` 도 박지 않아도 됨 (optional).
 
 응답은 1차와 동일하게 `{ job_id }` — 새 jobId 발급되어 1차 jobId 와 독립. 같은 흐름으로 `ai_jobs/{newJobId}` 결과 대기.

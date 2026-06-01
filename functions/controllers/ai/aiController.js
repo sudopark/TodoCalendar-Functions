@@ -65,9 +65,16 @@ class AiController {
         }
 
         // confirm path body:
-        //  - command_text: 클라가 보내지 않음. lang 은 Accept-Language 로, 그 외 confirm path
-        //    가 commandText 를 쓰지 않으므로 body 에서 제외 (#230 후속 정리).
+        //  - parent_job_id: 1차 command job 의 jobId. 서버가 그걸로 parent 의 commandText 를
+        //    load 해 confirm job 에 복사 (#238). confirmToken 에는 jobId 가 bind 되지 않아
+        //    클라가 명시.
+        //  - command_text: 클라가 보내지 않음. parent 의 commandText 가 진실의 source.
         //  - timezone: optional — runConfirm 본체에서 사용 X. 박혀 오면 형식만 검증.
+
+        const parentJobId = req.body.parent_job_id;
+        if (!parentJobId || typeof parentJobId !== 'string') {
+            throw new Errors.BadRequest('parent_job_id is required');
+        }
 
         const timezone = req.body.timezone;
         if (timezone !== undefined && timezone !== null && !isValidTimezone(timezone)) {
@@ -94,6 +101,7 @@ class AiController {
         const jobId = await this.jobService.createConfirmJob({
             userId,
             deviceId,
+            parentJobId,
             timezone: timezone ?? null,
             lang,
             confirmPayload: { tool, args, confirmToken }

@@ -133,7 +133,8 @@ class AgentLoopHandler {
         return this.agentLoopService.run(job.commandText, {
             userId: job.userId,
             timezone: job.timezone,
-            lang: job.lang
+            lang: job.lang,
+            jobId: job.jobId
         });
     }
 

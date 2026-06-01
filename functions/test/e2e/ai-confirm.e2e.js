@@ -43,7 +43,7 @@ describe('aiFrontAPI confirm 2차 호출', function () {
             const res = await client.post(
                 '/v1/ai/command/confirm',
                 {
-                    command_text: 'delete',
+                    parent_job_id: 'irrelevant',
                     timezone: 'Asia/Seoul',
                     args: { todo_id: 't1' },
                     confirm_token: 'tk'
@@ -57,10 +57,24 @@ describe('aiFrontAPI confirm 2차 호출', function () {
             const res = await client.post(
                 '/v1/ai/command/confirm',
                 {
-                    command_text: 'delete',
+                    parent_job_id: 'irrelevant',
                     timezone: 'Asia/Seoul',
                     tool: 'delete_todo',
                     args: ['t1'],
+                    confirm_token: 'tk'
+                },
+                { headers: { device_id: 'e2e-device-confirm' } }
+            );
+            assert.strictEqual(res.status, 400);
+        });
+
+        it('parent_job_id 누락 → 400 (#238)', async function () {
+            const res = await client.post(
+                '/v1/ai/command/confirm',
+                {
+                    timezone: 'Asia/Seoul',
+                    tool: 'delete_todo',
+                    args: { todo_id: 't1' },
                     confirm_token: 'tk'
                 },
                 { headers: { device_id: 'e2e-device-confirm' } }
@@ -74,6 +88,8 @@ describe('aiFrontAPI confirm 2차 호출', function () {
 
         let createdTodoId;
         let confirmAction;
+        let parentJobId;
+        let parentCommandText;
 
         it('todo 시드 (openAPI POST) → 1차 [stub:CONFIRM:<id>] → CONFIRM + result.action 추출', async function () {
             this.timeout(15000);
@@ -87,23 +103,27 @@ describe('aiFrontAPI confirm 2차 호출', function () {
             createdTodoId = createRes.data.uuid;
 
             // 2) 1차 command — FakeAnthropicClient 가 [stub:CONFIRM:<id>] 매칭해 delete_todo tool_use 반환
+            parentCommandText = `[stub:CONFIRM:${createdTodoId}] 이거 삭제해`;
             const cmdRes = await client.post(
                 '/v1/ai/command',
                 {
-                    command_text: `[stub:CONFIRM:${createdTodoId}] 이거 삭제해`,
+                    command_text: parentCommandText,
                     timezone: 'Asia/Seoul'
                 },
                 { headers: { device_id: 'e2e-device-confirm' } }
             );
             assert.strictEqual(cmdRes.status, 202);
+            parentJobId = cmdRes.data.job_id;
 
-            const job1 = await pollJob(client, cmdRes.data.job_id);
+            const job1 = await pollJob(client, parentJobId);
             assert.strictEqual(job1.status, 'CONFIRM');
             assert.strictEqual(job1.result.type, 'CONFIRM');
             assert.ok(job1.result.action, 'result.action 존재');
             assert.strictEqual(job1.result.action.tool, 'delete_todo');
             assert.deepStrictEqual(job1.result.action.args, { todo_id: createdTodoId });
             assert.ok(job1.result.action.confirmToken, 'confirmToken 존재');
+            // #238 — action.parentJobId 가 1차 job 의 jobId 와 같음 (클라가 그대로 confirm body 에 박을 수 있게)
+            assert.strictEqual(job1.result.action.parentJobId, parentJobId);
 
             confirmAction = job1.result.action;
         });
@@ -114,7 +134,7 @@ describe('aiFrontAPI confirm 2차 호출', function () {
             const confirmRes = await client.post(
                 '/v1/ai/command/confirm',
                 {
-                    command_text: '이거 삭제해',
+                    parent_job_id: confirmAction.parentJobId,
                     timezone: 'Asia/Seoul',
                     tool: confirmAction.tool,
                     args: confirmAction.args,
@@ -131,6 +151,9 @@ describe('aiFrontAPI confirm 2차 호출', function () {
             // 2차 job 의 mode 가 'confirm' 으로 응답에 노출됨
             assert.strictEqual(job2.mode, 'confirm');
 
+            // #238 — confirm job 의 command_text 가 1차 job 의 명령으로 채워짐
+            assert.strictEqual(job2.command_text, parentCommandText);
+
             // 실 todo 가 삭제됐는지 — openAPI GET → 404
             const checkRes = await openCli.get(`/v2/open/todos/${createdTodoId}`);
             assert.strictEqual(checkRes.status, 404, 'todo 가 실제로 삭제됨');
@@ -141,12 +164,25 @@ describe('aiFrontAPI confirm 2차 호출', function () {
     describe('verify 실패 — 변조된 confirm_token → FAILED', function () {
 
         it('전혀 다른 token 으로 2차 호출 → FAILED (lib verify 실패)', async function () {
-            this.timeout(15000);
+            this.timeout(20000);
+
+            // #238 — confirm 진입에 parent_job_id 가 필수. 평범한 1차 명령 먼저 발행해
+            // 그 jobId 로 confirm 호출. parent 의 결과(성공/실패)는 본 케이스와 무관.
+            const parentRes = await client.post(
+                '/v1/ai/command',
+                {
+                    command_text: 'parent for token verify test',
+                    timezone: 'Asia/Seoul'
+                },
+                { headers: { device_id: 'e2e-device-confirm' } }
+            );
+            assert.strictEqual(parentRes.status, 202);
+            const parentJobIdLocal = parentRes.data.job_id;
 
             const res = await client.post(
                 '/v1/ai/command/confirm',
                 {
-                    command_text: 'delete',
+                    parent_job_id: parentJobIdLocal,
                     timezone: 'Asia/Seoul',
                     tool: 'delete_todo',
                     args: { todo_id: 'never-existed' },

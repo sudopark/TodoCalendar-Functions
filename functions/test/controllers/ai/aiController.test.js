@@ -208,6 +208,7 @@ describe('AiController', () => {
 
         function makeConfirmReq({
             uid = 'user-1', deviceId = 'device-1',
+            parentJobId = 'parent-1',
             timezone = 'Asia/Seoul',
             tool = 'delete_todo', args = { todo_id: 't1' }, confirmToken = 'tk',
             acceptLanguage = null
@@ -220,13 +221,14 @@ describe('AiController', () => {
                     return null;
                 },
                 body: {
+                    parent_job_id: parentJobId,
                     timezone,
                     tool, args, confirm_token: confirmToken
                 }
             };
         }
 
-        it('정상 — 202 + job_id, createConfirmJob 인자에 confirmPayload 묶여 전달 (commandText 안 받음)', async () => {
+        it('정상 — 202 + job_id, createConfirmJob 인자에 parentJobId + confirmPayload 묶여 전달', async () => {
             const req = makeConfirmReq();
             const res = makeRes();
 
@@ -237,6 +239,7 @@ describe('AiController', () => {
             assert.deepEqual(stubService.lastCreateConfirmJobArgs, {
                 userId: 'user-1',
                 deviceId: 'device-1',
+                parentJobId: 'parent-1',
                 timezone: 'Asia/Seoul',
                 lang: 'en',
                 confirmPayload: { tool: 'delete_todo', args: { todo_id: 't1' }, confirmToken: 'tk' }
@@ -252,6 +255,23 @@ describe('AiController', () => {
 
         it('device_id 헤더 누락 → 400', async () => {
             const req = makeConfirmReq({ deviceId: null });
+            await assert.rejects(() => controller.postCommandConfirm(req, makeRes()), Errors.BadRequest);
+        });
+
+        it('parent_job_id 누락 → 400', async () => {
+            const req = makeConfirmReq();
+            delete req.body.parent_job_id;
+            await assert.rejects(() => controller.postCommandConfirm(req, makeRes()), Errors.BadRequest);
+        });
+
+        it('parent_job_id 빈 문자열 → 400', async () => {
+            const req = makeConfirmReq({ parentJobId: '' });
+            await assert.rejects(() => controller.postCommandConfirm(req, makeRes()), Errors.BadRequest);
+        });
+
+        it('parent_job_id 가 비문자열 → 400', async () => {
+            const req = makeConfirmReq();
+            req.body.parent_job_id = 123;
             await assert.rejects(() => controller.postCommandConfirm(req, makeRes()), Errors.BadRequest);
         });
 
