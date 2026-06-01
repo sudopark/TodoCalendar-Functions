@@ -99,16 +99,25 @@ describe('JobService', () => {
 
     describe('createConfirmJob', () => {
 
+        // parent command job 을 미리 만들어 그 jobId 를 confirm 호출 시 parentJobId 로 사용.
+        async function seedParent({ userId = 'u', commandText = '내일 일정 알려줘' } = {}) {
+            return service.createJob({ userId, deviceId: 'd', commandText, timezone: 'Asia/Seoul', lang: 'ko' });
+        }
+
         it('mode=confirm + confirmPayload 가 plain object 로 박히고 새 jobId 반환', async () => {
+            const parentId = await seedParent({ userId: 'u', commandText: '오늘 할일 추가' });
+
             const before = Date.now();
             const jobId = await service.createConfirmJob({
                 userId: 'u', deviceId: 'd',
+                parentJobId: parentId,
                 timezone: 'Asia/Seoul',
                 confirmPayload: { tool: 'delete_todo', args: { todo_id: 't1' }, confirmToken: 'tk' }
             });
             const after = Date.now();
 
             assert.ok(typeof jobId === 'string' && jobId.length > 0);
+            assert.notStrictEqual(jobId, parentId, 'parent 와 다른 새 jobId');
 
             const { jobId: storedJobId, data } = stubRepo.lastPutPayload;
             assert.strictEqual(storedJobId, jobId);
@@ -121,8 +130,6 @@ describe('JobService', () => {
             assert.deepStrictEqual(data.confirmPayload, { tool: 'delete_todo', args: { todo_id: 't1' }, confirmToken: 'tk' });
             assert.strictEqual(data.status, AiJob.STATUS.PENDING);
             assert.strictEqual(data.result, null);
-            // confirm job 은 commandText 안 받음 (#230 후속 정리)
-            assert.strictEqual('commandText' in data, false);
 
             assert.ok(data.expireAt instanceof Date);
             const expected24hLater = before + 24 * 60 * 60 * 1000;
@@ -130,16 +137,57 @@ describe('JobService', () => {
             assert.ok(drift >= 0 && drift <= (after - before) + 1000);
         });
 
+        it('parent 의 commandText 가 confirm job 의 commandText 로 복사됨 (#238)', async () => {
+            const parentId = await seedParent({ userId: 'u', commandText: '오늘 할일 추가' });
+
+            await service.createConfirmJob({
+                userId: 'u', deviceId: 'd',
+                parentJobId: parentId,
+                timezone: 'Asia/Seoul',
+                confirmPayload: { tool: 'delete_todo', args: { todo_id: 't1' }, confirmToken: 'tk' }
+            });
+
+            assert.strictEqual(stubRepo.lastPutPayload.data.commandText, '오늘 할일 추가');
+        });
+
+        it('parent 미존재 → NotFound', async () => {
+            await assert.rejects(
+                () => service.createConfirmJob({
+                    userId: 'u', deviceId: 'd',
+                    parentJobId: 'nonexistent',
+                    timezone: 'Asia/Seoul',
+                    confirmPayload: { tool: 'delete_todo', args: { todo_id: 't1' }, confirmToken: 'tk' }
+                }),
+                (err) => err.status === 404 && err.code === 'NotFound'
+            );
+        });
+
+        it('parent 가 타인의 job → 403 Forbidden', async () => {
+            const parentId = await seedParent({ userId: 'other-user', commandText: '타인 명령' });
+
+            await assert.rejects(
+                () => service.createConfirmJob({
+                    userId: 'u', deviceId: 'd',
+                    parentJobId: parentId,
+                    timezone: 'Asia/Seoul',
+                    confirmPayload: { tool: 'delete_todo', args: { todo_id: 't1' }, confirmToken: 'tk' }
+                }),
+                (err) => err.status === 403 && err.code === 'Forbidden'
+            );
+        });
+
         it('두 번 호출하면 서로 다른 jobId 반환', async () => {
+            const parentId = await seedParent();
             const payload = { tool: 'delete_todo', args: { todo_id: 't1' }, confirmToken: 'tk' };
-            const a = await service.createConfirmJob({ userId: 'u', deviceId: 'd', timezone: 'UTC', confirmPayload: payload });
-            const b = await service.createConfirmJob({ userId: 'u', deviceId: 'd', timezone: 'UTC', confirmPayload: payload });
+            const a = await service.createConfirmJob({ userId: 'u', deviceId: 'd', parentJobId: parentId, timezone: 'UTC', confirmPayload: payload });
+            const b = await service.createConfirmJob({ userId: 'u', deviceId: 'd', parentJobId: parentId, timezone: 'UTC', confirmPayload: payload });
             assert.notStrictEqual(a, b);
         });
 
         it('lang 인자 — confirm job 에 그대로 저장', async () => {
+            const parentId = await seedParent();
             await service.createConfirmJob({
-                userId: 'u', deviceId: 'd', timezone: 'Asia/Seoul', lang: 'ko',
+                userId: 'u', deviceId: 'd', parentJobId: parentId, timezone: 'Asia/Seoul', lang: 'ko',
                 confirmPayload: { tool: 'delete_todo', args: { todo_id: 't1' }, confirmToken: 'tk' }
             });
             assert.strictEqual(stubRepo.lastPutPayload.data.lang, 'ko');
@@ -210,9 +258,14 @@ describe('JobService', () => {
         });
 
         it('createConfirmJob 은 한도 적용 X — 한도 초과여도 PENDING / status=PENDING 그대로', async () => {
+            // parent 는 한도 차단 전(setOverDailyLimit false) 에 먼저 seed
+            const parentId = await service.createJob({
+                userId: 'u', deviceId: 'd', commandText: '오늘 할일', timezone: 'Asia/Seoul', lang: 'ko'
+            });
             stubUsageService.setOverDailyLimit('u', true);
+
             await service.createConfirmJob({
-                userId: 'u', deviceId: 'd', timezone: 'Asia/Seoul', lang: 'ko',
+                userId: 'u', deviceId: 'd', parentJobId: parentId, timezone: 'Asia/Seoul', lang: 'ko',
                 confirmPayload: { tool: 'delete_todo', args: { todo_id: 't1' }, confirmToken: 'tk' }
             });
             const { data } = stubRepo.lastPutPayload;

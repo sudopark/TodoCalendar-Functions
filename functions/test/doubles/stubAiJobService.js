@@ -23,9 +23,9 @@ class StubAiJobService {
         return this._nextJobId;
     }
 
-    async createConfirmJob({ userId, deviceId, timezone, lang, confirmPayload }) {
+    async createConfirmJob({ userId, deviceId, parentJobId, timezone, lang, confirmPayload }) {
         if (this.shouldFail) throw { message: 'service failed' };
-        this.lastCreateConfirmJobArgs = { userId, deviceId, timezone, lang, confirmPayload };
+        this.lastCreateConfirmJobArgs = { userId, deviceId, parentJobId, timezone, lang, confirmPayload };
         return this._nextJobId;
     }
 

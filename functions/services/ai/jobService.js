@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const AiJob = require('../../models/ai/AiJob');
 const AiJobResult = require('../../models/ai/AiJobResult');
 const AiErrorCode = require('../../models/ai/AiErrorCode');
+const Errors = require('../../models/Errors');
 
 // #157 — 일일 한도 초과 시 user-facing reason. AgentLoopService 의
 // MESSAGES.dailyLimitExceeded 와 같은 워딩 (단일 출처가 아니라 양쪽 갱신 시 같이 갱신).
@@ -63,21 +64,37 @@ class JobService {
     /**
      * CONFIRM 2차 호출용 job 발행. 새 jobId 발급 — 1차 jobId 와 독립.
      *
-     * commandText 는 confirm path 에서 사용되지 않아 받지 않음 (#230 후속 정리).
+     * #238 — parentJobId 로 1차 command job 을 load 해 그 commandText 를 confirm job 의
+     * commandText 로 복사한다. 클라가 confirm job 만 단독으로 봐도 "원래 어떤 자연어
+     * 명령이었는지" `command_text` 필드 하나로 파악 가능 (mode 별 분기 불필요).
+     * confirmToken payload 에 jobId 가 bind 되지 않아 클라가 parent 를 명시.
+     *
+     * - parent 미존재 → NotFound
+     * - parent.userId !== userId → 403 (다른 user 의 jobId 박는 거 차단)
+     *
      * lang 결정은 Accept-Language 헤더 → controller. 응답 메시지 워딩에 그것만 사용.
      *
      * 일일 한도 적용 X (#157) — 1차 confirm 흐름 보호 + tool 1회라 토큰 낮음.
      *
-     * @param {{ userId, deviceId, timezone, lang, confirmPayload: { tool, args, confirmToken } }} params
+     * @param {{ userId, deviceId, parentJobId, timezone, lang, confirmPayload: { tool, args, confirmToken } }} params
      * @returns {Promise<string>} jobId
      */
-    async createConfirmJob({ userId, deviceId, timezone, lang, confirmPayload }) {
+    async createConfirmJob({ userId, deviceId, parentJobId, timezone, lang, confirmPayload }) {
+        const parent = await this.jobRepository.load(parentJobId);
+        if (!parent) {
+            throw new Errors.NotFound('parent job not found');
+        }
+        if (parent.userId !== userId) {
+            throw new Errors.Base(403, 'Forbidden', 'forbidden');
+        }
+
         const jobId = crypto.randomUUID();
         const expireAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
         const data = {
             userId,
             deviceId,
+            commandText: parent.commandText,
             timezone,
             lang: lang ?? 'en',
             mode: AiJob.MODE.CONFIRM,

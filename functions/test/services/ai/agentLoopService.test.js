@@ -103,14 +103,16 @@ describe('AgentLoopService', () => {
 
         anthropic.enqueue(makeToolUseResponse('delete_todo', { todo_id: 't1' }));
 
-        const { result } = await service.run('할일 삭제해', { userId: 'u1', timezone: 'Asia/Seoul', lang: 'ko' });
+        const { result } = await service.run('할일 삭제해', { userId: 'u1', timezone: 'Asia/Seoul', lang: 'ko', jobId: 'job-parent-1' });
 
         assert.strictEqual(result.type, 'CONFIRM');
         assert.strictEqual(result.text, '확인이 필요한 작업이에요.');
         assert.deepStrictEqual(result.action, {
             tool: 'delete_todo',
             args: { todo_id: 't1' },
-            confirmToken: 'tok123'
+            confirmToken: 'tok123',
+            // #238 — confirm 종결 시 action 에 현재 (1차) job 의 jobId 가 박힌다.
+            parentJobId: 'job-parent-1'
         });
         assert.deepStrictEqual(result.notification, {
             title: '할 일 삭제 확인',

@@ -240,11 +240,16 @@ class AgentLoopService {
         ];
     }
 
-    _buildConfirmResult(tu, libResult, lang) {
+    _buildConfirmResult(tu, libResult, lang, jobId) {
         const defaults = CONFIRM_DEFAULTS[lang];
+        // #238 — action.parentJobId 는 현재 (1차 command) job 의 jobId. 클라가 action
+        // 통째로 받아 confirm 2차 호출 body 의 parent_job_id 로 그대로 박는다. jobId 미주입
+        // 시 (legacy caller) 키 자체 생략 — Firestore undefined reject 회피.
+        const action = { tool: tu.name, args: tu.input, confirmToken: libResult.confirmToken };
+        if (jobId !== undefined) action.parentJobId = jobId;
         return AiJobResult.confirm(
             libResult.message || defaults.text,
-            { tool: tu.name, args: tu.input, confirmToken: libResult.confirmToken },
+            action,
             { title: getConfirmTitle(tu.name, lang), body: defaults.body }
         );
     }
@@ -260,7 +265,7 @@ class AgentLoopService {
 
     /**
      * @param {string} commandText
-     * @param {{ userId: string, timezone: string, lang: 'ko'|'en' }} context
+     * @param {{ userId: string, timezone: string, lang: 'ko'|'en', jobId: string }} context
      * @returns {Promise<{ result: object, usage: { inputTokens: number, outputTokens: number } }>}
      *   result: AiJobResult plain object
      *   usage: 호출 누적 토큰 — caller (AgentLoopHandler) 가 일별 record 입력으로 사용.
@@ -268,8 +273,10 @@ class AgentLoopService {
      *          매 호출에 누적 prompt 전체를 input_tokens 로 보고하기 때문 — turn 별 합산
      *          시 double count 됨). outputTokens 는 모든 turn 합산.
      *          throw 경로는 catch 안 함 → caller 가 0/0 으로 처리 (acceptable loss).
+     *
+     * jobId 는 CONFIRM 종결 시 result.action.parentJobId 로 박는 용도 (#238).
      */
-    async run(commandText, { userId, timezone, lang }) {
+    async run(commandText, { userId, timezone, lang, jobId }) {
         const auth = { userId, scopes: this.scopes };
         const messages = [{ role: 'user', content: commandText }];
         const resolvedLang = lang ?? 'en';
@@ -333,7 +340,7 @@ class AgentLoopService {
                     if (registry.isConfirmRequired(libResult)) {
                         // confirm_required = 실 mutation 아직 발생 X (HMAC token 발급만)
                         // → tracker 에 박지 않음. 이전 turn 들의 누적만 첨부.
-                        return finish(this._buildConfirmResult(tu, libResult, resolvedLang));
+                        return finish(this._buildConfirmResult(tu, libResult, resolvedLang, jobId));
                     }
                     // 성공 시점에만 mutation 기록 (throw 경로는 박지 않음).
                     tracker.add(tu.name);
