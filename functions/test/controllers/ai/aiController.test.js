@@ -395,7 +395,8 @@ describe('AiController', () => {
                 input_tokens: 1234,
                 output_tokens: 567,
                 updated_at: '2026-05-22T10:00:00.000Z',
-                daily_limit: 5000
+                daily_limit: 5000,
+                resets_at: '2026-05-23T00:00:00.000Z'
             });
         });
 
@@ -411,6 +412,7 @@ describe('AiController', () => {
             assert.equal(res.body.output_tokens, 0);
             assert.equal(res.body.updated_at, null);
             assert.ok(typeof res.body.date === 'string', 'date 필드는 비어있지 않음');
+            assert.equal(res.body.resets_at, '2026-05-23T00:00:00.000Z', '사용량 미존재여도 초기화 시각은 노출');
         });
 
         it('응답에 daily_limit 노출', async () => {
