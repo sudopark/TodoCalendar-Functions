@@ -14,6 +14,7 @@ class StubAiUsageService {
         this._usageByUser = new Map();   // userId → AiUsage
         this._defaultDateKey = '2026-05-22';
         this._dailyLimit = 5000;
+        this._resetAt = '2026-05-23T00:00:00.000Z';   // _defaultDateKey 다음 UTC 자정
         this._overByUser = new Map();    // userId → boolean override; 미설정 시 false
 
         this.shouldFailGetTodayUsage = false;
@@ -69,6 +70,10 @@ class StubAiUsageService {
 
     async getDailyLimit(_userId) {
         return this._dailyLimit;
+    }
+
+    getResetAt() {
+        return this._resetAt;
     }
 
     async isOverDailyLimit(userId) {

@@ -67,6 +67,21 @@ class AiUsageService {
     }
 
     /**
+     * 사용량이 0 으로 재시작되는 다음 UTC 자정의 ISO string.
+     *
+     * dateKey 가 server UTC 'YYYY-MM-DD' 로 끊기므로 (`_todayUtcKey`), 초기화 시점은
+     * 항상 다음 UTC 00:00:00.000Z. 저장하지 않고 같은 clock 으로 계산해 dateKey 와
+     * 롤오버 규칙을 단일 source 로 유지. 클라가 로컬 변환해 "X 뒤 초기화" 표시.
+     *
+     * @returns {string}  예: '2026-06-08T00:00:00.000Z'
+     */
+    getResetAt() {
+        const now = this._clock();
+        const nextMidnight = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1);
+        return new Date(nextMidnight).toISOString();
+    }
+
+    /**
      * 본 user 가 오늘 일일 한도를 소진했는지 (input+output 합산 ≥ limit).
      * controller 가 새 명령 진입 시 사전 차단 판단에 사용.
      *

@@ -115,7 +115,8 @@ class AiController {
             this.aiUsageService.getTodayUsage(userId),
             this.aiUsageService.getDailyLimit(userId)
         ]);
-        res.status(200).send({ ...usage.toJSON(), daily_limit: dailyLimit });
+        const resetsAt = this.aiUsageService.getResetAt();
+        res.status(200).send({ ...usage.toJSON(), daily_limit: dailyLimit, resets_at: resetsAt });
     }
 }
 

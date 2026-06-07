@@ -3707,7 +3707,13 @@ components:
             본 유저의 오늘 일일 토큰 한도 (input + output 합산 기준).
             #157 MVP 는 무료 단일 5000, 추후 #166 에서 plan 별 분기.
           example: 5000
-      required: [date, input_tokens, output_tokens, daily_limit]
+        resets_at:
+          type: string
+          description: |
+            사용량이 0 으로 재시작되는 다음 UTC 자정 (#240). 항상 노출.
+            UTC 기준이므로 유저 로컬 자정과 다름 — 클라가 로컬 변환해 "X 뒤 초기화" 표시.
+          example: "2026-05-31T00:00:00.000Z"
+      required: [date, input_tokens, output_tokens, daily_limit, resets_at]
 
     # ──────────────── OAuth 2.1 AS schemas ────────────────
     OAuthClientRegistrationRequest:

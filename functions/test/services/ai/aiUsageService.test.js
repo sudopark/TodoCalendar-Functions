@@ -162,4 +162,36 @@ describe('AiUsageService', () => {
             assert.strictEqual(over, true);
         });
     });
+
+    // ------------------------------------------------------------------ //
+    // getResetAt — 사용량이 0 으로 재시작되는 다음 UTC 자정 (#240)
+    // ------------------------------------------------------------------ //
+
+    describe('getResetAt', () => {
+
+        it('낮 시각 → 같은 날 다음 UTC 자정 ISO string 반환', () => {
+            const service = makeService({ now: '2026-05-22T10:00:00.000Z' });
+            assert.strictEqual(service.getResetAt(), '2026-05-23T00:00:00.000Z');
+        });
+
+        it('UTC 자정 직전(23:59:59) → 바로 다음 자정', () => {
+            const service = makeService({ now: '2026-05-22T23:59:59.000Z' });
+            assert.strictEqual(service.getResetAt(), '2026-05-23T00:00:00.000Z');
+        });
+
+        it('UTC 자정 정각(00:00:00) → 그날 끝의 다음 자정 (이미 새 dateKey 시작)', () => {
+            const service = makeService({ now: '2026-05-22T00:00:00.000Z' });
+            assert.strictEqual(service.getResetAt(), '2026-05-23T00:00:00.000Z');
+        });
+
+        it('월말 → 다음 달 1일 자정으로 롤오버', () => {
+            const service = makeService({ now: '2026-05-31T12:00:00.000Z' });
+            assert.strictEqual(service.getResetAt(), '2026-06-01T00:00:00.000Z');
+        });
+
+        it('연말 → 다음 해 1월 1일 자정으로 롤오버', () => {
+            const service = makeService({ now: '2026-12-31T23:00:00.000Z' });
+            assert.strictEqual(service.getResetAt(), '2027-01-01T00:00:00.000Z');
+        });
+    });
 });
