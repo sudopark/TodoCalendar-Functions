@@ -70,3 +70,13 @@ describe('occurrencePaging', () => {
         assert.equal(page.occurrences[0].event_time.timestamp, 2 * DAY)
     })
 })
+
+describe('occurrencePaging — repeating.end 반영', () => {
+    it('repeating.end가 window 안이면 그 이후 occurrence 미생성', () => {
+        const ev = dailyEvent('a', 0, 1)         // 0,1,2,... 일
+        ev.repeating.end = 2 * DAY               // 2일차까지만
+        const page = buildExpandedPage([ev], 0, 10 * DAY, 100, null)
+        assert.deepEqual(page.occurrences.map((o) => o.event_time.timestamp), [0, DAY, 2 * DAY])
+        assert.equal(page.next_cursor, null)
+    })
+})

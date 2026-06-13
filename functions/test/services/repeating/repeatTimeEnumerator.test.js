@@ -148,3 +148,53 @@ describe('RepeatTimeEnumerator — seekTurnUntil (naive 교차검증)', () => {
             sec('2015-03-10 09:00'), sec('2023-06-01 00:00'))
     })
 })
+
+describe('RepeatTimeEnumerator — repeating.end (this.until) 강제', () => {
+    // this.until(=repeating.end)이 window 파라미터보다 작으면 그 시점에서 종료해야 함
+    it('repeating.end가 window upper보다 이르면 end에서 멈춤', () => {
+        const en = makeEnum({ optionType: 'every_day', interval: 1 }, { until: sec('2023-05-23 01:00') })
+        // window 파라미터(until)는 훨씬 큼 — 그래도 repeating.end(05-23)에서 멈춰야
+        const r = en.nextEventTimes({ time: atTime(sec('2023-05-20 01:00')), turn: 0 }, sec('2023-06-30 01:00'))
+        assert.deepEqual(r.map((x) => x.time.timestamp), [
+            sec('2023-05-21 01:00'), sec('2023-05-22 01:00'), sec('2023-05-23 01:00'),
+        ])
+    })
+    it('window param이 repeating.end보다 이르면 window에서 멈춤 (둘 중 작은 쪽)', () => {
+        const en = makeEnum({ optionType: 'every_day', interval: 1 }, { until: sec('2023-06-30 01:00') })
+        const r = en.nextEventTimes({ time: atTime(sec('2023-05-20 01:00')), turn: 0 }, sec('2023-05-22 01:00'))
+        assert.deepEqual(r.map((x) => x.time.timestamp), [
+            sec('2023-05-21 01:00'), sec('2023-05-22 01:00'),
+        ])
+    })
+})
+
+describe('RepeatTimeEnumerator — every_week (KST 미러)', () => {
+    const FROM = atTime(sec('2023-04-11 07:00')) // 화요일
+    // [화,금] 반복, 현재 화 → 같은 주 금요일 (interval 무관), turn 1
+    it('같은 주 다음 요일 (화·금 → 금)', () => {
+        for (const interval of [1, 2, 3, 9]) {
+            const r = makeEnum({ optionType: 'every_week', interval, dayOfWeek: [3, 6], timeZone: SEOUL })
+                .nextEventTime({ time: FROM, turn: 0 }, null)
+            assert.equal(r.time.timestamp, sec('2023-04-14 07:00'))
+            assert.equal(r.turn, 1)
+        }
+    })
+    it('같은 주 종료 경계: until < 금이면 null', () => {
+        const r = makeEnum({ optionType: 'every_week', interval: 1, dayOfWeek: [3, 6], timeZone: SEOUL })
+            .nextEventTime({ time: FROM, turn: 0 }, sec('2023-04-14 06:59'))
+        assert.equal(r, null)
+    })
+    // [화]만 반복 → 같은 주에 다음 요일 없음 → interval주 후 화요일
+    it('다음 주 첫 반복요일 (interval주 후 화)', () => {
+        const next = (interval) => makeEnum({ optionType: 'every_week', interval, dayOfWeek: [3], timeZone: SEOUL })
+            .nextEventTime({ time: FROM, turn: 0 }, null).time.timestamp
+        assert.equal(next(1), sec('2023-04-18 07:00'))
+        assert.equal(next(2), sec('2023-04-25 07:00'))
+        assert.equal(next(3), sec('2023-05-02 07:00'))
+    })
+    it('다음 주 종료 경계: until < 다음 화면 null', () => {
+        const r = makeEnum({ optionType: 'every_week', interval: 3, dayOfWeek: [3], timeZone: SEOUL })
+            .nextEventTime({ time: FROM, turn: 0 }, sec('2023-05-01 20:00'))
+        assert.equal(r, null)
+    })
+})

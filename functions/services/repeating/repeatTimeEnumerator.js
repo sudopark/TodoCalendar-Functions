@@ -24,6 +24,7 @@ class RepeatTimeEnumerator {
             return this.nextEventTime({ time: nextTime, turn: from.turn }, until, _depth + 1)
         }
         const next = { time: nextTime, turn: from.turn + 1 }
+        if (this.until != null && et.upperBound(nextTime) > this.until) return null
         if (until != null && et.upperBound(nextTime) > until) return null
         if (this.endCount != null && next.turn > this.endCount) return null
         return next
