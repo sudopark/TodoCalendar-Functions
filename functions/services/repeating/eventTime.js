@@ -35,8 +35,8 @@ function shift(time, deltaMs) {
     }
 }
 
-// exclude 매칭 키. Swift customKey와 동일하게 '초' 단위 정수로. (ms → 초 trunc)
-function sec(ms) { return Math.trunc(ms / 1000) }
+// exclude 매칭 키. Swift customKey(Int(time))와 동일하게 '초' 단위 정수 그대로.
+function sec(v) { return Math.trunc(v) }
 function customKey(time) {
     switch (time.time_type) {
         case 'at': return `${sec(time.timestamp)}`

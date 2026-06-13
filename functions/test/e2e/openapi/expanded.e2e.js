@@ -3,7 +3,7 @@ const { DateTime } = require('luxon');
 const { TEST_USER_UID } = require('../seeds/commonData');
 const { signUserToken, openClient, defaultMcpPat } = require('../helpers/openClient');
 
-const DAY = 86400000; // 1일 (ms). expanded 엔진/window check 모두 ms 단위로 동작.
+const DAY = 86400; // 1일 (초). event_time / window 모두 초 단위(production/Swift 일치).
 
 // scope 별 openAPI 클라이언트 — 사용자 JWT 에 scope 를 실어 발급.
 // (openClient 자체는 {pat, userToken} 만 받고, 인가 scope 는 JWT payload.scope 로 전달.)
@@ -16,11 +16,13 @@ describe('openAPI GET /v2/open/todos/expanded', function () {
 
     it('반복 todo 가 occurrence 로 전개되고 시각순 + turn 정확', async function () {
         const client = clientWithScope(['read:calendar', 'write:calendar']);
-        const start = DateTime.fromISO('2026-01-01T00:00:00Z').toMillis();
+        const start = DateTime.fromISO('2026-01-01T00:00:00Z').toMillis() / 1000;
+        // repeating.end 로 이 윈도우(Jan1~Jan4)에 가둠 — TEST_USER 가 공유돼
+        // 후속 케이스(March 윈도우)로 occurrence 가 새는 것 방지. 검증 윈도우는 그대로.
         const created = await client.post('/v2/open/todos/', {
             name: 'expanded-daily',
             event_time: { time_type: 'at', timestamp: start },
-            repeating: { start, option: { optionType: 'every_day', interval: 1 } }
+            repeating: { start, end: start + 3 * DAY, option: { optionType: 'every_day', interval: 1 } }
         });
         assert.strictEqual(created.status, 201);
 
@@ -49,7 +51,7 @@ describe('openAPI GET /v2/open/todos/expanded', function () {
 
     it('cursor 페이징 이어받기 + next_cursor null 종료', async function () {
         const client = clientWithScope(['read:calendar', 'write:calendar']);
-        const start = DateTime.fromISO('2026-03-01T00:00:00Z').toMillis();
+        const start = DateTime.fromISO('2026-03-01T00:00:00Z').toMillis() / 1000;
         const created = await client.post('/v2/open/todos/', {
             name: 'expanded-daily-paging',
             event_time: { time_type: 'at', timestamp: start },
@@ -90,34 +92,31 @@ describe('openAPI GET /v2/open/schedules/expanded — 음력 Swift 벡터 게이
             const endDt = startDt.endOf('day');
             return {
                 time_type: 'allday',
-                period_start: startDt.toMillis(),
-                period_end: endDt.toMillis(),
-                // seconds_from_gmt: 엔진 전체가 ms 단위이므로 ms 로 전달 (KST = +9h).
-                seconds_from_gmt: 9 * 3600 * 1000
+                period_start: startDt.toMillis() / 1000,
+                period_end: endDt.toMillis() / 1000,
+                // seconds_from_gmt: 초 단위 (KST = +9h).
+                seconds_from_gmt: 9 * 3600
             };
         };
 
         const seedTime = allday(1991, 5, 24);
-        // repeating.end 명시: end 없으면 time-range index upper 가 sentinel
-        // (Utils/constants.eventTimeMaxUpperBound) 로 채워지는데 이 값이 초 스케일이라
-        // ms seed 의 lower(1991) 보다 작아져 overlap 쿼리가 깨진다. end 를 양력 1994 말로 둬
-        // index upper 를 ms 로 정상 채운다 (조회 window 전부 커버).
-        const repeatingEnd = allday(1994, 12, 31).period_end;
+        // open-ended 반복 (repeating.end 없음). 초 단위에선 sentinel eventTimeMaxUpperBound
+        // (≈12025년, 초 스케일) 가 seed 의 초 timestamp 보다 정상적으로 far-future 라
+        // time-range index upper 가 유효하게 채워진다 → open-ended 반복도 overlap 조회됨.
         const created = await client.post('/v2/open/schedules/', {
             name: 'expanded-lunar',
             event_time: seedTime,
             repeating: {
                 start: seedTime.period_start,
-                end: repeatingEnd,
                 option: { optionType: 'lunar_calendar_every_year', month: 4, day: 11, timeZone: zone }
             }
         });
         assert.strictEqual(created.status, 201);
 
-        // window 1년 cap(ONE_YEAR_MS) 때문에 1991~1994 전체를 한 번에 못 가져옴.
+        // window 1년 cap(ONE_YEAR_SEC) 때문에 1991~1994 전체를 한 번에 못 가져옴.
         // → 연 단위(<1년) 서브 윈도우로 끊어 조회 후 concat. 음력 occurrence 는 연 1회라
         //   각 윈도우가 정확히 1건씩 반환. (테스트 약화 아님 — 양력 결과값 검증은 그대로.)
-        // 윈도우 span < ONE_YEAR_MS(365일) 이어야 하므로 Jan1~Dec1 (~334일)로 잡음.
+        // 윈도우 span < ONE_YEAR_SEC(365일) 이어야 하므로 Jan1~Dec1 (~334일)로 잡음.
         // 음력 occurrence 가 모두 5월이라 이 범위로 충분히 포착.
         const yearWindows = [
             [allday(1992, 1, 1).period_start, allday(1992, 12, 1).period_start],
@@ -130,7 +129,7 @@ describe('openAPI GET /v2/open/schedules/expanded — 음력 Swift 벡터 게이
             const res = await client.get(`/v2/open/schedules/expanded?lower=${lower}&upper=${upper}`);
             assert.strictEqual(res.status, 200);
             for (const o of res.data.occurrences) {
-                days.push(DateTime.fromMillis(o.event_time.period_start, { zone }).toFormat('yyyy-MM-dd'));
+                days.push(DateTime.fromMillis(o.event_time.period_start * 1000, { zone }).toFormat('yyyy-MM-dd'));
             }
         }
 

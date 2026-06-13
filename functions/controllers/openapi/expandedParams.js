@@ -1,5 +1,5 @@
 
-const ONE_YEAR_MS = 365 * 86400000;
+const ONE_YEAR_SEC = 365 * 86400;
 const DEFAULT_LIMIT = 100;
 const MAX_LIMIT = 500;
 
@@ -15,4 +15,4 @@ function parseExpandedParams(req) {
     return { lower, upper, limit, cursor };
 }
 
-module.exports = { parseExpandedParams, ONE_YEAR_MS, DEFAULT_LIMIT, MAX_LIMIT };
+module.exports = { parseExpandedParams, ONE_YEAR_SEC, DEFAULT_LIMIT, MAX_LIMIT };

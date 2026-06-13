@@ -8,7 +8,7 @@ function dailyEvent(uuid, startMs, intervalDays, isTodo = true) {
         repeating: { start: startMs, option: { optionType: 'every_day', interval: intervalDays } },
     }
 }
-const DAY = 86400000
+const DAY = 86400
 
 describe('occurrencePaging', () => {
     it('cursor roundtrip', () => {

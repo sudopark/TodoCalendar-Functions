@@ -1,10 +1,10 @@
 const { DateTime } = require('luxon')
 const { Solar, Lunar } = require('lunar-javascript')
 
-// currentMs의 zone 기준 날짜 → 음력으로 변환 → 음력 해 +1 → 같은 음력 월/일 → 양력 ms.
+// currentSec의 zone 기준 날짜 → 음력으로 변환 → 음력 해 +1 → 같은 음력 월/일 → 양력 초(seconds).
 // 시/분/초는 보존.
-function nextLunarYearMs(currentMs, zone) {
-    const dtv = DateTime.fromMillis(currentMs, { zone })
+function nextLunarYearSec(currentSec, zone) {
+    const dtv = DateTime.fromMillis(currentSec * 1000, { zone })
     const solar = Solar.fromYmd(dtv.year, dtv.month, dtv.day)
     const lunar = solar.getLunar()
 
@@ -19,7 +19,7 @@ function nextLunarYearMs(currentMs, zone) {
         },
         { zone }
     )
-    return result.toMillis()
+    return Math.round(result.toMillis() / 1000)
 }
 
-module.exports = { nextLunarYearMs }
+module.exports = { nextLunarYearSec }
