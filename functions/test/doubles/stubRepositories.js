@@ -114,6 +114,9 @@ class StubTodoRepository {
     }
 
     async findTodos(eventIds) {
+        if(this.findTodosResult != null) {
+            return this.findTodosResult
+        }
         const todos = eventIds.map((id) => {
             return TodoModel.fromData(id, { userId: 'some' })
         })
@@ -179,6 +182,9 @@ class StubScheduleEventRepository {
     }
 
     async findEvents(eventIds) {
+        if(this.findEventsResult != null) {
+            return this.findEventsResult
+        }
         const events = eventIds.map((id) => {
             return ScheduleModel.fromData(id, { userId: 'some' })
         })
@@ -288,6 +294,9 @@ class StubEventTimeRangeRepository {
     }
 
     async eventIds(userId, isTodo, lower, upper) {
+        if(this.eventIdsResult != null) {
+            return this.eventIdsResult
+        }
         const len = upper - lower
         const array = Array.from({length: len}, (v, i) => i+lower)
         return array.map(i => `id:${i}`)

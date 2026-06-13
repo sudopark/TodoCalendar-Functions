@@ -2,6 +2,7 @@ const { DataChangeLog, DataChangeCase } = require("../models/DataChangeLog");
 const DataTypes = require("../models/DataTypes");
 const Errors = require("../models/Errors");
 const { chunk } = require("../Utils/functions")
+const { buildExpandedPage } = require("./repeating/occurrencePaging")
 
 class ScheduleEventService {
 
@@ -27,6 +28,19 @@ class ScheduleEventService {
             return this.scheduleEventRepository.findEvents(ids)
         })
         return (await Promise.all(loadEvents)).flat();
+    }
+
+    async findExpandedEvents(userId, lower, upper, limit, cursor) {
+        const eventIds = await this.eventTimeRangeService.eventIds(userId, false, lower, upper);
+        if(eventIds.length === 0) {
+            return { events: {}, occurrences: [], next_cursor: null }
+        }
+        const eventIdSlices = chunk(eventIds, 30)
+        const loaded = (await Promise.all(eventIdSlices.map((ids) => {
+            return this.scheduleEventRepository.findEvents(ids)
+        }))).flat()
+        const plain = loaded.map((event) => ({ ...event.toJSON(), is_todo: false }))
+        return buildExpandedPage(plain, Number(lower), Number(upper), Number(limit), cursor)
     }
 
     async makeEvent(userId, payload) {
