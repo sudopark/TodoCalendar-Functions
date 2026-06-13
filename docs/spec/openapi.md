@@ -116,6 +116,7 @@ base prefix `/v2/open` 아래 여섯 그룹. 마운트 순서상 `dones` 가 `to
 | Method | Path | Scope |
 |---|---|---|
 | GET | `/v2/open/todos/` | read |
+| GET | `/v2/open/todos/expanded` | read |
 | GET | `/v2/open/todos/uncompleted` | read |
 | GET | `/v2/open/todos/:id` | read |
 | POST | `/v2/open/todos/` | write |
@@ -140,6 +141,7 @@ base prefix `/v2/open` 아래 여섯 그룹. 마운트 순서상 `dones` 가 `to
 | Method | Path | Scope |
 |---|---|---|
 | GET | `/v2/open/schedules/` | read |
+| GET | `/v2/open/schedules/expanded` | read |
 | GET | `/v2/open/schedules/:id` | read |
 | POST | `/v2/open/schedules/` | write |
 | PUT | `/v2/open/schedules/:id` | write |
@@ -186,6 +188,83 @@ serviceAPI `/v1/foremost/event` 와 동등. 사용자당 단일 foremost event (
 각 endpoint 의 요청 body / 응답 모델은 swagger 정의 (`functions/swagger.yaml`) 와 도메인 모델
 (`models/Todo`, `models/Schedule`, `models/EventTag`, `models/DoneTodo`, `models/EventDetail`,
 `models/ForemostEvent`) 을 재사용한다. 인증/스코프 외 라우팅·검증·응답 형식은 도메인 layer 와 동일.
+
+## Occurrence 전개 조회 (`/expanded`)
+
+```
+GET /v2/open/todos/expanded
+GET /v2/open/schedules/expanded
+```
+
+조회 구간 안에서 반복(repeating) 이벤트를 서버가 실제 발생 **회차(occurrence)** 로 전개해
+내려준다. 클라(특히 MCP) 는 반복 규칙을 받아 날짜를 직접 계산할 필요가 없다. 기존
+`/v2/open/todos/`·`/v2/open/schedules/` 조회는 **원본 이벤트만** 반환하므로 그대로 유지되고,
+전개가 필요할 때만 이 endpoint 를 쓴다.
+
+- **scope**: `read:calendar`
+- **인증**: 기존 openAPI 와 동일 (PAT `Authorization: Bearer mcp_<secret>` + 사용자 JWT
+  `x-open-user-token`).
+
+### 쿼리 파라미터
+
+| 이름 | 필수 | 타입 | 의미 |
+|---|---|---|---|
+| `lower` | 필수 | 초 단위 epoch | 조회 구간 시작 |
+| `upper` | 필수 | 초 단위 epoch | 조회 구간 끝 |
+| `limit` | 선택 | 정수 (default 100, max 500) | 페이지당 occurrence 수. 초과 시 500 으로 clamp |
+| `cursor` | 선택 | opaque base64url | 다음 페이지 조회용. 직전 응답의 `next_cursor` 를 그대로 전달 |
+
+- `lower` / `upper` 누락 시 **400**.
+- `upper - lower` 가 **1년 (365일 = 31,536,000초) 초과** 시 **400**.
+
+### 응답 (200) — 정규화 형태
+
+origin 메타(`events`) 와 발생 회차(`occurrences`) 를 분리한 정규화 응답이다. 같은 origin 의 여러
+회차가 메타를 중복해서 싣지 않도록 occurrence 항목은 초경량으로 유지한다.
+
+```jsonc
+{
+  "events": {                       // 이 페이지에 등장한 원본 메타, origin 당 1벌 (반복 규칙 포함)
+    "todo-abc": {
+      "uuid": "todo-abc", "name": "...", "is_todo": true,
+      "event_tag_id": "...",
+      "event_time": { /* 원본 */ }, "repeating": { /* 원본 옵션 */ }
+    }
+  },
+  "occurrences": [                  // 시각순 평탄 배열 (초경량)
+    { "origin_event_id": "todo-abc", "turn": 3, "event_time": { "time_type": "at", "timestamp": 1690000000 } }
+  ],
+  "next_cursor": "eyJ0Ijo..."       // null 이면 마지막 페이지
+}
+```
+
+- **`occurrences[]`** — 시각순으로 정렬된 평탄 배열. 각 항목은 `origin_event_id` + `turn` +
+  계산된 `event_time`(초 단위) 만 담는다.
+  - `turn` — `repeating.start` 부터 시작하는 **1-based 실제 회차**. 비반복 이벤트는 항상 `1`.
+  - occurrence 식별이 필요하면 클라가 `"{origin_event_id}:{turn}"` 로 합성한다 (서버는 별도
+    occurrence id 를 내려주지 않는다).
+- **`events{}`** — 그 페이지에 등장한 origin 들의 원본 1벌 (반복 규칙 포함). 같은 origin 이 여러
+  페이지에 걸치면 페이지마다 중복 포함될 수 있다.
+- **`next_cursor`** — opaque cursor. `null` 이면 마지막 페이지.
+
+### 전개 규칙
+
+6종 반복 옵션 (`every_day` / `every_week` / `every_month` / `every_year` / `every_year_some_day`
+/ `lunar`) 을 모두 서버가 계산한다. 클라(iOS `EventRepeatTimeEnumerator`) 동작과 1:1 로 맞춘다.
+
+- 매월 N일 반복은 해당 일자가 없는 달을 **스킵** (예: 31일 → 2월 없음).
+- 매년 2/29 반복은 평년에 **2/28 로 clamp**.
+- schedule 의 `exclude_repeatings` 에 등록된 회차는 결과에서 제외하되, **`turn` 은 소비하지 않는다**
+  (제외된 회차 이후의 turn 번호가 밀리지 않음).
+
+### 운영 제약 / 주의
+
+- **발생 간격이 긴 반복 (다년 음력 등) 을 긴 구간으로 받으려면**: 1년 window cap 때문에 구간을
+  1년 이하로 쪼개 cursor 없이 연 단위로 재조회해야 한다. 음력은 연 1회 발생이라 한 번의 호출로
+  여러 해 분량을 받을 수 없다.
+- **음력 정확성**: 서버 음력 계산은 `lunar-javascript` 기반이며, iOS 의 `Calendar(.chinese)` (ICU)
+  와 윤달 케이스에서 미세한 차이가 날 수 있다. 현재 Swift 테스트 벡터(1991→1994) 기반 E2E 게이트는
+  통과한다. 불일치가 발견되면 재논의 대상.
 
 ## 에러 응답 형식
 
