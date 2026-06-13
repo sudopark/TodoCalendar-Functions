@@ -108,3 +108,43 @@ describe('RepeatTimeEnumerator — nextEventTimes (end / count / exclude)', () =
         assert.deepEqual(r.map((x) => x.turn), [2, 3, 4])
     })
 })
+
+describe('RepeatTimeEnumerator — seekTurnUntil (naive 교차검증)', () => {
+    const { RepeatTimeEnumerator } = require('../../../services/repeating/repeatTimeEnumerator')
+    // naive: start부터 t 직전까지 nextEventTime 반복하며 turn 카운트
+    function naiveTurnAt(en, startTime, t) {
+        let turn = 1 // start 자체가 turn 1
+        let cursor = { time: startTime, turn: 1 }
+        for (;;) {
+            const next = en.nextEventTime(cursor, null)
+            if (next == null) break
+            const lb = next.time.time_type === 'at' ? next.time.timestamp : next.time.period_start
+            if (lb >= t) break
+            turn = next.turn
+            cursor = next
+        }
+        return turn
+    }
+    function check(optionJson, startMs, tMs) {
+        const startTime = { time_type: 'at', timestamp: startMs }
+        const en = new RepeatTimeEnumerator(optionJson, {})
+        const seeked = en.seekTurnUntil(startTime, tMs)
+        const naive = naiveTurnAt(en, startTime, tMs)
+        assert.equal(seeked.turn, naive, `turn mismatch for ${optionJson.optionType}`)
+    }
+    it('every_day interval 1: 먼 과거 start도 동일 turn', () => {
+        check({ optionType: 'every_day', interval: 1 }, ms('2020-01-01 00:00'), ms('2023-06-01 00:00'))
+    })
+    it('every_week', () => {
+        check({ optionType: 'every_week', interval: 1, dayOfWeek: [2, 4, 6], timeZone: SEOUL },
+            ms('2022-01-03 09:00'), ms('2023-06-01 00:00'))
+    })
+    it('every_month days', () => {
+        check({ optionType: 'every_month', interval: 1, monthDaySelection: { days: [1, 15, 31] }, timeZone: SEOUL },
+            ms('2021-01-01 09:00'), ms('2023-06-01 00:00'))
+    })
+    it('every_year_some_day', () => {
+        check({ optionType: 'every_year_some_day', interval: 1, month: 3, day: 10, timeZone: SEOUL },
+            ms('2015-03-10 09:00'), ms('2023-06-01 00:00'))
+    })
+})
