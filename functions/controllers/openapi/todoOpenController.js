@@ -1,5 +1,6 @@
 
 const Errors = require('../../models/Errors');
+const { parseExpandedParams, ONE_YEAR_MS } = require('./expandedParams');
 
 class TodoOpenController {
 
@@ -49,6 +50,23 @@ class TodoOpenController {
                 const currents = await this.todoService.findCurrentTodo(userId);
                 res.status(200).send(currents);
             }
+        } catch (error) {
+            throw new Errors.Application(error);
+        }
+    }
+
+    async getExpandedTodos(req, res) {
+        const userId = req.openUserId;
+        const { lower, upper, limit, cursor } = parseExpandedParams(req);
+        if (!userId || lower == null || upper == null) {
+            throw new Errors.BadRequest('user id, lower or upper is missing.');
+        }
+        if (upper - lower > ONE_YEAR_MS) {
+            throw new Errors.BadRequest('query window exceeds 1 year.');
+        }
+        try {
+            const page = await this.todoService.findExpandedTodos(userId, lower, upper, limit, cursor);
+            res.status(200).send(page);
         } catch (error) {
             throw new Errors.Application(error);
         }
