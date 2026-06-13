@@ -28,6 +28,8 @@
     "firebase-functions": "^7.0.2",
     "jose": "^4.15.9",
     "jsonwebtoken": "^9.0.2",
+    "lunar-javascript": "^1.7.7",
+    "luxon": "^3.7.2",
     "swagger-ui-express": "^5.0.1",
     "todocalendar-tools": "^0.2.0",
     "yamljs": "^0.3.0"
