@@ -43,6 +43,10 @@ router.get('/uncompleted', READ, async (req, res) => {
     await controller.getUncompletedTodos(req, res);
 });
 
+router.get('/expanded', READ, async (req, res) => {
+    await controller.getExpandedTodos(req, res);
+});
+
 router.get('/:id', READ, async (req, res) => {
     await controller.getTodo(req, res);
 });
