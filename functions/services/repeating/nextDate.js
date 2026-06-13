@@ -1,6 +1,6 @@
 const dm = require('./dateMath')
 const { OptionType } = require('./data/constants')
-const { nextLunarYearMs } = require('./lunar/lunarYear')
+const { nextLunarYearSec } = require('./lunar/lunarYear')
 
 // dayOfWeeks(앱 1-7 배열)에서 current 다음 요일. Swift Array<DayOfWeeks>.next.
 function nextWeekday(dayOfWeeks, current) {
@@ -115,10 +115,10 @@ function nextEveryYear(opt, cur) {
     return null
 }
 
-// 다음 회차 '시작' ms 반환 (null이면 더 없음).
-function nextDateByOption(opt, currentMs) {
+// 다음 회차 '시작' 초(seconds) 반환 (null이면 더 없음).
+function nextDateByOption(opt, currentSec) {
     const zone = opt.zone || 'UTC'
-    const dtv = dm.fromMs(currentMs, opt.type === OptionType.everyDay ? 'UTC' : zone)
+    const dtv = dm.fromMs(currentSec * 1000, opt.type === OptionType.everyDay ? 'UTC' : zone)
     const cur = { dt: dtv, year: dtv.year, month: dtv.month, day: dtv.day, weekday: dm.appWeekday(dtv) }
 
     let next = null
@@ -129,10 +129,10 @@ function nextDateByOption(opt, currentMs) {
             next = opt.selection.kind === 'days' ? nextEveryMonthDays(opt, cur) : nextEveryMonthWeek(opt, cur); break
         case OptionType.everyYear: next = nextEveryYear(opt, cur); break
         case OptionType.everyYearSomeDay: next = dm.addYears(cur.dt, opt.interval); break
-        case OptionType.lunar: return nextLunarYearMs(currentMs, zone)
+        case OptionType.lunar: return nextLunarYearSec(currentSec, zone)
         default: return null
     }
-    return next ? next.toMillis() : null
+    return next ? Math.round(next.toMillis() / 1000) : null
 }
 
 module.exports = { nextDateByOption }

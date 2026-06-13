@@ -54,10 +54,10 @@ class RepeatTimeEnumerator {
         let cursor = { time: startTime, turn: 1 }
         // daily 닫힌 산술 점프 (exclude 없을 때만; 있으면 loop fallback)
         if (this.option.type === 'every_day' && this.excludes.size === 0) {
-            const stepMs = this.option.interval * 86400000
-            const n = Math.floor((t - 1 - lb(startTime)) / stepMs)
+            const stepSec = this.option.interval * 86400
+            const n = Math.floor((t - 1 - lb(startTime)) / stepSec)
             if (n > 0) {
-                const jumpedStart = lb(startTime) + n * stepMs
+                const jumpedStart = lb(startTime) + n * stepSec
                 cursor = { time: et.shift(startTime, jumpedStart - lb(startTime)), turn: 1 + n }
             }
         }

@@ -1,6 +1,6 @@
 
 const Errors = require('../../models/Errors');
-const { parseExpandedParams, ONE_YEAR_MS } = require('./expandedParams');
+const { parseExpandedParams, ONE_YEAR_SEC } = require('./expandedParams');
 
 class TodoOpenController {
 
@@ -61,7 +61,7 @@ class TodoOpenController {
         if (!userId || lower == null || upper == null) {
             throw new Errors.BadRequest('user id, lower or upper is missing.');
         }
-        if (upper - lower > ONE_YEAR_MS) {
+        if (upper - lower > ONE_YEAR_SEC) {
             throw new Errors.BadRequest('query window exceeds 1 year.');
         }
         try {

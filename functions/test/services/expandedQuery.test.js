@@ -8,7 +8,7 @@ const EventDetailDataService = require('../../services/eventDetailService')
 const TodoModel = require('../../models/Todo')
 const ScheduleModel = require('../../models/Schedule')
 
-const DAY = 86400000
+const DAY = 86400
 
 describe('findExpandedTodos / findExpandedEvents', () => {
     it('todo: 반복 todo가 window 안에서 occurrence로 전개', async () => {
@@ -35,7 +35,7 @@ describe('findExpandedTodos / findExpandedEvents', () => {
     it('schedule: exclude_repeatings 반영 + is_todo=false', async () => {
         const stubEventTime = new StubRepos.EventTime()
         const stubSchedRepo = new StubRepos.ScheduleEvent()
-        const excludeKey = `${Math.trunc((1 * DAY) / 1000)}`
+        const excludeKey = `${Math.trunc(1 * DAY)}`
         stubSchedRepo.findEventsResult = [ScheduleModel.fromData('s1', {
             userId: 'u', name: 'daily',
             event_time: { time_type: 'at', timestamp: 0 },

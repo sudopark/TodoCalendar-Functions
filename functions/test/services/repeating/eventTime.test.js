@@ -21,9 +21,9 @@ describe('eventTime', () => {
     })
 
     it('customKey: 초 단위, 형태별 포맷', () => {
-        // ms → 초로 trunc
-        assert.equal(et.customKey({ time_type: 'at', timestamp: 123456 }), '123')
-        assert.equal(et.customKey({ time_type: 'period', period_start: 10000, period_end: 20000 }), '10..<20')
-        assert.equal(et.customKey({ time_type: 'allday', period_start: 10000, period_end: 20000, seconds_from_gmt: 32400000 }), '10..<20+32400')
+        // 값이 이미 초 — Swift Int(time) 그대로 trunc
+        assert.equal(et.customKey({ time_type: 'at', timestamp: 123456 }), '123456')
+        assert.equal(et.customKey({ time_type: 'period', period_start: 10000, period_end: 20000 }), '10000..<20000')
+        assert.equal(et.customKey({ time_type: 'allday', period_start: 10000, period_end: 20000, seconds_from_gmt: 32400 }), '10000..<20000+32400')
     })
 })
