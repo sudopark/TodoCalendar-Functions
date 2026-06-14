@@ -37,7 +37,7 @@ const settingRouter = require('./routes/settingRoutes');
 const holidayRouter = require('./routes/holidayRoutes');
 const syncRouter = require('./routes/dataSyncRoutes.js');
 const testRouter = require('./routes/testRoutes');
-const aiRouter = require('./routes/ai/aiRoutes');
+const { isEnabled } = require('./services/featureFlags');
 
 const todoOpenRouter = require('./routes/openapi/todoOpenRoutes');
 const doneTodoOpenRouter = require('./routes/openapi/doneTodoOpenRoutes');
@@ -119,7 +119,11 @@ app.use('/v2/sync', authValidator, setVersion('v2'), syncRouter);
 // aiFrontAPI (/v1/ai/*) — 앱이 호출하는 자연어 명령 진입점 (#153). Firebase Auth.
 // 처리는 비동기 — POST /command 가 ai_jobs/{jobId} doc 만 만들고 jobId 즉시 반환.
 // 실제 Agent Loop 은 aiAgentLoop trigger (별도 export, Firestore onCreate) 가 실행.
-app.use('/v1/ai', authValidator, setVersion('v1'), aiRouter);
+// 미완성 기능 — FEATURE_AI 게이트 (#245). off면 require·mount 자체를 안 해 완전 dark.
+if (isEnabled('ai')) {
+    const aiRouter = require('./routes/ai/aiRoutes');
+    app.use('/v1/ai', authValidator, setVersion('v1'), aiRouter);
+}
 
 // openAPI (/v2/open/*) — PAT (서비스 식별) + signed user JWT (사용자 식별) + scope 인가
 // dones 가 todos 보다 먼저 mount: '/v2/open/todos/dones/...' 가 '/v2/open/todos' 의 prefix 매칭으로 흡수되지 않게.
@@ -194,4 +198,7 @@ exports.oauthClientCleanup = require('./scheduled/oauthClientCleanup');
 exports.oauthRefreshTokenCleanup = require('./scheduled/oauthRefreshTokenCleanup');
 
 // AI agent loop trigger — ai_jobs/{jobId} 문서 생성 시 발화, stub/실 AI 처리 후 결과 기록
-exports.aiAgentLoop = require('./triggers/ai/agentLoopTrigger');
+// 미완성 기능 — FEATURE_AI 게이트 (#245). off면 require·export 자체를 안 해 trigger 미배포.
+if (isEnabled('ai')) {
+    exports.aiAgentLoop = require('./triggers/ai/agentLoopTrigger');
+}
