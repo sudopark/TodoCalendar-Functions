@@ -198,3 +198,16 @@ describe('RepeatTimeEnumerator — every_week (KST 미러)', () => {
         assert.equal(r, null)
     })
 })
+
+describe('RepeatTimeEnumerator — lunar 윤달 origin (throw 방지)', () => {
+    it('윤달 origin이어도 throw 없이 다음 회차 생성 (평달 fallback)', () => {
+        // 2023-04-05 KST = 음력 2023 윤2월 15일 → 2024엔 윤2월 없음 → 평달(2월)로 resolve
+        const start = DateTime.fromISO('2023-04-05T09:00:00', { zone: SEOUL }).toMillis() / 1000
+        const en = makeEnum({ optionType: 'lunar_calendar_every_year', month: 2, day: 15, timeZone: SEOUL })
+        let r
+        assert.doesNotThrow(() => { r = en.nextEventTime({ time: atTime(start), turn: 0 }, null) })
+        assert.notEqual(r, null)
+        const got = DateTime.fromMillis(r.time.timestamp * 1000, { zone: SEOUL }).toFormat('yyyy-MM-dd')
+        assert.equal(got, '2024-03-24') // 2024 음력 2월 15일
+    })
+})
