@@ -9,6 +9,8 @@ class StubAiJobService {
         this.shouldFail = false;
         this.lastCreateJobArgs = null;
         this.lastCreateConfirmJobArgs = null;
+        this.lastRejectConfirmArgs = null;
+        this.rejectConfirmResult = true;
         this._jobs = {};
         this._nextJobId = 'job-123';
     }
@@ -27,6 +29,12 @@ class StubAiJobService {
         if (this.shouldFail) throw { message: 'service failed' };
         this.lastCreateConfirmJobArgs = { userId, deviceId, parentJobId, timezone, lang, confirmPayload };
         return this._nextJobId;
+    }
+
+    async rejectConfirm({ userId, jobId }) {
+        if (this.shouldFail) throw { message: 'service failed' };
+        this.lastRejectConfirmArgs = { userId, jobId };
+        return this.rejectConfirmResult;
     }
 
     async loadJob(jobId) {

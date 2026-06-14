@@ -109,6 +109,26 @@ class AiController {
         res.status(202).send({ job_id: jobId });
     }
 
+    async postCommandReject(req, res) {
+        const deviceId = req.header('device_id');
+        if (!deviceId) {
+            throw new Errors.BadRequest('device_id header is required');
+        }
+
+        // reject path body:
+        //  - job_id: confirm 대기 중인 1차 command job 의 jobId (confirm path 의
+        //    parent_job_id 와 같은 대상). 그 job 을 REJECTED 로 종결시킨다.
+        const jobId = req.body.job_id;
+        if (!jobId || typeof jobId !== 'string') {
+            throw new Errors.BadRequest('job_id is required');
+        }
+
+        const userId = req.auth.uid;
+        // 클라가 fire-and-forget 으로 호출 — 전이 성공/no-op 여부와 무관하게 204.
+        await this.jobService.rejectConfirm({ userId, jobId });
+        res.status(204).send();
+    }
+
     async getUsage(req, res) {
         const userId = req.auth.uid;
         const [usage, dailyLimit] = await Promise.all([

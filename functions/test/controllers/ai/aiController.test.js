@@ -325,6 +325,71 @@ describe('AiController', () => {
     });
 
 
+    // MARK: - postCommandReject
+
+    describe('postCommandReject', () => {
+
+        function makeRejectReq({ uid = 'user-1', deviceId = 'device-1', jobId = 'job-123' } = {}) {
+            return {
+                auth: { uid },
+                header: (name) => {
+                    if (name === 'device_id') return deviceId;
+                    return null;
+                },
+                body: { job_id: jobId }
+            };
+        }
+
+        it('정상 — 204 (본문 없음), rejectConfirm 에 userId + jobId 전달', async () => {
+            const req = makeRejectReq();
+            const res = makeRes();
+
+            await controller.postCommandReject(req, res);
+
+            assert.equal(res.statusCode, 204);
+            assert.deepEqual(stubService.lastRejectConfirmArgs, { userId: 'user-1', jobId: 'job-123' });
+        });
+
+        it('이미 종결돼 전이가 안 일어나도(rejectConfirm=false) 204 — fire-and-forget 멱등', async () => {
+            stubService.rejectConfirmResult = false;
+            const req = makeRejectReq();
+            const res = makeRes();
+
+            await controller.postCommandReject(req, res);
+
+            assert.equal(res.statusCode, 204);
+        });
+
+        it('device_id 헤더 누락 → 400', async () => {
+            const req = makeRejectReq({ deviceId: null });
+            await assert.rejects(() => controller.postCommandReject(req, makeRes()), Errors.BadRequest);
+        });
+
+        it('job_id 누락 → 400', async () => {
+            const req = makeRejectReq();
+            delete req.body.job_id;
+            await assert.rejects(() => controller.postCommandReject(req, makeRes()), Errors.BadRequest);
+        });
+
+        it('job_id 빈 문자열 → 400', async () => {
+            const req = makeRejectReq({ jobId: '' });
+            await assert.rejects(() => controller.postCommandReject(req, makeRes()), Errors.BadRequest);
+        });
+
+        it('job_id 가 비문자열 → 400', async () => {
+            const req = makeRejectReq();
+            req.body.job_id = 123;
+            await assert.rejects(() => controller.postCommandReject(req, makeRes()), Errors.BadRequest);
+        });
+
+        it('서비스가 NotFound/403 throw → 그대로 전파', async () => {
+            stubService.shouldFail = true;
+            const req = makeRejectReq();
+            await assert.rejects(() => controller.postCommandReject(req, makeRes()));
+        });
+    });
+
+
     // MARK: - getJob
 
     describe('getJob', () => {
