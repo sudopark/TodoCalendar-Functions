@@ -24,6 +24,7 @@ class StubAiJobRepository {
         // recorders
         this.lastPutPayload = null;       // { jobId, data }
         this.lastTransitionAttempt = null; // jobId (most recent call)
+        this.lastRejectAttempt = null;     // jobId (most recent rejectConfirm call)
     }
 
     /**
@@ -96,6 +97,26 @@ class StubAiJobRepository {
         }
         data.status = result.type;   // 'DONE' | 'CONFIRM' | 'FAILED'
         data.result = result;
+        return true;
+    }
+
+    /**
+     * CONFIRM → REJECTED 상태 전이 (Compare-And-Swap 시뮬레이션, #243).
+     * 현재 status 가 CONFIRM 이면 REJECTED 로 갱신하고 true 반환.
+     * 아니면 false (이미 REJECTED 거나 다른 상태 — 멱등 no-op).
+     *
+     * lastRejectAttempt 에 jobId 를 기록한다.
+     *
+     * @param {string} jobId
+     * @returns {Promise<boolean>}
+     */
+    async rejectConfirm(jobId) {
+        this.lastRejectAttempt = jobId;
+        const data = this._store.get(jobId);
+        if (!data || data.status !== AiJob.STATUS.CONFIRM) {
+            return false;
+        }
+        data.status = AiJob.STATUS.REJECTED;
         return true;
     }
 }

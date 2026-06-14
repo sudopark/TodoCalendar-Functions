@@ -178,6 +178,34 @@ class JobService {
     async completeWith(jobId, result) {
         return this.jobRepository.completeWith(jobId, result);
     }
+
+    /**
+     * #243 — confirm 대기(CONFIRM) job 을 사용자 미동의(거부)로 종결.
+     *
+     * confirm 2차 호출(createConfirmJob)의 거부 짝. 데이터 mutation·토큰 검증 없이
+     * 1차 command job 의 status 만 CONFIRM → REJECTED 로 전이(CAS). 새 job 을 만들지
+     * 않고 기존 job 을 종결 — `result`(거부된 action 포함)는 그대로 보존해 무엇을
+     * 거부했는지 히스토리로 남긴다.
+     *
+     * - job 미존재 → NotFound
+     * - job.userId !== userId → 403 (타인 job 거부 차단)
+     *
+     * 멱등성: CONFIRM 이 아닌 상태(이미 REJECTED / DONE / FAILED 등)면 전이 없이 false.
+     * 클라가 fire-and-forget 으로 호출하므로 중복·경합 호출도 throw 없이 안전.
+     *
+     * @param {{ userId: string, jobId: string }} params
+     * @returns {Promise<boolean>} CONFIRM → REJECTED 전이가 실제로 일어났는지 여부
+     */
+    async rejectConfirm({ userId, jobId }) {
+        const job = await this.jobRepository.load(jobId);
+        if (!job) {
+            throw new Errors.NotFound('job not found');
+        }
+        if (job.userId !== userId) {
+            throw new Errors.Base(403, 'Forbidden', 'forbidden');
+        }
+        return this.jobRepository.rejectConfirm(jobId);
+    }
 }
 
 module.exports = JobService;
