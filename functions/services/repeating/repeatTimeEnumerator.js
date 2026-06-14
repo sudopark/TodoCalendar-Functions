@@ -2,8 +2,6 @@ const { parseRepeatingOption } = require('./options')
 const { nextDateByOption } = require('./nextDate')
 const et = require('./eventTime')
 
-const ITERATION_GUARD = 10000
-
 class RepeatTimeEnumerator {
     constructor(optionJson, end = {}) {
         this.option = parseRepeatingOption(optionJson)
@@ -11,68 +9,70 @@ class RepeatTimeEnumerator {
         this.endCount = end.endCount ?? null
         this.excludes = end.excludes ?? new Set()
     }
+
     isValid() { return this.option != null }
 
-    nextEventTime(from, until, _depth = 0) {
-        if (this.option == null || _depth > ITERATION_GUARD) return null
-        const currentStart = et.lowerBound(from.time)
-        const nextStart = nextDateByOption(this.option, currentStart)
-        if (nextStart == null) return null
-        const deltaMs = nextStart - currentStart
-        const nextTime = et.shift(from.time, deltaMs)
-        if (this.excludes.has(et.customKey(nextTime))) {
-            return this.nextEventTime({ time: nextTime, turn: from.turn }, until, _depth + 1)
+    // from 다음 회차. 더 없으면 null.
+    // exclude된 회차는 turn을 소비하지 않고 건너뛴다 (Swift와 동일하게 종료 조건보다 먼저 판정).
+    // 종료: 이벤트 자체 종료일(this.until = repeating.end)과 조회 상한(until 파라미터)을 둘 다 cap, 그다음 endCount.
+    nextEventTime(from, until) {
+        if (this.option == null) return null
+
+        let cursorTime = from.time
+        for (;;) {
+            const currentStart = et.lowerBound(cursorTime)
+            const nextStart = nextDateByOption(this.option, currentStart)
+            if (nextStart == null) return null
+
+            const nextTime = et.shift(cursorTime, nextStart - currentStart)
+            if (this.excludes.has(et.customKey(nextTime))) {
+                cursorTime = nextTime
+                continue
+            }
+            if (this.until != null && et.upperBound(nextTime) > this.until) return null
+            if (until != null && et.upperBound(nextTime) > until) return null
+
+            const next = { time: nextTime, turn: from.turn + 1 }
+            if (this.endCount != null && next.turn > this.endCount) return null
+            return next
         }
-        const next = { time: nextTime, turn: from.turn + 1 }
-        if (this.until != null && et.upperBound(nextTime) > this.until) return null
-        if (until != null && et.upperBound(nextTime) > until) return null
-        if (this.endCount != null && next.turn > this.endCount) return null
-        return next
     }
 
+    // start 다음부터 끝까지 모든 회차. 조회 상한(until)·종료일·endCount가 상한이라 자연 종료.
     nextEventTimes(start, until) {
         const out = []
         let cursor = start
-        let guard = 0
-        for (;;) {
-            const next = this.nextEventTime(cursor, until)
-            if (next == null) break
+        let next
+        while ((next = this.nextEventTime(cursor, until)) != null) {
             out.push(next)
             cursor = next
-            if (++guard > ITERATION_GUARD) break
         }
         return out
     }
 
-    // startTime(첫 회차, turn 1)부터 t 직전까지 전진해 { time, turn } 회복.
-    // t '이상'은 결과에서 제외(다음 emit이 시작될 지점). §4 Phase 1.
-    // daily는 닫힌 산술로 점프해 호출 횟수를 줄이고, 나머지는 주기 loop로 맞춘다.
+    // startTime(첫 회차, turn 1)부터 t 직전까지 전진해 { time, turn } 회복. §4 Phase 1.
+    // daily는 회차 간격이 일정(interval일)해 닫힌 산술로 단번에 점프하고,
+    // 그 외 옵션은 한 회차씩 순회한다(경과 주기 수에 bound — daily처럼 일 단위로 폭발하지 않음).
     seekTurnUntil(startTime, t) {
         if (this.option == null) return { time: startTime, turn: 1 }
-        const lb = (time) => et.lowerBound(time)
-        if (lb(startTime) >= t) return { time: startTime, turn: 1 }
+        const lowerOf = (time) => et.lowerBound(time)
+        if (lowerOf(startTime) >= t) return { time: startTime, turn: 1 }
 
         let cursor = { time: startTime, turn: 1 }
-        // daily 닫힌 산술 점프 (exclude 없을 때만; 있으면 loop fallback)
         if (this.option.type === 'every_day' && this.excludes.size === 0) {
             const stepSec = this.option.interval * 86400
-            const n = Math.floor((t - 1 - lb(startTime)) / stepSec)
-            if (n > 0) {
-                const jumpedStart = lb(startTime) + n * stepSec
-                cursor = { time: et.shift(startTime, jumpedStart - lb(startTime)), turn: 1 + n }
+            const steps = Math.floor((t - 1 - lowerOf(startTime)) / stepSec)
+            if (steps > 0) {
+                const jumpedSec = lowerOf(startTime) + steps * stepSec
+                cursor = { time: et.shift(startTime, jumpedSec - lowerOf(startTime)), turn: 1 + steps }
             }
         }
-        // 나머지(또는 daily 잔여)는 주기 loop로 정확히 (hard guard 내)
-        let guard = 0
-        for (;;) {
-            const next = this.nextEventTime(cursor, null)
-            if (next == null) break
-            if (lb(next.time) >= t) break
+        let next
+        while ((next = this.nextEventTime(cursor, null)) != null && lowerOf(next.time) < t) {
             cursor = next
-            if (++guard > ITERATION_GUARD) break
         }
         return cursor
     }
 }
 
-module.exports = { RepeatTimeEnumerator, ITERATION_GUARD }
+module.exports = { RepeatTimeEnumerator }
