@@ -86,6 +86,28 @@ class JobRepository {
             return true;
         });
     }
+
+    /**
+     * CONFIRM → REJECTED 상태 전이 (#243). transaction 으로 원자적 수행.
+     * 현재 status 가 CONFIRM 이 아니면 false 반환 — 멱등 no-op.
+     * result 는 건드리지 않는다 (거부된 confirm action 을 히스토리로 보존).
+     *
+     * @param {string} jobId
+     * @returns {boolean} CONFIRM 에서 전이가 실제로 일어났는지 여부
+     */
+    async rejectConfirm(jobId) {
+        const docRef = collectionRef.doc(jobId);
+        return db.runTransaction(async (tx) => {
+            const snapshot = await tx.get(docRef);
+            if (!snapshot.exists) return false;
+            if (snapshot.data().status !== AiJob.STATUS.CONFIRM) return false;
+            tx.update(docRef, {
+                status: AiJob.STATUS.REJECTED,
+                updatedAt: FieldValue.serverTimestamp()
+            });
+            return true;
+        });
+    }
 }
 
 module.exports = JobRepository;

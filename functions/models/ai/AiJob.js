@@ -68,16 +68,20 @@ class AiJob {
     static isTerminal(status) {
         return status === AiJob.STATUS.DONE ||
                status === AiJob.STATUS.CONFIRM ||
-               status === AiJob.STATUS.FAILED;
+               status === AiJob.STATUS.FAILED ||
+               status === AiJob.STATUS.REJECTED;
     }
 }
 
+// REJECTED: confirm 대기(CONFIRM) job 을 사용자가 미동의(거부)로 종결시킨 상태 (#243).
+//           confirm 2차 호출(processConfirmCommand) 의 거부 짝 — 데이터 mutation 없음.
 AiJob.STATUS = Object.freeze({
     PENDING: 'PENDING',
     RUNNING: 'RUNNING',
     DONE: 'DONE',
     CONFIRM: 'CONFIRM',
-    FAILED: 'FAILED'
+    FAILED: 'FAILED',
+    REJECTED: 'REJECTED'
 });
 
 // 'command': 자연어 명령 (1차) — Agent Loop run() 진입

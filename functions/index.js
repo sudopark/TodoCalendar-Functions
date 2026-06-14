@@ -71,7 +71,26 @@ app.set('trust proxy', true);
 // credentials: true — Authorization: Bearer <Firebase ID token> 헤더 전송 허용.
 const WEB_ORIGINS = (process.env.WEB_ORIGINS ?? 'https://todo-calendar.com')
     .split(',').map((o) => o.trim()).filter(Boolean);
-app.use(cors({ origin: WEB_ORIGINS, credentials: true }));
+// hosting preview channel (web staging) 도 cross-origin 호출 허용. preview origin 형식은
+// https://<projectId>--<channel>-<hash>.web.app — 런타임 project id 로 패턴을 만들어 이 프로젝트
+// 의 채널만 매칭한다 (hash 가 배포마다 바뀌어도 커버, 타 프로젝트 도메인은 불가). 프로덕션 origin
+// 은 WEB_ORIGINS exact match 그대로라 동작 불변 — preview origin 만 추가로 통과시킨다.
+const projectId = process.env.GOOGLE_CLOUD_PROJECT
+    ?? process.env.GCLOUD_PROJECT
+    ?? process.env.GCP_PROJECT;
+const PREVIEW_ORIGIN = projectId
+    ? new RegExp(`^https://${projectId}--[a-z0-9-]+\\.web\\.app$`)
+    : null;
+const corsOrigin = (origin, callback) => {
+    // Origin 헤더 없는 요청 (server-to-server, same-origin, openAPI/oauth self-loopback) 은
+    // CORS 무관 — 그대로 통과시켜 기존 동작 보존.
+    if (!origin) return callback(null, true);
+    const allowed = WEB_ORIGINS.includes(origin)
+        || (PREVIEW_ORIGIN !== null && PREVIEW_ORIGIN.test(origin));
+    // 미허용 origin 은 ACAO 미부착 (에러 아님) → 브라우저가 차단.
+    return callback(null, allowed);
+};
+app.use(cors({ origin: corsOrigin, credentials: true }));
 
 // app use middleware
 app.use(bodyParser.json());
