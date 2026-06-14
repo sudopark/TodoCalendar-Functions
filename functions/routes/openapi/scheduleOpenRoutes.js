@@ -39,6 +39,10 @@ router.get('/', READ, async (req, res) => {
     await controller.getEvents(req, res);
 });
 
+router.get('/expanded', READ, async (req, res) => {
+    await controller.getExpandedEvents(req, res);
+});
+
 router.get('/:id', READ, async (req, res) => {
     await controller.getEvent(req, res);
 });

@@ -37,6 +37,7 @@ const settingRouter = require('./routes/settingRoutes');
 const holidayRouter = require('./routes/holidayRoutes');
 const syncRouter = require('./routes/dataSyncRoutes.js');
 const testRouter = require('./routes/testRoutes');
+const { isEnabled } = require('./services/featureFlags');
 
 const todoOpenRouter = require('./routes/openapi/todoOpenRoutes');
 const doneTodoOpenRouter = require('./routes/openapi/doneTodoOpenRoutes');
@@ -46,6 +47,11 @@ const eventDetailOpenRouter = require('./routes/openapi/eventDetailOpenRoutes');
 const foremostOpenRouter = require('./routes/openapi/foremostOpenRoutes');
 const patAuth = require('./middlewares/openapi/patAuth');
 const signedUserAuth = require('./middlewares/openapi/signedUserAuth');
+const OpenRateLimitRepository = require('./repositories/openRateLimitRepository');
+const OpenRateLimitConfigRepository = require('./repositories/openRateLimitConfigRepository');
+const OpenRateLimitConfigProvider = require('./services/openRateLimitConfigProvider');
+const OpenRateLimitService = require('./services/openRateLimitService');
+const openRateLimit = require('./middlewares/openapi/rateLimit');
 
 const oauthWellKnownRouter = require('./routes/oauth/wellKnownRoutes');
 const oauthRegisterRouter = require('./routes/oauth/registerRoutes');
@@ -110,9 +116,29 @@ app.use('/v1/sync', authValidator, setVersion('v1'), syncRouter);
 app.use('/v2/sync', authValidator, setVersion('v2'), syncRouter);
 // app.use('/v1/tests', v1TestRouter);
 
+// aiFrontAPI (/v1/ai/*) — 앱이 호출하는 자연어 명령 진입점 (#153). Firebase Auth.
+// 처리는 비동기 — POST /command 가 ai_jobs/{jobId} doc 만 만들고 jobId 즉시 반환.
+// 실제 Agent Loop 은 aiAgentLoop trigger (별도 export, Firestore onCreate) 가 실행.
+// 미완성 기능 — FEATURE_AI 게이트 (#245). off면 require·mount 자체를 안 해 완전 dark.
+if (isEnabled('ai')) {
+    const aiRouter = require('./routes/ai/aiRoutes');
+    app.use('/v1/ai', authValidator, setVersion('v1'), aiRouter);
+}
+
 // openAPI (/v2/open/*) — PAT (서비스 식별) + signed user JWT (사용자 식별) + scope 인가
 // dones 가 todos 보다 먼저 mount: '/v2/open/todos/dones/...' 가 '/v2/open/todos' 의 prefix 매칭으로 흡수되지 않게.
-const openApiAuth = [patAuth, signedUserAuth, setVersion('v2')];
+const openRateLimitConfigProvider = new OpenRateLimitConfigProvider({
+    repository: new OpenRateLimitConfigRepository(),
+    ttlMs: parseInt(process.env.RATE_LIMIT_CONFIG_CACHE_TTL_SEC ?? '60', 10) * 1000
+});
+const openRateLimitService = new OpenRateLimitService({
+    repository: new OpenRateLimitRepository(),
+    configProvider: openRateLimitConfigProvider,
+    userPerMin: parseInt(process.env.RATE_LIMIT_USER_PER_MIN ?? '120', 10),
+    patPerMin: parseInt(process.env.RATE_LIMIT_PAT_PER_MIN ?? '600', 10),
+    unlimitedPats: (process.env.RATE_LIMIT_PAT_UNLIMITED ?? 'mcp').split(',').map((s) => s.trim()).filter(Boolean)
+});
+const openApiAuth = [patAuth, signedUserAuth, openRateLimit(openRateLimitService), setVersion('v2')];
 app.use('/v2/open/todos/dones', openApiAuth, doneTodoOpenRouter);
 app.use('/v2/open/todos', openApiAuth, todoOpenRouter);
 app.use('/v2/open/schedules', openApiAuth, scheduleOpenRouter);
@@ -134,7 +160,10 @@ const requestLogger = (gen) => (req, res, next) => {
     const start = Date.now();
     res.on('finish', () => {
         const duration = Date.now() - start;
-        const log = `[${gen}] ${req.method} ${req.originalUrl} ${res.statusCode} ${duration}ms`;
+        const callerSuffix = (req.callerId || req.openUserId)
+            ? ` caller=${req.callerId ?? '-'} user=${req.openUserId ?? '-'}`
+            : '';
+        const log = `[${gen}] ${req.method} ${req.originalUrl} ${res.statusCode} ${duration}ms${callerSuffix}`;
         if (res.statusCode >= 500) {
             logger.error(log);
         } else if (res.statusCode >= 400) {
@@ -167,3 +196,9 @@ exports.apiV2 = onRequest(appV2);
 exports.oauthClientCleanup = require('./scheduled/oauthClientCleanup');
 // expired refresh_token 정리 — 매 24시간 (Asia/Seoul timezone). 자세한 정책: README 의 'Cleanup' 섹션
 exports.oauthRefreshTokenCleanup = require('./scheduled/oauthRefreshTokenCleanup');
+
+// AI agent loop trigger — ai_jobs/{jobId} 문서 생성 시 발화, stub/실 AI 처리 후 결과 기록
+// 미완성 기능 — FEATURE_AI 게이트 (#245). off면 require·export 자체를 안 해 trigger 미배포.
+if (isEnabled('ai')) {
+    exports.aiAgentLoop = require('./triggers/ai/agentLoopTrigger');
+}

@@ -46,6 +46,17 @@ routes/ → controllers/ → services/ → repositories/
 - **Services** (`services/`): Business logic. Services receive their dependencies injected; never instantiate repositories themselves.
 - **Repositories** (`repositories/`): Firestore read/write. Return domain model instances (e.g., `Todo.fromData(snapshot.id, snapshot.data())`). Firebase Admin SDK is initialized once in `index.js`.
 
+#### 정책/카테고리 값은 코드 상수 X — 구조화 데이터로 분리
+
+plan·tier·요금·한도·정책 같이 확장될 카테고리 값은 service 안 상수로 박지 말고 **`services/<도메인>/data/<name>.json`** 으로 분리한다. 이유:
+- 카테고리 추가 시 코드 변경 없이 데이터만 갱신 (향후 admin UI / Firestore / Remote Config 이전 trivial).
+- 다른 영역(사용량 조회 API, 결제 페이지, 운영 대시보드 등)에서 같은 정의를 재참조 가능 — 단일 source.
+- service 는 데이터 require 만 하고 그 값에 따른 로직만 가진다.
+
+예: AI plan 별 daily 토큰 한도를 `services/ai/data/aiPlans.json` 으로 두고 `aiUsageService.getDailyLimit(userId)` 가 plan 조회 → 한도 lookup (PR #?, issue #157). 추후 plan 추가는 JSON 갱신만으로.
+
+같은 패턴이 적합한 후보: 결제 tier, 권한 role, feature flag 의 정적 정의, 외부 webhook routing 매핑 등.
+
 ### API Versioning
 
 Routes are registered under `/v1/` and `/v2/` prefixes. A `setVersion` middleware sets `req.apiVersion` so services can branch on version where needed (e.g., tag delete behavior differs between v1 and v2).
@@ -112,7 +123,7 @@ Tests use **Mocha + assert** (Node.js built-in). Test doubles live in `test/doub
 
 **Test double policy — recorders, not validators**: stubs/spies record raw inputs (e.g., `lastPutPayload`) so test cases can assert on them directly. Never bake validation/throw logic into the stub itself — that turns it into a mock and scatters test intent into the double. To catch a regression, expose what the production code actually passes and let the test case verify it. Example: PR #184 (issue #178) — `StubScheduleEventRepository.lastPutPayload` records the raw payload so the test can assert `Object.getPrototypeOf(payload) === Object.prototype`, instead of having the stub throw on custom-prototype inputs.
 
-**Fake/대체 구현 위치 — `repositories/fakes/`로 격리**: emulator runtime이 require해야 하는 fake(예: 외부 API 호출 차단용)는 `test/`에 둘 수 없음 — e2e가 mocha 프로세스에서 firebase emulator가 띄운 함수 프로세스를 외부 호출하는 구조라, fake가 함수 프로세스의 require 경로 안(=production-tree)에 있어야 함. 이때는 `repositories/fakes/` 같은 격리된 디렉토리에 두어 production-tree 안이지만 fake임이 한눈에 드러나게 함. 테스트 코드에서만 쓰는 stub/spy(`test/doubles/`)와 emulator runtime용 fake(`repositories/fakes/`)는 위치/역할이 다름. 예: `repositories/fakes/holidayRepository.js` (PR #187, issue #183).
+**Fake/대체 구현 위치 — `<layer>/fakes/`로 격리**: emulator runtime이 require해야 하는 fake(예: 외부 API 호출 차단용)는 `test/`에 둘 수 없음 — e2e가 mocha 프로세스에서 firebase emulator가 띄운 함수 프로세스를 외부 호출하는 구조라, fake가 함수 프로세스의 require 경로 안(=production-tree)에 있어야 함. 이때는 fake 가 대체하는 layer 의 `fakes/` 디렉토리에 두어 production-tree 안이지만 fake임이 한눈에 드러나게 함. 외부 데이터 소스(repository) 대체는 `repositories/fakes/`, 외부 API client(service wrapper) 대체는 `services/<도메인>/fakes/`. 테스트 코드에서만 쓰는 stub/spy(`test/doubles/`)와 emulator runtime용 fake(`<layer>/fakes/`)는 위치/역할이 다름. 예: `repositories/fakes/holidayRepository.js` (PR #187, issue #183), `services/ai/fakes/anthropicClient.js` (PR #219, issue #154).
 
 Tests are organized in `test/services/`, `test/controllers/`, and `test/models/`. Service tests pass stubs via constructor injection. Controller tests use `stubServices.js` (plain objects, independent of repository model changes).
 
@@ -164,11 +175,11 @@ test/e2e/
 못하게).
 
 **OPENAPI_PAT_MCP — PAT(Personal Access Token) secret**
-- 호출자(MCP 서비스)가 헤더에 넣는 토큰 형식: `Authorization: Bearer mcp_<secret>`
-- 환경변수에는 **prefix 없이 secret 만** 둔다. 예: `OPENAPI_PAT_MCP=abc123...` (X: `mcp_abc123...`)
-- 검증 로직(`middlewares/openapi/patAuth.js`): 인입 토큰을 `_` 로 split → secret 부분만
-  `crypto.timingSafeEqual` 비교. prefix 가 env 값에 섞이면 절대 일치하지 않음.
-- 생성: `openssl rand -hex 32` (32바이트 = 64 hex 문자) — 길이는 32 이상 권장
+- 호출자(MCP 서비스 또는 functions self-loopback)가 헤더에 넣는 토큰 형식: `Authorization: Bearer mcp_<secret>`
+- 환경변수에는 **prefix 포함 full token** 을 둔다. 예: `OPENAPI_PAT_MCP=mcp_abc123...`
+  - lib `todocalendar-tools` 의 `callOpenApi` 가 env 값을 그대로 Authorization 헤더에 박는 형식과 일관. Agent Loop → openAPI self-loopback 흐름(예: `delete_todo` 2차 confirm) 이 작동하려면 prefix 포함 필수.
+- 검증 로직(`middlewares/openapi/patAuth.js`): 인입 토큰을 `_` 로 split → service+secret 분리, env 값도 같은 형식이라 prefix 떼고 secret 부분만 `crypto.timingSafeEqual` 비교.
+- 생성: secret 부분만 `openssl rand -hex 32` (32바이트 = 64 hex 문자) → 앞에 `mcp_` 접두 → env 에 박는다.
 - 화이트리스트(`KNOWN_SERVICES`): MVP 는 `mcp` 한 종류만. 새 서비스 추가 시 코드 수정 필요.
 
 **SIGNING_SECRET — 사용자 JWT(HS256) 서명키**
@@ -179,7 +190,13 @@ test/e2e/
 - 생성: `openssl rand -hex 32` (32바이트 이상 random hex 권장)
 
 **로테이션 / 변경**
-- 운영에서 PAT 또는 SIGNING_SECRET 을 바꾸면 호출자(MCP, aiFrontAPI) 도 동시에 갱신해야 함 — 무중단 교체가 필요하면 화이트리스트에 임시로 두 secret 을 모두 허용하는 단계가 필요(현 MVP 미지원, 단기 다운타임 감수).
+- **무중단 로테이션 지원 (#176)** — PAT, SIGNING_SECRET 둘 다 `_PRIMARY` / `_SECONDARY` 두 슬롯을 동시에 허용. 호출자(MCP, aiFrontAPI) 전환 시점을 분리할 수 있어 다운타임 없이 교체 가능. 기존 단일 env 이름(`OPENAPI_PAT_<SVC>`, `SIGNING_SECRET`) 은 PRIMARY 별칭으로 그대로 인식.
+- **로테이션 절차 (예: `OPENAPI_PAT_MCP`)**:
+  1. `OPENAPI_PAT_MCP_SECONDARY` 에 신 secret 등록 (구 secret 은 PRIMARY/legacy 그대로). 서버 재시작/redeploy 로 신 secret 검증 활성화.
+  2. 호출자(MCP) 가 신 secret 으로 전환 — 호출 측 배포 완료까지 대기.
+  3. `OPENAPI_PAT_MCP_PRIMARY` (또는 legacy `OPENAPI_PAT_MCP`) 에 신 secret 복사.
+  4. `OPENAPI_PAT_MCP_SECONDARY` 비움. 다시 단일 슬롯 운영으로 복귀.
+  `SIGNING_SECRET` 도 동일 절차 — 단 발급자(aiFrontAPI) 가 SECONDARY 로 서명을 전환하는 동안 구 PRIMARY 로 발급된 미만료 JWT 도 계속 통과.
 - `.env.test.example` dummy 값(`deadbeef...`/`cafebabe...`) 은 절대 운영 secret 으로 쓰지 말 것.
 
 #### OAuth 2.1 Authorization Server 시크릿 운영 정책 (`/v1/oauth/*`)
@@ -194,3 +211,47 @@ test/e2e/
 - **`OAUTH_CONSENT_URL`** — Web consent UI base URL (`/authorize` 의 302 redirect 대상). error 페이지는 `<base>/error?reason=...`.
 
 호스팅 / 운영 배포 절차는 이슈 #189 (특히 백로그 코멘트 #issuecomment-4426228666).
+
+#### aiFrontAPI Agent Loop 시크릿 운영 정책 (`/v1/ai/*` + `aiAgentLoop` Firestore trigger)
+
+기능 스펙은 issue #154 (부모 #151) 참조. 아래는 운영/시크릿 정책만.
+
+**POST `/v1/ai/command` body schema** (required fields):
+- `command_text` (string): 사용자 자연어 명령
+- `timezone` (string, IANA — 예: `Asia/Seoul`, `America/Los_Angeles`): 클라이언트 timezone. 누락·invalid 시 400. 서버 default 없음.
+
+`aiAgentLoop` 는 Firestore trigger 로 실행되며 Anthropic Claude API 와 `todocalendar-tools` 패키지를 호출하는 Agent Loop. 시크릿은 trigger runtime 에 `process.env` 로 주입된다. 운영(`.env`) 과 테스트(`.env.test`) 양쪽에 **반드시 다른 값**으로 둔다 (테스트 dummy 가 운영 인증을 우회하지 못하게).
+
+**`ANTHROPIC_API_KEY` — Anthropic API access token**
+- Agent Loop 가 Claude 모델을 호출할 때 사용. Anthropic console(`https://console.anthropic.com/settings/keys`)에서 발급.
+- Firebase Secret 등록: `firebase functions:secrets:set ANTHROPIC_API_KEY`
+- 기본 모델: `claude-haiku-4-5-20251001` (`AnthropicClient` constructor 기본값). 다른 모델로 바꾸려면 `AI_MODEL` env 추가.
+- 비용 주의: trigger 호출마다 Anthropic 측 과금 발생. 플랜별 한도 / rate limit 관리는 후속 issue #157 에서.
+
+**`CONFIRM_SECRET` — `todocalendar-tools` confirmToken HMAC 키**
+- `delete_todo` / `delete_schedule` tool 의 confirmToken 서명·검증에 사용. lib (`todocalendar-tools`) 가 process require 시점에 `process.env.CONFIRM_SECRET` 읽음.
+- 생성: `openssl rand -hex 32` (32바이트 = 64 hex 문자)
+- Firebase Secret 등록: `firebase functions:secrets:set CONFIRM_SECRET`
+- MVP 1차 호출은 confirmToken 실제 HMAC 검증 없이 처리됨. 하지만 lib require 시점에 env 가 없으면 오류가 나므로 dummy 라도 반드시 세팅해야 함. 2차 HMAC 검증 흐름은 후속 issue #158 에서.
+
+**`OPENAPI_BASE_URL` — functions self-loopback base URL**
+- `todocalendar-tools` lib 이 openAPI 엔드포인트(`/v2/open/*`)를 HTTP 로 호출할 때 사용. 같은 service 내부라도 lib transport 가 HTTP fixed 이므로 반드시 명시.
+- production 예시: `https://us-central1-<PROJECT>.cloudfunctions.net/api` (functions canonical URL) 또는 hosting custom domain (예: `https://api.todo-calendar.com`)
+- emulator 예시: `http://127.0.0.1:5001/<PROJECT>/<REGION>/api` (예: `http://127.0.0.1:5001/todocalendar-1707723626269/us-central1/api`)
+- Firebase Secret 등록: `firebase functions:secrets:set OPENAPI_BASE_URL`
+
+**재사용 시크릿 — openAPI 인증 체계와 공유**
+
+`OPENAPI_PAT_MCP` 와 `SIGNING_SECRET` 은 기존 "openAPI 시크릿 운영 정책" 섹션에서 관리. `todocalendar-tools` lib 이 openAPI 호출 시 같은 process env 에서 읽으므로 별도 세팅 불필요 — 값이 이미 있어야 함.
+
+**Emulator 분리 정책 — `.env.test`**
+- 신규 시크릿 3개(`ANTHROPIC_API_KEY` / `CONFIRM_SECRET` / `OPENAPI_BASE_URL`) 는 emulator 에서 dummy 값 사용.
+- `ANTHROPIC_API_KEY` 의 emulator dummy: `deadbeef...` 64 hex 문자. E2E 는 `AI_STUB_ANTHROPIC=true` env 로 `StubAnthropicClient` 를 주입해 실 Anthropic API 호출을 차단.
+- `CONFIRM_SECRET` 의 emulator dummy: `deadbeef...` 64 hex 문자. MVP 1차 흐름만이라 실제 HMAC 비교 거의 없음.
+- `OPENAPI_BASE_URL` 은 emulator self URL 로 세팅 — emulator 가 functions + auth + firestore 모두 뜨면 lib self-loopback 이 emulator 내부 openAPI 로 라우팅됨.
+- `.env.test.example` 에 위 3개 dummy 항목 모두 포함할 것. 신규 시크릿 키 추가 시 example 도 함께 갱신.
+
+**로테이션 / 변경**
+- `ANTHROPIC_API_KEY` 갱신: Anthropic console 에서 새 키 발급 → Firebase Secret 재등록(`firebase functions:secrets:set`) → functions redeploy. 무중단 교체가 필요하면 Anthropic console 의 multi-key 지원 확인 후 구키 회수.
+- `CONFIRM_SECRET` 갱신: 변경하면 미결 confirmToken 이 모두 무효화됨. MVP 1차 흐름만이라 영향 적음. 후속 issue #158 시점에 본격 운영 정책 수립 필요.
+- `OPENAPI_BASE_URL` 은 hosting domain 변경 또는 functions region 변경 시 갱신.

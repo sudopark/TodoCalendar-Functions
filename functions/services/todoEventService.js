@@ -2,6 +2,7 @@
 const DataChangeLog = require('../models/DataChangeLog');
 const DataTypes = require('../models/DataTypes');
 const { chunk } = require('../Utils/functions');
+const { buildExpandedPage } = require('./repeating/occurrencePaging');
 
 class TodoEventService {
 
@@ -24,6 +25,19 @@ class TodoEventService {
             return this.todoRepository.findTodos(ids)
         })
         return (await Promise.all(loadTodods)).flat();
+    }
+
+    async findExpandedTodos(userId, lower, upper, limit, cursor) {
+        const eventIds = await this.eventTimeRangeService.eventIds(userId, true, lower, upper);
+        if(eventIds.length === 0) {
+            return { events: {}, occurrences: [], next_cursor: null }
+        }
+        const eventIdSlices = chunk(eventIds, 30)
+        const loaded = (await Promise.all(eventIdSlices.map((ids) => {
+            return this.todoRepository.findTodos(ids)
+        }))).flat()
+        const plain = loaded.map((todo) => ({ ...todo.toJSON(), is_todo: true }))
+        return buildExpandedPage(plain, Number(lower), Number(upper), Number(limit), cursor)
     }
 
     async findCurrentTodo(userId) {

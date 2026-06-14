@@ -114,6 +114,9 @@ class StubTodoRepository {
     }
 
     async findTodos(eventIds) {
+        if(this.findTodosResult != null) {
+            return this.findTodosResult
+        }
         const todos = eventIds.map((id) => {
             return TodoModel.fromData(id, { userId: 'some' })
         })
@@ -179,6 +182,9 @@ class StubScheduleEventRepository {
     }
 
     async findEvents(eventIds) {
+        if(this.findEventsResult != null) {
+            return this.findEventsResult
+        }
         const events = eventIds.map((id) => {
             return ScheduleModel.fromData(id, { userId: 'some' })
         })
@@ -288,6 +294,9 @@ class StubEventTimeRangeRepository {
     }
 
     async eventIds(userId, isTodo, lower, upper) {
+        if(this.eventIdsResult != null) {
+            return this.eventIdsResult
+        }
         const len = upper - lower
         const array = Array.from({length: len}, (v, i) => i+lower)
         return array.map(i => `id:${i}`)
@@ -781,7 +790,7 @@ class StubUserRepository {
         }
         this.userDevices.set(device.deviceId, device)
     }
-    
+
     async removeUserDevice(deviceId) {
         if(this.shouldFail) {
             throw { message: 'failed' };
@@ -790,19 +799,59 @@ class StubUserRepository {
     }
 }
 
+// MARK: - openAPI rate limit
+
+class StubOpenRateLimitRepository {
+
+    constructor() {
+        this.shouldFail = false
+        this.calls = []
+        this.counts = {}
+        this.defaultCount = 1
+    }
+
+    async incrementWithinWindow(dimension, entityId, windowSeconds, now = Date.now()) {
+        this.calls.push({ dimension, entityId, windowSeconds, now })
+        if(this.shouldFail) {
+            throw { message: 'failed' }
+        }
+        const key = `${dimension}:${entityId}`
+        return this.counts[key] !== undefined ? this.counts[key] : this.defaultCount
+    }
+}
+
+class StubOpenRateLimitConfigRepository {
+
+    constructor() {
+        this.shouldFail = false
+        this.loadCalls = 0
+        this.loadResult = { userUnlimited: [], userOverrides: {} }
+    }
+
+    async load() {
+        this.loadCalls += 1
+        if(this.shouldFail) {
+            throw { message: 'failed' }
+        }
+        return this.loadResult
+    }
+}
+
 module.exports = {
     Account: StubAccountRepository,
     User: StubUserRepository,
-    Todo: StubTodoRepository, 
-    EventTime: StubEventTimeRangeRepository, 
-    DoneTodo: StubDoneTodoEventRepository, 
+    Todo: StubTodoRepository,
+    EventTime: StubEventTimeRangeRepository,
+    DoneTodo: StubDoneTodoEventRepository,
     ScheduleEvent: StubScheduleEventRepository,
     Foremost: StubForemostEventIdRepository,
-    EventTag: StubEventTagRepository, 
-    EventDetailData: StubEventDetailDataRepository, 
-    Migration: StubMigrationReposiotry, 
-    ApPSetting: StubAppSettingRepository, 
-    Holiday: StubHolidayRepository, 
+    EventTag: StubEventTagRepository,
+    EventDetailData: StubEventDetailDataRepository,
+    Migration: StubMigrationReposiotry,
+    ApPSetting: StubAppSettingRepository,
+    Holiday: StubHolidayRepository,
     ChangeLog: StubDataChangeLogRepository,
-    SyncTimeStamp: StubSyncTimeStampRepository
+    SyncTimeStamp: StubSyncTimeStampRepository,
+    OpenRateLimit: StubOpenRateLimitRepository,
+    OpenRateLimitConfig: StubOpenRateLimitConfigRepository
 };
