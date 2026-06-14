@@ -45,7 +45,7 @@
 | 객체 | 위치 | 책임 |
 |---|---|---|
 | `AiController` | `controllers/ai/aiController.js` | HTTP body / header 검증, `jobId` 즉시 반환 (202) |
-| `JobService` | `services/ai/jobService.js` | job doc create, state CAS (PENDING→RUNNING→종결) |
+| `JobService` | `services/ai/jobService.js` | job doc create, state CAS (PENDING→RUNNING→종결, CONFIRM→REJECTED 거부) |
 | `JobRepository` | `repositories/ai/jobRepository.js` | Firestore `ai_jobs` 컬렉션 IO (transaction 기반 CAS) |
 | `agentLoopTrigger` | `triggers/ai/agentLoopTrigger.js` | `ai_jobs/{jobId}` onCreate trigger (composition root) |
 | `AgentLoopHandler` | `triggers/ai/agentLoopHandler.js` | 전이 가드, usage record, FCM 발송, 에러 sanitize |
@@ -64,6 +64,7 @@
 |---|---|---|---|---|
 | POST | `/v1/ai/command` | `{ command_text, timezone }` | `Authorization`, `device_id`, `Accept-Language?` | `202 { job_id }` |
 | POST | `/v1/ai/command/confirm` | `{ parent_job_id, tool, args, confirm_token, timezone? }` | `Authorization`, `device_id`, `Accept-Language?` | `202 { job_id }` |
+| POST | `/v1/ai/command/reject` | `{ job_id }` | `Authorization`, `device_id` | `204 No Content` |
 | GET | `/v1/ai/jobs/:id` | — | `Authorization` | `200 AiJob.toJSON()` |
 | GET | `/v1/ai/usage` | — | `Authorization` | `200 AiUsage.toJSON() + { daily_limit }` (오늘 사용량 + 일일 한도) |
 
@@ -72,10 +73,11 @@
 - `Accept-Language` 헤더에서 `ko` / `en` 자동 결정 → `job.lang` 저장. 누락 / unsupported → `en` default. 표준 q-factor / region tag (`ko-KR`) 처리.
 - 누락 / invalid → 400.
 - `POST /v1/ai/command` 은 일일 토큰 한도 (`daily_limit`) 초과 시 controller 가 agent loop 진입 전 차단 → `202 { job_id }` 그대로 + Firestore 의 해당 job 은 즉시 `FAILED` (`errorCode: DailyLimitExceeded`). `/confirm` 은 한도 적용 X (#157).
+- `POST /v1/ai/command/reject` 는 confirm 대기 (`CONFIRM`) 1차 job 을 사용자 미동의 (거부) 로 종결 (#243). body 의 `job_id` 는 confirm path 의 `parent_job_id` 와 같은 대상 (1차 command job). 해당 job 을 `CONFIRM → REJECTED` 로 전이만 하고 **데이터 mutation·confirmToken 검증·trigger·FCM 없음**. 클라가 **fire-and-forget** 으로 호출 — 응답 안 기다리고 즉시 미동의 UI 로 전환. **멱등**: 이미 종결 (`REJECTED`/`DONE`/`FAILED`) 된 job 중복 호출도 `204`. 소유권 불일치 403 / 미존재 404. (전이 성공/no-op 여부와 무관하게 항상 `204` — 클라는 본문·상태코드 분기 불필요.)
 
 ## Firestore Collections
 
-- **`ai_jobs/{jobId}`** — 단일 job. status: `PENDING` → `RUNNING` → `{DONE | CONFIRM | FAILED}`.
+- **`ai_jobs/{jobId}`** — 단일 job. status: `PENDING` → `RUNNING` → `{DONE | CONFIRM | FAILED}`, 그리고 `CONFIRM` → `REJECTED` (사용자 미동의, #243).
   필드: `userId`, `deviceId`, `commandText`, `timezone`, `lang` (`ko`|`en`), `mode` (`command`|`confirm`), `confirmPayload`,
   `status`, `result` (`AiJobResult` plain object), `createdAt`, `updatedAt`, `expireAt` (24h).
 - **`aiUsage/{userId}/dailyUsage/{YYYY-MM-DD}`** — UTC 기준 일별 토큰 누적.
@@ -210,6 +212,34 @@ sequenceDiagram
 
 ---
 
+## 시퀀스: REJECT 흐름 (CONFIRM 미동의)
+
+`CONFIRM` 응답을 받은 사용자가 **미동의 (거부)** 를 선택. confirm 2차 흐름과 달리 **trigger·Claude·lib·FCM 을 거치지 않는 동기 처리** — confirm 대기 job 의 status 만 `CONFIRM → REJECTED` 로 전이하고 즉시 응답. 데이터 mutation 없음.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant App
+    participant Ctrl as AiController
+    participant JobSvc as JobService
+    participant FS as Firestore ai_jobs
+    App->>Ctrl: POST /v1/ai/command/reject with job_id, device_id
+    Ctrl->>Ctrl: validate device_id and job_id
+    Ctrl->>JobSvc: rejectConfirm with userId, jobId
+    JobSvc->>FS: load jobId
+    Note over JobSvc: 미존재 404, job.userId 불일치 403
+    JobSvc->>FS: tx CONFIRM to REJECTED via CAS
+    Note over JobSvc,FS: status 가 CONFIRM 이 아니면 no-op false (멱등) — result 보존
+    JobSvc-->>Ctrl: transitioned boolean
+    Ctrl-->>App: 204 No Content
+    Note over App: 응답·전이 결과와 무관하게 즉시 미동의 UI 전환 (fire-and-forget)
+    Note over JobSvc,FS: 데이터 mutation 없음, confirmToken 검증 없음, FCM 없음
+```
+
+reject 와 trigger 의 race 는 안전하다 — handler 는 `RUNNING → 종결` 로만, reject 는 `CONFIRM → REJECTED` 로만 전이해 **source 상태가 disjoint**. 동시 인입돼도 서로 덮어쓰지 않는다.
+
+---
+
 ## 시퀀스: GET /v1/ai/usage
 
 ```mermaid
@@ -266,11 +296,11 @@ Content-Type: application/json
 
 ```
 PENDING ──(trigger 발화)──▶ RUNNING ──┬─▶ DONE
-                                       ├─▶ CONFIRM   (terminal)
+                                       ├─▶ CONFIRM ──(POST /command/reject)──▶ REJECTED
                                        └─▶ FAILED
 ```
 
-`status` 가 terminal (`DONE` / `CONFIRM` / `FAILED`) 이면 `result` 필드에 `AiJobResult` 가 박혀 있다.
+`status` 가 terminal (`DONE` / `CONFIRM` / `FAILED` / `REJECTED`) 이면 `result` 필드에 `AiJobResult` 가 박혀 있다. `REJECTED` 는 거부된 `CONFIRM` 의 `result` (= `type: CONFIRM`, `action` 포함) 를 **그대로 보존**한다 — 무엇을 거부했는지 추적용. 따라서 **상태 판단은 `status` 필드 기준** (`result.type` 아님).
 
 ### `AiJobResult` 응답 형태
 
@@ -317,7 +347,7 @@ PENDING ──(trigger 발화)──▶ RUNNING ──┬─▶ DONE
 | `type` | 클라가 할 일 |
 |---|---|
 | `DONE` | `text` 사용자에게 표시 (toast / chat 등). **`mutations` 보고 영향받은 도메인 list/cache invalidate**. |
-| `CONFIRM` | `text` 로 confirm UI 표시. **사용자가 승인하면 `action` 통째로 2차 호출 body 에 박아 `POST /v1/ai/command/confirm`** 호출 (`action.parentJobId` 는 body 의 `parent_job_id` 자리로). 거부 시 그냥 폐기. 1차 응답에 `mutations` 가 박혀 있을 수 있음 (이전 turn 의 변경) → list reload. |
+| `CONFIRM` | `text` 로 confirm UI 표시. **승인 시** `action` 통째로 2차 호출 body 에 박아 `POST /v1/ai/command/confirm` 호출 (`action.parentJobId` 는 body 의 `parent_job_id` 자리로). **거부 시** `action.parentJobId` 를 `job_id` 로 담아 `POST /v1/ai/command/reject` fire-and-forget 호출 (아래 "거부 호출" 참고). 1차 응답에 `mutations` 가 박혀 있을 수 있음 (이전 turn 의 변경) → list reload. |
 | `FAILED` | `reason` 사용자에게 표시. **`errorCode` 보고 분류 / 다른 UX 분기**. `mutations` 도 박혀 있을 수 있음 (부분 mutation) → reload. |
 
 ### 2차 호출 — CONFIRM 확인 후
@@ -345,7 +375,27 @@ Content-Type: application/json
 
 응답은 1차와 동일하게 `{ job_id }` — 새 jobId 발급되어 1차 jobId 와 독립. 같은 흐름으로 `ai_jobs/{newJobId}` 결과 대기.
 
-### `mutations` 처리
+### 거부 호출 — CONFIRM 미동의 시 (#243)
+
+사용자가 confirm UI 에서 **미동의 (거부)** 를 누르면 호출. 1차 응답 `action.parentJobId` 를 `job_id` 로 담는다 (confirm 의 `parent_job_id` 와 같은 대상).
+
+```http
+POST /v1/ai/command/reject
+Authorization: Bearer <Firebase ID token>
+device_id: <device id>
+Content-Type: application/json
+
+{
+  "job_id": "<1차 응답의 action.parentJobId>"
+}
+```
+
+응답: `204 No Content`.
+
+- **fire-and-forget** — 응답을 기다리지 말고 즉시 화면을 미동의/취소 상태로 전환. 네트워크 실패·에러는 무시. 서버가 멱등 처리라 중복 호출·재탭 모두 안전.
+- `confirm_token` 불필요 — `job_id` 만 보낸다.
+- **`device_id` 헤더 필수** — 빠지면 `400` 이고 거부 처리가 안 돼 job 이 `CONFIRM` 으로 남는다. fire-and-forget 이라 클라가 `400` 을 못 보니 반드시 포함.
+- 처리 후 해당 job 의 `status` 가 `REJECTED` 로 바뀐다. 히스토리·재진입 등으로 다시 조회하면 `status: REJECTED` + 거부한 `action` 이 보존된 `result` 가 보인다.
 
 도메인 별 reload 결정에 사용. `dataType` × `op` 매핑:
 
