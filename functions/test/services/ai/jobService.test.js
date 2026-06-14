@@ -421,4 +421,76 @@ describe('JobService', () => {
             assert.strictEqual(success, false);
         });
     });
+
+    // ------------------------------------------------------------------ //
+    // rejectConfirm (#243)
+    // ------------------------------------------------------------------ //
+
+    describe('rejectConfirm', () => {
+
+        // 1차 command job 을 CONFIRM 상태까지 진행시켜 jobId 반환.
+        async function setupConfirmJob(userId = 'u') {
+            const jobId = await service.createJob({
+                userId, deviceId: 'd', commandText: '할일 지워줘'
+            });
+            await service.transitionToRunning(jobId);
+            await service.completeWith(
+                jobId,
+                AiJobResult.confirm('지울까요?', { tool: 'delete_todo', args: { todo_id: 't1' }, confirmToken: 'tk' })
+            );
+            return jobId;
+        }
+
+        it('CONFIRM 대기 job → REJECTED 로 전이하고 true 반환', async () => {
+            const jobId = await setupConfirmJob('u');
+
+            const result = await service.rejectConfirm({ userId: 'u', jobId });
+            assert.strictEqual(result, true);
+
+            const job = await service.loadJob(jobId);
+            assert.strictEqual(job.status, AiJob.STATUS.REJECTED);
+        });
+
+        it('이미 REJECTED 인 job 재호출 → throw 없이 false (멱등)', async () => {
+            const jobId = await setupConfirmJob('u');
+            await service.rejectConfirm({ userId: 'u', jobId });
+
+            const result = await service.rejectConfirm({ userId: 'u', jobId });
+            assert.strictEqual(result, false);
+
+            const job = await service.loadJob(jobId);
+            assert.strictEqual(job.status, AiJob.STATUS.REJECTED);
+        });
+
+        it('CONFIRM 이 아닌 job(DONE) → 전이 없이 false (no-op, 상태 보존)', async () => {
+            const jobId = await service.createJob({ userId: 'u', deviceId: 'd', commandText: 'cmd' });
+            await service.transitionToRunning(jobId);
+            await service.completeWith(jobId, AiJobResult.done('완료'));
+
+            const result = await service.rejectConfirm({ userId: 'u', jobId });
+            assert.strictEqual(result, false);
+
+            const job = await service.loadJob(jobId);
+            assert.strictEqual(job.status, AiJob.STATUS.DONE);
+        });
+
+        it('존재하지 않는 jobId → NotFound', async () => {
+            await assert.rejects(
+                () => service.rejectConfirm({ userId: 'u', jobId: 'no-such-job' }),
+                (err) => err.status === 404
+            );
+        });
+
+        it('다른 user 의 job → 403 (전이 시도조차 안 함)', async () => {
+            const jobId = await setupConfirmJob('owner');
+
+            await assert.rejects(
+                () => service.rejectConfirm({ userId: 'intruder', jobId }),
+                (err) => err.status === 403
+            );
+
+            const job = await service.loadJob(jobId);
+            assert.strictEqual(job.status, AiJob.STATUS.CONFIRM, '거부 실패 — CONFIRM 유지');
+        });
+    });
 });
