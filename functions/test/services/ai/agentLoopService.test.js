@@ -763,6 +763,66 @@ describe('AgentLoopService', () => {
         });
     });
 
+    // ─── 협조적 cancel (#250) ──────────────────────────────────────────────────
+    //
+    // context.cancelChecker — 매 turn top 에서 await 호출. true 면 다음 Claude 호출
+    // 전에 CANCELED 로 종결. 진행 중인 호출/tool 은 못 끊고 turn 사이에만 멈춘다.
+    // 중지 시점까지의 mutations 는 finish 가 첨부.
+
+    describe('cancel 협조적 중지 (#250)', () => {
+
+        it('cancelChecker 가 첫 체크에서 true — Claude 호출 없이 CANCELED 종결 (ko 메시지)', async () => {
+            const { service, anthropic } = makeService();
+            anthropic.enqueue(makeToolUseResponse('finalize', { type: 'DONE', text: '완료' }));
+
+            const { result } = await service.run('회의 추가', {
+                userId: 'u1', timezone: 'Asia/Seoul', lang: 'ko',
+                cancelChecker: async () => true
+            });
+
+            assert.strictEqual(result.type, 'CANCELED');
+            assert.strictEqual(result.text, '요청을 중지했어요.');
+            assert.strictEqual(anthropic.allCreateMessageArgs.length, 0, 'Claude 호출 0회');
+            assert.deepStrictEqual(result.mutations, []);
+        });
+
+        it('한 turn mutation 후 cancel — 다음 turn 전 CANCELED + 부분 mutation 보존', async () => {
+            const { service, anthropic, registry } = makeService();
+            registry.registerExecute('create_todo', { uuid: 't1' });
+            anthropic.enqueue(makeToolUseResponse('create_todo', { name: '회의' }));
+            anthropic.enqueue(makeToolUseResponse('finalize', { type: 'DONE', text: '완료' })); // 소비되면 안 됨
+
+            let checks = 0;
+            const { result } = await service.run('회의 추가', {
+                userId: 'u1', timezone: 'Asia/Seoul',
+                cancelChecker: async () => (checks++ >= 1) // 1st turn false, 2nd turn true
+            });
+
+            assert.strictEqual(result.type, 'CANCELED');
+            assert.deepStrictEqual(result.mutations, [{ dataType: 'todo', op: 'created' }]);
+            assert.strictEqual(anthropic.allCreateMessageArgs.length, 1, '두 번째 turn 은 Claude 호출 안 함');
+        });
+
+        it('cancelChecker 미주입 — 기존 흐름 그대로 (정상 DONE)', async () => {
+            const { service, anthropic } = makeService();
+            anthropic.enqueue(makeToolUseResponse('finalize', { type: 'DONE', text: '완료' }));
+
+            const { result } = await service.run('할일 보여줘', { userId: 'u1', timezone: 'Asia/Seoul' });
+
+            assert.strictEqual(result.type, 'DONE');
+        });
+
+        it('lang=en — 영어 중지 메시지', async () => {
+            const { service } = makeService();
+            const { result } = await service.run('add todo', {
+                userId: 'u1', timezone: 'Asia/Seoul', lang: 'en',
+                cancelChecker: async () => true
+            });
+            assert.strictEqual(result.type, 'CANCELED');
+            assert.strictEqual(result.text, 'The request was canceled.');
+        });
+    });
+
     // ─── runConfirm (CONFIRM 2차 호출) ─────────────────────────────────────────
 
     describe('runConfirm', () => {

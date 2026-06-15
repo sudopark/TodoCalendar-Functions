@@ -158,10 +158,33 @@ describe('AgentLoopHandler', () => {
         assert.strictEqual(payload.data.status, 'DONE');
 
         // handler 가 agentLoopService.run 에 commandText 와 {userId, timezone, lang, jobId} 을 정확히 전달하는지 검증 (재발 방지)
-        assert.deepStrictEqual(agentLoopService.lastRunArgs, {
-            commandText: BASE_JOB_DATA.commandText,
-            opts: { userId: BASE_JOB_DATA.userId, timezone: BASE_JOB_DATA.timezone, lang: BASE_JOB_DATA.lang, jobId: 'job-1' }
-        });
+        const { commandText, opts } = agentLoopService.lastRunArgs;
+        assert.strictEqual(commandText, BASE_JOB_DATA.commandText);
+        assert.strictEqual(opts.userId, BASE_JOB_DATA.userId);
+        assert.strictEqual(opts.timezone, BASE_JOB_DATA.timezone);
+        assert.strictEqual(opts.lang, BASE_JOB_DATA.lang);
+        assert.strictEqual(opts.jobId, 'job-1');
+        // #250 — 협조적 cancel 체크포인트 주입
+        assert.strictEqual(typeof opts.cancelChecker, 'function');
+    });
+
+    it('command dispatch — cancelChecker 가 jobService.isCancelRequested(jobId) 에 연결됨 (#250)', async () => {
+        const repo = seededRepo();
+        const jobService = new JobService(repo, makeAiUsageService());
+        const agentLoopService = makeAgentLoopService(AiJobResult.done('done'));
+        const messaging = makeMessaging();
+        const userRepo = makeUserRepository(BASE_DEVICE);
+        const { logger } = captureLogger();
+
+        const handler = makeHandler({ jobService, agentLoopService, userRepository: userRepo, messaging, logger });
+        await handler.handle(makeEvent('job-1', BASE_JOB_DATA));
+
+        const checker = agentLoopService.lastRunArgs.opts.cancelChecker;
+        // flag 안 세워진 상태 → false
+        assert.strictEqual(await checker(), false);
+        // 올바른 jobId('job-1')에 바인딩됐는지 — 그 doc 에 flag set 하면 true 로 바뀜
+        repo._store.get('job-1').cancelRequested = true;
+        assert.strictEqual(await checker(), true);
     });
 
     it('정상 발화 — result.notification 있으면 그 값으로 FCM 발송', async () => {
@@ -266,6 +289,22 @@ describe('AgentLoopHandler', () => {
         assert.strictEqual(messaging.sendCalled, 1);
         assert.strictEqual(messaging.lastSendPayload.notification.title, FALLBACK_NOTIFICATION.ko.FAILED.title);
         assert.strictEqual(messaging.lastSendPayload.data.status, 'FAILED');
+    });
+
+    it('result.type 이 CANCELED 일 때 FCM 에 fallback CANCELED 카피 사용 (#250)', async () => {
+        const repo = seededRepo();
+        const jobService = new JobService(repo, makeAiUsageService());
+        const agentLoopService = makeAgentLoopService(AiJobResult.canceled('stub canceled')); // no notification
+        const messaging = makeMessaging();
+        const userRepo = makeUserRepository(BASE_DEVICE);
+        const { logger } = captureLogger();
+
+        const handler = makeHandler({ jobService, agentLoopService, userRepository: userRepo, messaging, logger });
+        await handler.handle(makeEvent('job-1', BASE_JOB_DATA));
+
+        assert.strictEqual(messaging.sendCalled, 1);
+        assert.strictEqual(messaging.lastSendPayload.notification.title, FALLBACK_NOTIFICATION.ko.CANCELED.title);
+        assert.strictEqual(messaging.lastSendPayload.data.status, 'CANCELED');
     });
 
     it('result.notification 의 title 이 빈 문자열이면 hasNotification false → fallback 사용', async () => {

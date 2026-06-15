@@ -91,7 +91,8 @@ const MESSAGES = Object.freeze({
         confirmArgsMismatch: '확인 정보가 일치하지 않아요. 처음부터 다시 시도해 주세요.',
         confirmDone: '요청하신 작업을 완료했어요.',
         dailyLimitExceeded: '오늘 사용 가능한 한도를 모두 사용했어요. 내일 다시 시도해 주세요.',
-        timeout: '응답이 너무 오래 걸려 처리를 중단했어요. 잠시 후 다시 시도해 주세요.'
+        timeout: '응답이 너무 오래 걸려 처리를 중단했어요. 잠시 후 다시 시도해 주세요.',
+        canceled: '요청을 중지했어요.'
     }),
     en: Object.freeze({
         internalError: 'Something went wrong. Please try again.',
@@ -103,7 +104,8 @@ const MESSAGES = Object.freeze({
         confirmArgsMismatch: "Confirmation details don't match. Please start over.",
         confirmDone: 'Done',
         dailyLimitExceeded: "You've reached today's usage limit. Please try again tomorrow.",
-        timeout: 'The request took too long and was canceled. Please try again later.'
+        timeout: 'The request took too long and was canceled. Please try again later.',
+        canceled: 'The request was canceled.'
     })
 });
 
@@ -275,8 +277,14 @@ class AgentLoopService {
      *          throw 경로는 catch 안 함 → caller 가 0/0 으로 처리 (acceptable loss).
      *
      * jobId 는 CONFIRM 종결 시 result.action.parentJobId 로 박는 용도 (#238).
+     *
+     * cancelChecker (#250) — 매 turn top 에서 await 호출하는 협조적 cancel 체크포인트.
+     * true 면 다음 Claude 호출 전에 CANCELED 로 종결한다 (turn 사이에만 멈춤 — 진행
+     * 중인 Claude 호출/tool 한 건은 못 끊음). 미주입이면 기존 흐름 그대로. handler 가
+     * `() => jobService.isCancelRequested(jobId)` 로 주입 — agentLoopService 는 job
+     * 저장소를 모름 (dependency inversion).
      */
-    async run(commandText, { userId, timezone, lang, jobId }) {
+    async run(commandText, { userId, timezone, lang, jobId, cancelChecker }) {
         const auth = { userId, scopes: this.scopes };
         const messages = [{ role: 'user', content: commandText }];
         const resolvedLang = lang ?? 'en';
@@ -289,6 +297,7 @@ class AgentLoopService {
             return { result, usage: { inputTokens: tokens.input, outputTokens: tokens.output } };
         };
         const timeoutResult = () => AiJobResult.failed(_msg(resolvedLang, 'timeout'), undefined, undefined, AiErrorCode.Timeout);
+        const canceledResult = () => AiJobResult.canceled(_msg(resolvedLang, 'canceled'));
 
         const ac = new AbortController();
         const budgetTimer = setTimeout(() => ac.abort(), this.budgetMs);
@@ -300,6 +309,8 @@ class AgentLoopService {
 
             for (let iter = 0; iter < this.loopCap; iter++) {
                 if (ac.signal.aborted) return finish(timeoutResult());
+                // 사용자 중지 — 다음 Claude 호출 전에 종결. 누적 mutations 는 finish 가 첨부.
+                if (cancelChecker && await cancelChecker()) return finish(canceledResult());
 
                 _markLastMessageForCache(messages);
                 let resp;
