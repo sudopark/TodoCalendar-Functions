@@ -69,19 +69,25 @@ class AiJob {
         return status === AiJob.STATUS.DONE ||
                status === AiJob.STATUS.CONFIRM ||
                status === AiJob.STATUS.FAILED ||
-               status === AiJob.STATUS.REJECTED;
+               status === AiJob.STATUS.REJECTED ||
+               status === AiJob.STATUS.CANCELED;
     }
 }
 
 // REJECTED: confirm 대기(CONFIRM) job 을 사용자가 미동의(거부)로 종결시킨 상태 (#243).
 //           confirm 2차 호출(processConfirmCommand) 의 거부 짝 — 데이터 mutation 없음.
+// CANCELED: 진행 중인 작업을 사용자가 중지시킨 상태 (#250). PENDING 이면 loop 진입 전
+//           즉시 종결, RUNNING 이면 loop 가 턴 사이 cancelRequested 를 보고 협조적 종결.
+//           REJECTED(confirm 거부)와 동선이 다른 별개 상태 — 중지 시점까지 일어난
+//           부분 mutation 은 result 에 보존(롤백 X).
 AiJob.STATUS = Object.freeze({
     PENDING: 'PENDING',
     RUNNING: 'RUNNING',
     DONE: 'DONE',
     CONFIRM: 'CONFIRM',
     FAILED: 'FAILED',
-    REJECTED: 'REJECTED'
+    REJECTED: 'REJECTED',
+    CANCELED: 'CANCELED'
 });
 
 // 'command': 자연어 명령 (1차) — Agent Loop run() 진입

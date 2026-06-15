@@ -493,4 +493,116 @@ describe('JobService', () => {
             assert.strictEqual(job.status, AiJob.STATUS.CONFIRM, '거부 실패 — CONFIRM 유지');
         });
     });
+
+    // ------------------------------------------------------------------ //
+    // cancel (#250)
+    // ------------------------------------------------------------------ //
+
+    describe('cancel', () => {
+
+        async function setupPendingJob(userId = 'u') {
+            return service.createJob({ userId, deviceId: 'd', commandText: '내일 일정 추가' });
+        }
+
+        async function setupRunningJob(userId = 'u') {
+            const jobId = await setupPendingJob(userId);
+            await service.transitionToRunning(jobId);
+            return jobId;
+        }
+
+        it('PENDING job → 즉시 CANCELED 로 전이하고 true 반환 (loop 진입 전 종결)', async () => {
+            const jobId = await setupPendingJob('u');
+
+            const result = await service.cancel({ userId: 'u', jobId });
+            assert.strictEqual(result, true);
+
+            const job = await service.loadJob(jobId);
+            assert.strictEqual(job.status, AiJob.STATUS.CANCELED);
+        });
+
+        it('RUNNING job → status 는 RUNNING 유지, cancelRequested 만 set + true 반환', async () => {
+            const jobId = await setupRunningJob('u');
+
+            const result = await service.cancel({ userId: 'u', jobId });
+            assert.strictEqual(result, true);
+
+            // 직접 종결시키지 않는다 — loop 가 협조적으로 CANCELED 로 종결.
+            const job = await service.loadJob(jobId);
+            assert.strictEqual(job.status, AiJob.STATUS.RUNNING);
+            assert.strictEqual(await service.isCancelRequested(jobId), true);
+        });
+
+        it('CONFIRM 대기 job → no-op false (cancel 대상 아님, reject 가 처리)', async () => {
+            const jobId = await setupRunningJob('u');
+            await service.completeWith(jobId, AiJobResult.confirm('지울까요?', { tool: 'delete_todo', args: {}, confirmToken: 'tk' }));
+
+            const result = await service.cancel({ userId: 'u', jobId });
+            assert.strictEqual(result, false);
+
+            const job = await service.loadJob(jobId);
+            assert.strictEqual(job.status, AiJob.STATUS.CONFIRM, 'CONFIRM 유지');
+        });
+
+        it('terminal(DONE) job → no-op false (상태 보존)', async () => {
+            const jobId = await setupRunningJob('u');
+            await service.completeWith(jobId, AiJobResult.done('완료'));
+
+            const result = await service.cancel({ userId: 'u', jobId });
+            assert.strictEqual(result, false);
+
+            const job = await service.loadJob(jobId);
+            assert.strictEqual(job.status, AiJob.STATUS.DONE);
+        });
+
+        it('이미 CANCELED 인 job 재호출 → throw 없이 false (멱등)', async () => {
+            const jobId = await setupPendingJob('u');
+            await service.cancel({ userId: 'u', jobId });
+
+            const result = await service.cancel({ userId: 'u', jobId });
+            assert.strictEqual(result, false);
+
+            const job = await service.loadJob(jobId);
+            assert.strictEqual(job.status, AiJob.STATUS.CANCELED);
+        });
+
+        it('존재하지 않는 jobId → NotFound', async () => {
+            await assert.rejects(
+                () => service.cancel({ userId: 'u', jobId: 'no-such-job' }),
+                (err) => err.status === 404
+            );
+        });
+
+        it('다른 user 의 job → 403 (전이 시도조차 안 함)', async () => {
+            const jobId = await setupRunningJob('owner');
+
+            await assert.rejects(
+                () => service.cancel({ userId: 'intruder', jobId }),
+                (err) => err.status === 403
+            );
+
+            const job = await service.loadJob(jobId);
+            assert.strictEqual(job.status, AiJob.STATUS.RUNNING, '중지 실패 — RUNNING 유지');
+            assert.strictEqual(await service.isCancelRequested(jobId), false);
+        });
+    });
+
+    // ------------------------------------------------------------------ //
+    // isCancelRequested (#250) — agent loop 의 협조적 cancel 체크포인트가 사용
+    // ------------------------------------------------------------------ //
+
+    describe('isCancelRequested', () => {
+
+        it('cancelRequested 가 set 되지 않은 job → false', async () => {
+            const jobId = await service.createJob({ userId: 'u', deviceId: 'd', commandText: 'cmd' });
+            await service.transitionToRunning(jobId);
+            assert.strictEqual(await service.isCancelRequested(jobId), false);
+        });
+
+        it('RUNNING 중 cancel 호출로 flag 가 set 되면 → true', async () => {
+            const jobId = await service.createJob({ userId: 'u', deviceId: 'd', commandText: 'cmd' });
+            await service.transitionToRunning(jobId);
+            await service.cancel({ userId: 'u', jobId });
+            assert.strictEqual(await service.isCancelRequested(jobId), true);
+        });
+    });
 });

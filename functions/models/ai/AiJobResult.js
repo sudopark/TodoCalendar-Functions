@@ -70,6 +70,26 @@ const AiJobResult = {
     },
 
     /**
+     * #250 — 진행 중인 작업이 사용자 중지로 종결될 때의 결과.
+     * mutations 에 중지 시점까지 일어난 부분 mutation 을 실어 클라가 "일부 반영됨" 을
+     * 표시할 수 있게 한다 (롤백 없음). errorCode 없음 — 오류가 아니라 사용자 의도.
+     *
+     * @param {string} text  사용자 노출 텍스트 (lang-aware)
+     * @param {{ title: string, body: string } | null | undefined} notification
+     * @param {Array<{dataType: string, op: string}> | undefined} mutations
+     * @returns {object}
+     */
+    canceled(text, notification, mutations) {
+        const n = sanitizeNotification(notification);
+        return {
+            type: 'CANCELED',
+            text,
+            ...(n ? { notification: n } : {}),
+            mutations: mutations ?? []
+        };
+    },
+
+    /**
      * result 에 실제로 사용 가능한 notification 이 있는지 판별.
      * title 과 body 가 모두 non-empty string 이어야 true.
      * trigger 가 push notification fallback 분기에 사용.
