@@ -206,6 +206,49 @@ class JobService {
         }
         return this.jobRepository.rejectConfirm(jobId);
     }
+
+    /**
+     * #250 — 진행 중인 작업을 사용자가 중지. rejectConfirm(confirm 거부)과 동선이 다른
+     * 별개 액션 — 대상은 아직 진행 중인 PENDING/RUNNING job.
+     *
+     * 상태별 처리는 repository.cancel 이 atomic 하게 분기:
+     * - PENDING → CANCELED 즉시 전이 (trigger 의 transitionToRunning CAS 가 false 가 돼
+     *   agent loop 진입 차단).
+     * - RUNNING → cancelRequested flag 만 set. status 는 직접 건드리지 않고, loop 가 턴
+     *   사이 isCancelRequested 를 보고 협조적으로 CANCELED 로 종결 (중지 시점까지의 부분
+     *   mutation 은 result 에 보존).
+     * - CONFIRM / terminal → no-op false.
+     *
+     * - job 미존재 → NotFound
+     * - job.userId !== userId → 403 (타인 job 중지 차단)
+     *
+     * 멱등성: 이미 CANCELED / terminal 이면 전이 없이 false. 클라가 fire-and-forget 으로
+     * 호출하므로 중복·경합 호출도 throw 없이 안전.
+     *
+     * @param {{ userId: string, jobId: string }} params
+     * @returns {Promise<boolean>} 전이 또는 cancelRequested set 이 실제로 일어났는지 여부
+     */
+    async cancel({ userId, jobId }) {
+        const job = await this.jobRepository.load(jobId);
+        if (!job) {
+            throw new Errors.NotFound('job not found');
+        }
+        if (job.userId !== userId) {
+            throw new Errors.Base(403, 'Forbidden', 'forbidden');
+        }
+        return this.jobRepository.cancel(jobId);
+    }
+
+    /**
+     * #250 — RUNNING job 에 cancelRequested flag 가 세워졌는지 조회.
+     * agent loop 의 협조적 cancel 체크포인트(턴 사이)가 호출.
+     *
+     * @param {string} jobId
+     * @returns {Promise<boolean>}
+     */
+    async isCancelRequested(jobId) {
+        return this.jobRepository.isCancelRequested(jobId);
+    }
 }
 
 module.exports = JobService;

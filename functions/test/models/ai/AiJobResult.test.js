@@ -19,6 +19,11 @@ describe('AiJobResult', () => {
             const result = AiJobResult.failed('reason');
             assert.strictEqual(Object.getPrototypeOf(result), Object.prototype);
         });
+
+        it('canceled() 이 plain object 를 반환', () => {
+            const result = AiJobResult.canceled('중지됨');
+            assert.strictEqual(Object.getPrototypeOf(result), Object.prototype);
+        });
     });
 
     describe('done()', () => {
@@ -85,6 +90,38 @@ describe('AiJobResult', () => {
         it('notification null 이면 포함 안 됨', () => {
             const result = AiJobResult.failed('오류', null);
             assert.strictEqual(result.notification, undefined);
+        });
+    });
+
+    describe('canceled()', () => {
+        it('notification 없이 생성 — type CANCELED', () => {
+            const result = AiJobResult.canceled('요청을 중지했어요.');
+            assert.strictEqual(result.type, 'CANCELED');
+            assert.strictEqual(result.text, '요청을 중지했어요.');
+            assert.strictEqual(result.notification, undefined);
+        });
+
+        it('notification 있으면 포함', () => {
+            const notification = { title: '중지됨', body: '요청을 중지했어요' };
+            const result = AiJobResult.canceled('중지', notification);
+            assert.strictEqual(result.type, 'CANCELED');
+            assert.deepStrictEqual(result.notification, notification);
+        });
+
+        it('notification null 이면 포함 안 됨', () => {
+            const result = AiJobResult.canceled('중지', null);
+            assert.strictEqual(result.notification, undefined);
+        });
+
+        it('mutations 전달 시 그대로 노출 (중지 시점까지 일어난 부분 mutation)', () => {
+            const m = [{ dataType: 'todo', op: 'created' }];
+            const result = AiJobResult.canceled('중지', null, m);
+            assert.deepStrictEqual(result.mutations, m);
+        });
+
+        it('mutations 미지정 시 빈 array', () => {
+            const result = AiJobResult.canceled('중지');
+            assert.deepStrictEqual(result.mutations, []);
         });
     });
 

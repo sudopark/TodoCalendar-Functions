@@ -25,6 +25,7 @@ class StubAiJobRepository {
         this.lastPutPayload = null;       // { jobId, data }
         this.lastTransitionAttempt = null; // jobId (most recent call)
         this.lastRejectAttempt = null;     // jobId (most recent rejectConfirm call)
+        this.lastCancelAttempt = null;     // jobId (most recent cancel call)
     }
 
     /**
@@ -118,6 +119,43 @@ class StubAiJobRepository {
         }
         data.status = AiJob.STATUS.REJECTED;
         return true;
+    }
+
+    /**
+     * 사용자 중지 (#250, Compare-And-Swap 시뮬레이션).
+     * - PENDING → CANCELED 즉시 전이 (loop 진입 전 종결).
+     * - RUNNING → cancelRequested flag 만 set (loop 가 협조적으로 종결).
+     * - 그 외(CONFIRM/terminal) → no-op false.
+     *
+     * lastCancelAttempt 에 jobId 를 기록한다.
+     *
+     * @param {string} jobId
+     * @returns {Promise<boolean>} 전이 또는 flag set 이 실제로 일어났는지 여부
+     */
+    async cancel(jobId) {
+        this.lastCancelAttempt = jobId;
+        const data = this._store.get(jobId);
+        if (!data) return false;
+        if (data.status === AiJob.STATUS.PENDING) {
+            data.status = AiJob.STATUS.CANCELED;
+            return true;
+        }
+        if (data.status === AiJob.STATUS.RUNNING) {
+            data.cancelRequested = true;
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * cancelRequested flag 조회 (#250). RUNNING loop 의 협조적 cancel 체크포인트가 사용.
+     *
+     * @param {string} jobId
+     * @returns {Promise<boolean>}
+     */
+    async isCancelRequested(jobId) {
+        const data = this._store.get(jobId);
+        return !!(data && data.cancelRequested === true);
     }
 }
 

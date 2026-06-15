@@ -5,13 +5,14 @@ const AiJob = require('../../../models/ai/AiJob');
 describe('AiJob', () => {
 
     describe('STATUS enum', () => {
-        it('6개 상태 상수가 모두 존재함', () => {
+        it('7개 상태 상수가 모두 존재함', () => {
             assert.strictEqual(AiJob.STATUS.PENDING, 'PENDING');
             assert.strictEqual(AiJob.STATUS.RUNNING, 'RUNNING');
             assert.strictEqual(AiJob.STATUS.DONE, 'DONE');
             assert.strictEqual(AiJob.STATUS.CONFIRM, 'CONFIRM');
             assert.strictEqual(AiJob.STATUS.FAILED, 'FAILED');
             assert.strictEqual(AiJob.STATUS.REJECTED, 'REJECTED');
+            assert.strictEqual(AiJob.STATUS.CANCELED, 'CANCELED');
         });
     });
 
@@ -37,6 +38,10 @@ describe('AiJob', () => {
 
         it('REJECTED 는 terminal', () => {
             assert.strictEqual(AiJob.isTerminal(AiJob.STATUS.REJECTED), true);
+        });
+
+        it('CANCELED 는 terminal', () => {
+            assert.strictEqual(AiJob.isTerminal(AiJob.STATUS.CANCELED), true);
         });
 
         it('PENDING 은 terminal 아님', () => {

@@ -108,6 +108,54 @@ class JobRepository {
             return true;
         });
     }
+
+    /**
+     * 사용자 중지 (#250). transaction 으로 현재 status 를 읽어 atomic 분기.
+     * - PENDING → CANCELED 즉시 전이. 이후 onCreate trigger 의 transitionToRunning CAS
+     *   가 status !== PENDING 으로 false → agent loop 진입 차단.
+     * - RUNNING → status 는 유지하고 cancelRequested 만 true 로 set. loop 가 턴 사이
+     *   isCancelRequested 로 읽어 협조적으로 CANCELED 종결 (completeWith).
+     * - 그 외(CONFIRM/terminal) → no-op false (멱등).
+     *
+     * @param {string} jobId
+     * @returns {boolean} 전이 또는 flag set 이 실제로 일어났는지 여부
+     */
+    async cancel(jobId) {
+        const docRef = collectionRef.doc(jobId);
+        return db.runTransaction(async (tx) => {
+            const snapshot = await tx.get(docRef);
+            if (!snapshot.exists) return false;
+            const status = snapshot.data().status;
+            if (status === AiJob.STATUS.PENDING) {
+                tx.update(docRef, {
+                    status: AiJob.STATUS.CANCELED,
+                    updatedAt: FieldValue.serverTimestamp()
+                });
+                return true;
+            }
+            if (status === AiJob.STATUS.RUNNING) {
+                tx.update(docRef, {
+                    cancelRequested: true,
+                    updatedAt: FieldValue.serverTimestamp()
+                });
+                return true;
+            }
+            return false;
+        });
+    }
+
+    /**
+     * cancelRequested flag 조회 (#250). RUNNING loop 의 협조적 cancel 체크포인트가 매 턴
+     * 호출 — 가벼운 단일 doc read. 없는 doc / 미설정이면 false.
+     *
+     * @param {string} jobId
+     * @returns {boolean}
+     */
+    async isCancelRequested(jobId) {
+        const snapshot = await collectionRef.doc(jobId).get();
+        if (!snapshot.exists) return false;
+        return snapshot.data().cancelRequested === true;
+    }
 }
 
 module.exports = JobRepository;
