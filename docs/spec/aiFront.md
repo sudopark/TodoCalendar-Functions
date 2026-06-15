@@ -45,7 +45,7 @@
 | 객체 | 위치 | 책임 |
 |---|---|---|
 | `AiController` | `controllers/ai/aiController.js` | HTTP body / header 검증, `jobId` 즉시 반환 (202) |
-| `JobService` | `services/ai/jobService.js` | job doc create, state CAS (PENDING→RUNNING→종결, CONFIRM→REJECTED 거부) |
+| `JobService` | `services/ai/jobService.js` | job doc create, state CAS (PENDING→RUNNING→종결, CONFIRM→REJECTED 거부, PENDING/RUNNING 중지 #250) |
 | `JobRepository` | `repositories/ai/jobRepository.js` | Firestore `ai_jobs` 컬렉션 IO (transaction 기반 CAS) |
 | `agentLoopTrigger` | `triggers/ai/agentLoopTrigger.js` | `ai_jobs/{jobId}` onCreate trigger (composition root) |
 | `AgentLoopHandler` | `triggers/ai/agentLoopHandler.js` | 전이 가드, usage record, FCM 발송, 에러 sanitize |
@@ -65,6 +65,7 @@
 | POST | `/v1/ai/command` | `{ command_text, timezone }` | `Authorization`, `device_id`, `Accept-Language?` | `202 { job_id }` |
 | POST | `/v1/ai/command/confirm` | `{ parent_job_id, tool, args, confirm_token, timezone? }` | `Authorization`, `device_id`, `Accept-Language?` | `202 { job_id }` |
 | POST | `/v1/ai/command/reject` | `{ job_id }` | `Authorization`, `device_id` | `204 No Content` |
+| POST | `/v1/ai/command/cancel` | `{ job_id }` | `Authorization`, `device_id` | `202 Accepted` |
 | GET | `/v1/ai/jobs/:id` | — | `Authorization` | `200 AiJob.toJSON()` |
 | GET | `/v1/ai/usage` | — | `Authorization` | `200 AiUsage.toJSON() + { daily_limit }` (오늘 사용량 + 일일 한도) |
 
@@ -74,12 +75,13 @@
 - 누락 / invalid → 400.
 - `POST /v1/ai/command` 은 일일 토큰 한도 (`daily_limit`) 초과 시 controller 가 agent loop 진입 전 차단 → `202 { job_id }` 그대로 + Firestore 의 해당 job 은 즉시 `FAILED` (`errorCode: DailyLimitExceeded`). `/confirm` 은 한도 적용 X (#157).
 - `POST /v1/ai/command/reject` 는 confirm 대기 (`CONFIRM`) 1차 job 을 사용자 미동의 (거부) 로 종결 (#243). body 의 `job_id` 는 confirm path 의 `parent_job_id` 와 같은 대상 (1차 command job). 해당 job 을 `CONFIRM → REJECTED` 로 전이만 하고 **데이터 mutation·confirmToken 검증·trigger·FCM 없음**. 클라가 **fire-and-forget** 으로 호출 — 응답 안 기다리고 즉시 미동의 UI 로 전환. **멱등**: 이미 종결 (`REJECTED`/`DONE`/`FAILED`) 된 job 중복 호출도 `204`. 소유권 불일치 403 / 미존재 404. (전이 성공/no-op 여부와 무관하게 항상 `204` — 클라는 본문·상태코드 분기 불필요.)
+- `POST /v1/ai/command/cancel` 은 **진행 중**인 작업을 사용자가 중지 (#250). reject 와 동선이 다른 별개 액션 — confirm 거부가 아니라 "지금 돌아가는 거 중지". 대상 상태에 따라 분기: `PENDING` → 즉시 `CANCELED` (trigger 의 `PENDING→RUNNING` CAS 가 실패해 agent loop 진입 차단), `RUNNING` → `cancelRequested` flag 만 set 하고 loop 가 turn 사이 이를 읽어 협조적으로 `CANCELED` 종결 (진행 중인 Claude 호출/tool 한 건은 못 끊고 turn 사이에만 멈춤; 중지 시점까지의 부분 mutation 은 `result` 에 보존, 롤백 없음). `CONFIRM`/terminal → no-op. 클라가 **fire-and-forget** 으로 호출하고 `GET /jobs/:id` 로 최종 상태 재폴링하므로 전이/no-op 무관하게 `202`. 소유권 불일치 403 / 미존재 404.
 
 ## Firestore Collections
 
-- **`ai_jobs/{jobId}`** — 단일 job. status: `PENDING` → `RUNNING` → `{DONE | CONFIRM | FAILED}`, 그리고 `CONFIRM` → `REJECTED` (사용자 미동의, #243).
+- **`ai_jobs/{jobId}`** — 단일 job. status: `PENDING` → `RUNNING` → `{DONE | CONFIRM | FAILED}`, `CONFIRM` → `REJECTED` (사용자 미동의, #243), `PENDING`/`RUNNING` → `CANCELED` (사용자 중지, #250).
   필드: `userId`, `deviceId`, `commandText`, `timezone`, `lang` (`ko`|`en`), `mode` (`command`|`confirm`), `confirmPayload`,
-  `status`, `result` (`AiJobResult` plain object), `createdAt`, `updatedAt`, `expireAt` (24h).
+  `status`, `result` (`AiJobResult` plain object), `cancelRequested` (RUNNING 중지 요청 flag, #250), `createdAt`, `updatedAt`, `expireAt` (24h).
 - **`aiUsage/{userId}/dailyUsage/{YYYY-MM-DD}`** — UTC 기준 일별 토큰 누적.
   필드: `inputTokens`, `outputTokens`, `lastUpdatedAt`.
 
@@ -240,6 +242,43 @@ reject 와 trigger 의 race 는 안전하다 — handler 는 `RUNNING → 종결
 
 ---
 
+## 시퀀스: CANCEL 흐름 (진행 중 작업 중지, #250)
+
+진행 중인 작업을 사용자가 중지. cross-instance (cancel HTTP vs trigger) 라 즉시 abort 불가 — 상태에 따라 다르게 처리한다.
+
+- **PENDING 중지** — trigger 가 아직 `PENDING→RUNNING` CAS 를 선점하기 전. cancel 이 먼저 `PENDING→CANCELED` 로 전이하면, 뒤이어 발화한 trigger 의 `transitionToRunning` CAS 가 status≠PENDING 으로 false → agent loop 진입 자체가 차단된다 (mutation 0).
+- **RUNNING 중지** — loop 가 이미 돌고 있음. cancel 은 `cancelRequested` flag 만 set 하고, loop 가 **매 turn top 에서** 이 flag 를 읽어 다음 Claude 호출 전에 `CANCELED` 로 협조적 종결. 진행 중인 Claude 호출/tool 한 건은 못 끊고 **turn 사이에만** 멈춘다. 중지 시점까지의 부분 mutation 은 `result.mutations` 에 보존 (롤백 없음).
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant App
+    participant Ctrl as AiController
+    participant JobSvc as JobService
+    participant FS as Firestore ai_jobs
+    participant Hand as AgentLoopHandler
+    participant Loop as AgentLoopService
+    App->>Ctrl: POST /v1/ai/command/cancel with job_id, device_id
+    Ctrl->>JobSvc: cancel with userId, jobId
+    JobSvc->>FS: load jobId
+    Note over JobSvc: 미존재 404, job.userId 불일치 403
+    JobSvc->>FS: tx — PENDING to CANCELED, or RUNNING set cancelRequested, else no-op
+    JobSvc-->>Ctrl: transitioned boolean
+    Ctrl-->>App: 202 Accepted (fire-and-forget)
+    Note over App: GET /jobs/:id 로 최종 상태 재폴링
+    opt RUNNING 이었던 경우
+        Loop->>JobSvc: isCancelRequested(jobId) — 매 turn top
+        JobSvc->>FS: read cancelRequested
+        Loop->>Hand: AiJobResult.canceled (부분 mutation 첨부)
+        Hand->>FS: completeWith RUNNING to CANCELED
+        Hand->>App: FCM (CANCELED)
+    end
+```
+
+cancel 과 trigger 의 race 도 안전하다 — PENDING 중지는 trigger 의 `PENDING→RUNNING` 과 같은 source 를 다투지만 CAS 라 한쪽만 이긴다 (cancel 이 이기면 loop 미진입, trigger 가 이기면 RUNNING 경로로 넘어가 flag 기반 협조 종결). handler 의 `RUNNING→CANCELED` 종결은 `completeWith` CAS 가 보장.
+
+---
+
 ## 시퀀스: GET /v1/ai/usage
 
 ```mermaid
@@ -296,11 +335,12 @@ Content-Type: application/json
 
 ```
 PENDING ──(trigger 발화)──▶ RUNNING ──┬─▶ DONE
-                                       ├─▶ CONFIRM ──(POST /command/reject)──▶ REJECTED
-                                       └─▶ FAILED
+   │                          │        ├─▶ CONFIRM ──(POST /command/reject)──▶ REJECTED
+   │                          │        └─▶ FAILED
+   └──(POST /command/cancel)──┴─▶ CANCELED   ◀──(POST /command/cancel: RUNNING 협조 종결)
 ```
 
-`status` 가 terminal (`DONE` / `CONFIRM` / `FAILED` / `REJECTED`) 이면 `result` 필드에 `AiJobResult` 가 박혀 있다. `REJECTED` 는 거부된 `CONFIRM` 의 `result` (= `type: CONFIRM`, `action` 포함) 를 **그대로 보존**한다 — 무엇을 거부했는지 추적용. 따라서 **상태 판단은 `status` 필드 기준** (`result.type` 아님).
+`status` 가 terminal (`DONE` / `CONFIRM` / `FAILED` / `REJECTED` / `CANCELED`) 이면 `result` 필드에 `AiJobResult` 가 박혀 있다. `REJECTED` 는 거부된 `CONFIRM` 의 `result` (= `type: CONFIRM`, `action` 포함) 를 **그대로 보존**한다 — 무엇을 거부했는지 추적용. `CANCELED` 는 `result.type: CANCELED` + 중지 시점까지의 부분 `mutations` (단, PENDING 중지면 `result` 없이 status 만 `CANCELED`). 따라서 **상태 판단은 `status` 필드 기준** (`result.type` 아님).
 
 ### `AiJobResult` 응답 형태
 
@@ -342,6 +382,15 @@ PENDING ──(trigger 발화)──▶ RUNNING ──┬─▶ DONE
 }
 ```
 
+**CANCELED** — 사용자 중지 (#250). 오류가 아니라 의도된 중지라 `errorCode` 없음. PENDING 중지면 `result` 자체가 없을 수 있음 (status 만 `CANCELED`):
+```json
+{
+  "type": "CANCELED",
+  "text": "요청을 중지했어요.",
+  "mutations": [{ "dataType": "todo", "op": "created" }]
+}
+```
+
 ### 클라 처리 패턴
 
 | `type` | 클라가 할 일 |
@@ -349,6 +398,7 @@ PENDING ──(trigger 발화)──▶ RUNNING ──┬─▶ DONE
 | `DONE` | `text` 사용자에게 표시 (toast / chat 등). **`mutations` 보고 영향받은 도메인 list/cache invalidate**. |
 | `CONFIRM` | `text` 로 confirm UI 표시. **승인 시** `action` 통째로 2차 호출 body 에 박아 `POST /v1/ai/command/confirm` 호출 (`action.parentJobId` 는 body 의 `parent_job_id` 자리로). **거부 시** `action.parentJobId` 를 `job_id` 로 담아 `POST /v1/ai/command/reject` fire-and-forget 호출 (아래 "거부 호출" 참고). 1차 응답에 `mutations` 가 박혀 있을 수 있음 (이전 turn 의 변경) → list reload. |
 | `FAILED` | `reason` 사용자에게 표시. **`errorCode` 보고 분류 / 다른 UX 분기**. `mutations` 도 박혀 있을 수 있음 (부분 mutation) → reload. |
+| `CANCELED` | 중지 완료 UI. **`mutations` 가 있으면** 중지 시점까지 일어난 부분 변경 → 해당 도메인 reload + "일부 작업은 반영됐어요" 안내 가능. PENDING 중지면 `mutations` 없음. |
 
 ### 2차 호출 — CONFIRM 확인 후
 
@@ -397,6 +447,28 @@ Content-Type: application/json
 - **`device_id` 헤더 필수** — 빠지면 `400` 이고 거부 처리가 안 돼 job 이 `CONFIRM` 으로 남는다. fire-and-forget 이라 클라가 `400` 을 못 보니 반드시 포함.
 - 처리 후 해당 job 의 `status` 가 `REJECTED` 로 바뀐다. 히스토리·재진입 등으로 다시 조회하면 `status: REJECTED` + 거부한 `action` 이 보존된 `result` 가 보인다.
 
+### 중지 호출 — 진행 중 작업 중지 시 (#250)
+
+사용자가 진행 중인 작업의 **중지 (취소)** 를 누르면 호출. reject (confirm 거부) 와 동선이 다른 별개 액션 — `RUNNING`/`PENDING` 인 job 을 대상으로 한다 (보통 1차 command jobId).
+
+```http
+POST /v1/ai/command/cancel
+Authorization: Bearer <Firebase ID token>
+device_id: <device id>
+Content-Type: application/json
+
+{
+  "job_id": "<중지할 job 의 jobId>"
+}
+```
+
+응답: `202 Accepted`.
+
+- **fire-and-forget** — 응답을 기다리지 말고 즉시 중지 UI 로 전환. 최종 상태는 `GET /jobs/:id` (또는 Firestore listen) 로 `CANCELED` 확인. 서버가 멱등 처리라 중복 호출·재탭 모두 안전.
+- **`device_id` 헤더 필수** — 빠지면 `400`. fire-and-forget 이라 클라가 `400` 을 못 보니 반드시 포함.
+- **즉시 중지 아님** — `RUNNING` 이면 진행 중인 Claude 호출/tool 한 건은 못 끊고 turn 사이에만 멈춘다. 그래서 중지 요청 후에도 짧게는 작업이 더 진행될 수 있고, **중지 시점까지 일어난 변경은 `result.mutations` 에 남는다** (롤백 없음) → 그 도메인 reload + "일부 반영됨" 안내 가능.
+- 이미 `CONFIRM`/terminal 인 job 에 호출하면 no-op (상태 그대로) — 그래도 `202`.
+
 도메인 별 reload 결정에 사용. `dataType` × `op` 매핑:
 
 | `dataType` | 영향받는 컬렉션 |
@@ -438,7 +510,7 @@ Content-Type: application/json
 ```
 
 - `notification.{title,body}` — 1차 응답의 `result.notification` (있으면) 또는 lang 별 fallback.
-- `data.status` — `DONE` / `CONFIRM` / `FAILED` 중 하나. 클라가 tap 시 → `ai_jobs/{jobId}` doc 으로 결과 fetch.
+- `data.status` — `DONE` / `CONFIRM` / `FAILED` / `CANCELED` 중 하나. 클라가 tap 시 → `ai_jobs/{jobId}` doc 으로 결과 fetch. (`CANCELED` 는 RUNNING 협조 종결 시에만 발송 — PENDING 중지는 loop 미진입이라 FCM 없음.)
 - 페이로드에 민감 정보 없음 — text / args / token 등 일체 미포함.
 
 ### `GET /v1/ai/usage` — 오늘 사용량 조회
