@@ -36,12 +36,14 @@ const FALLBACK_NOTIFICATION = Object.freeze({
     ko: Object.freeze({
         DONE: Object.freeze({ title: 'AI 작업이 완료됐어요', body: '탭해서 결과를 확인해 주세요' }),
         CONFIRM: Object.freeze({ title: '확인이 필요해요', body: '작업 전 확인이 필요해요' }),
-        FAILED: Object.freeze({ title: '처리에 실패했어요', body: '탭해서 자세히 확인해 주세요' })
+        FAILED: Object.freeze({ title: '처리에 실패했어요', body: '탭해서 자세히 확인해 주세요' }),
+        CANCELED: Object.freeze({ title: '요청을 중지했어요', body: '탭해서 결과를 확인해 주세요' })
     }),
     en: Object.freeze({
         DONE: Object.freeze({ title: 'AI command completed', body: 'Tap to view the result' }),
         CONFIRM: Object.freeze({ title: 'Confirmation required', body: 'Please confirm before proceeding' }),
-        FAILED: Object.freeze({ title: 'AI command failed', body: 'Tap to view the result' })
+        FAILED: Object.freeze({ title: 'AI command failed', body: 'Tap to view the result' }),
+        CANCELED: Object.freeze({ title: 'Request canceled', body: 'Tap to view the result' })
     })
 });
 
@@ -134,7 +136,10 @@ class AgentLoopHandler {
             userId: job.userId,
             timezone: job.timezone,
             lang: job.lang,
-            jobId: job.jobId
+            jobId: job.jobId,
+            // #250 — 협조적 cancel 체크포인트. loop 가 매 turn isCancelRequested 로 읽어
+            // 사용자 중지 시 CANCELED 로 종결. runConfirm(2차)은 단일 실행이라 미주입.
+            cancelChecker: () => this.jobService.isCancelRequested(job.jobId)
         });
     }
 
