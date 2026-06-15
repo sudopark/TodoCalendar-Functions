@@ -129,6 +129,27 @@ class AiController {
         res.status(204).send();
     }
 
+    async postCommandCancel(req, res) {
+        const deviceId = req.header('device_id');
+        if (!deviceId) {
+            throw new Errors.BadRequest('device_id header is required');
+        }
+
+        // cancel path body:
+        //  - job_id: 중지할 진행 중(PENDING/RUNNING) job 의 jobId. reject 와 동선이 다른
+        //    별개 액션 — confirm 거부가 아니라 "지금 돌아가는 거 중지".
+        const jobId = req.body.job_id;
+        if (!jobId || typeof jobId !== 'string') {
+            throw new Errors.BadRequest('job_id is required');
+        }
+
+        const userId = req.auth.uid;
+        // 클라가 fire-and-forget 으로 호출. RUNNING 은 협조적으로 비동기 종결되고
+        // 클라는 GET /jobs/:id 로 최종 상태를 재폴링하므로 202 Accepted (전이/no-op 무관).
+        await this.jobService.cancel({ userId, jobId });
+        res.status(202).send();
+    }
+
     async getUsage(req, res) {
         const userId = req.auth.uid;
         const [usage, dailyLimit] = await Promise.all([
